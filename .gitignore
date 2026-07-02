@@ -1,0 +1,38 @@
+# Runtime data and local database files
+nads26/mysql_data/
+nads26/db.sqlite3
+*.sqlite3
+*.sqlite
+*.db
+
+# Uploaded/generated media and copied legacy assets
+nads26/media/
+nads26/static/facility/rooms/
+nads26/legacy/
+
+# Backups, dumps, logs, archives
+backups/
+nads26/backups/
+*.sql
+*.dump
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.log
+
+# Local secrets
+nads26/.env
+.env
+.env.*
+
+# Python/runtime artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

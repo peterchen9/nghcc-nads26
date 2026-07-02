@@ -1,0 +1,871 @@
+{% extends "base.html" %}
+
+{% block title %}場地登記 - {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    html { scroll-behavior: smooth; }
+    :root {
+        --booking-fixed-top: 86px;
+        --booking-fixed-clearance: 240px;
+    }
+    .booking-page {
+        display: grid;
+        gap: 14px;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        overflow-x: hidden;
+    }
+    .content-area {
+        max-width: 100%;
+        min-width: 0;
+        overflow-x: hidden;
+    }
+    .booking-toolbar,
+    .schedule-section {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 14px;
+        min-width: 0;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    .booking-toolbar {
+        display: grid;
+        gap: 14px;
+        position: fixed;
+        top: var(--booking-fixed-top);
+        left: calc(var(--sidebar-width) + 40px);
+        right: 40px;
+        z-index: 80;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
+    }
+    .booking-toolbar-spacer {
+        height: var(--booking-toolbar-space, 156px);
+        pointer-events: none;
+    }
+    .toolbar-main {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+    .toolbar-form {
+        display: flex;
+        align-items: end;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .field label {
+        color: var(--text-secondary);
+        font-size: 0.86rem;
+    }
+    .field input,
+    .field select,
+    .field textarea {
+        box-sizing: border-box;
+        border: 1px solid rgba(255,255,255,0.14);
+        border-radius: 6px;
+        padding: 9px 10px;
+        background: rgba(8, 13, 20, 0.35);
+        color: var(--text-primary);
+        font: inherit;
+    }
+    .field option { color: #111827; }
+    .btn {
+        border: 1px solid rgba(188,220,255,0.35);
+        background: rgba(188,220,255,0.12);
+        color: var(--accent-color);
+        border-radius: 6px;
+        padding: 9px 12px;
+        text-decoration: none;
+        cursor: pointer;
+        font: inherit;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+    }
+    .btn.primary {
+        background: var(--accent-color);
+        color: var(--sidebar-bg);
+        font-weight: 700;
+    }
+    .btn.danger {
+        border-color: rgba(248,113,113,0.45);
+        color: #fecaca;
+        background: rgba(248,113,113,0.1);
+    }
+    .floor-nav {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        padding-top: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .floor-link {
+        color: var(--accent-color);
+        background: rgba(188,220,255,0.1);
+        border: 1px solid rgba(188,220,255,0.22);
+        border-radius: 999px;
+        padding: 7px 12px;
+        text-decoration: none;
+        font-weight: 700;
+        cursor: pointer;
+        font: inherit;
+    }
+    .messages {
+        display: grid;
+        gap: 8px;
+    }
+    .message {
+        border-radius: 6px;
+        padding: 10px 12px;
+        background: rgba(188,220,255,0.12);
+        color: var(--accent-color);
+    }
+    .message.error {
+        background: rgba(248,113,113,0.12);
+        color: #fecaca;
+    }
+    .schedule-section {
+        scroll-margin-top: var(--booking-fixed-clearance);
+        overflow-anchor: none;
+    }
+    .section-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: baseline;
+        margin-bottom: 10px;
+    }
+    .section-head h2 {
+        font-size: 1.3rem;
+        margin: 0;
+    }
+    .back-top-link {
+        color: var(--accent-color);
+        text-decoration: none;
+        font-size: 0.88rem;
+        border: 1px solid rgba(188,220,255,0.28);
+        border-radius: 6px;
+        padding: 5px 8px;
+        background: rgba(188,220,255,0.08);
+    }
+    .back-top-link:hover {
+        background: rgba(188,220,255,0.16);
+    }
+    .schedule-wrap {
+        overflow-x: auto;
+        overflow-y: hidden;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 8px;
+        background: rgba(8, 13, 20, 0.18);
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+    .schedule-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        min-width: max-content;
+        width: max-content;
+        table-layout: fixed;
+    }
+    .schedule-table th,
+    .schedule-table td {
+        border-right: 1px solid rgba(255,255,255,0.08);
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        width: 148px;
+        min-width: 148px;
+        max-width: 148px;
+        min-height: 30px;
+        height: 30px;
+        padding: 0;
+        vertical-align: top;
+    }
+    .schedule-table th:first-child,
+    .schedule-table td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 3;
+        width: 82px;
+        min-width: 82px;
+        max-width: 82px;
+        background: #2f4156;
+    }
+    .schedule-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 4;
+        background: #26384d;
+        color: var(--text-primary);
+        padding: 8px 6px;
+        font-size: 0.88rem;
+        line-height: 1.25;
+        text-align: center;
+    }
+    .schedule-table thead th:first-child { z-index: 5; }
+    .axis-time,
+    .axis-room {
+        font-weight: 800;
+    }
+    .axis-room {
+        min-height: 42px;
+    }
+    .room-capacity {
+        display: block;
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        margin-top: 2px;
+    }
+    .room-info-button {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        color: var(--text-primary);
+        cursor: pointer;
+        font: inherit;
+        font-weight: 800;
+        line-height: 1.25;
+        padding: 0;
+        text-align: center;
+    }
+    .room-info-button:hover,
+    .room-info-button:focus-visible {
+        color: var(--accent-color);
+        text-decoration: underline;
+        outline: none;
+    }
+    .room-photo-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 4px;
+        padding: 2px 6px;
+        border-radius: 999px;
+        border: 1px solid rgba(188,220,255,0.28);
+        color: var(--accent-color);
+        font-size: 0.68rem;
+        font-weight: 700;
+        background: rgba(188,220,255,0.08);
+    }
+    .time-cell {
+        color: var(--text-secondary);
+        font-size: 0.76rem;
+        text-align: center;
+        padding-top: 8px !important;
+        font-variant-numeric: tabular-nums;
+    }
+    .slot-cell {
+        background: rgba(255,255,255,0.025);
+    }
+    .slot-button {
+        width: 100%;
+        min-height: 30px;
+        height: 30px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        display: block;
+    }
+    .slot-button:hover {
+        background: rgba(188,220,255,0.12);
+        outline: 1px solid rgba(188,220,255,0.42);
+        outline-offset: -1px;
+    }
+    .booked-cell {
+        background: rgba(250,204,21,0.06);
+        color: #fff;
+        overflow: hidden;
+        box-shadow: inset 0 0 0 2px rgba(250,204,21,0.82);
+    }
+    .booked-cell.continuation {
+        background: rgba(250,204,21,0.035);
+    }
+    .booked-button {
+        width: 100%;
+        min-height: 30px;
+        height: 100%;
+        min-height: inherit;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        display: block;
+        padding: 0;
+        text-align: left;
+    }
+    .booked-button:hover {
+        background: rgba(250,204,21,0.12);
+        outline: 1px solid rgba(250,204,21,0.92);
+        outline-offset: -1px;
+    }
+    .booking-chip {
+        padding: 5px 7px;
+        font-size: 0.78rem;
+        line-height: 1.25;
+        min-height: 30px;
+        height: auto;
+        box-sizing: border-box;
+        overflow: visible;
+    }
+    .booking-chip strong {
+        display: block;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        overflow-wrap: anywhere;
+    }
+    .booking-chip span {
+        display: block;
+        color: var(--text-secondary);
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        overflow-wrap: anywhere;
+    }
+    .booking-readonly-note {
+        display: none;
+        color: #fde68a;
+        border: 1px solid rgba(250,204,21,0.35);
+        border-radius: 6px;
+        padding: 9px 10px;
+        background: rgba(250,204,21,0.08);
+        margin-top: 12px;
+    }
+    .booking-readonly-note.show { display: block; }
+    .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 16, 24, 0.68);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 500;
+        padding: 20px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .booking-modal {
+        width: min(520px, 100%);
+        background: #2f4156;
+        border: 1px solid rgba(255,255,255,0.14);
+        border-radius: 8px;
+        box-shadow: 0 24px 80px rgba(0,0,0,0.45);
+        padding: 18px;
+    }
+    .room-modal {
+        width: min(860px, 100%);
+        max-height: calc(100vh - 44px);
+        overflow: auto;
+    }
+    .modal-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 14px;
+    }
+    .modal-head h2 {
+        margin: 0;
+        font-size: 1.2rem;
+    }
+    .close-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 1px solid rgba(255,255,255,0.18);
+        background: rgba(255,255,255,0.06);
+        color: #fff;
+        cursor: pointer;
+    }
+    .modal-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+    .modal-grid .full { grid-column: 1 / -1; }
+    .room-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+    .room-detail-item {
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 6px;
+        padding: 10px;
+        background: rgba(8, 13, 20, 0.16);
+        min-width: 0;
+    }
+    .room-detail-item.full { grid-column: 1 / -1; }
+    .room-detail-label {
+        display: block;
+        color: var(--text-secondary);
+        font-size: 0.78rem;
+        margin-bottom: 4px;
+    }
+    .room-detail-value {
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+    }
+    .room-photo-gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px;
+    }
+    .room-photo-gallery img {
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 1px solid rgba(255,255,255,0.12);
+        background: rgba(8, 13, 20, 0.2);
+    }
+    .room-empty-photo {
+        color: var(--text-secondary);
+        border: 1px dashed rgba(255,255,255,0.18);
+        border-radius: 6px;
+        padding: 14px;
+    }
+    @media (max-width: 700px) {
+        :root { --booking-fixed-top: 76px; }
+        .booking-toolbar {
+            left: 20px;
+            right: 20px;
+        }
+        .modal-grid { grid-template-columns: 1fr; }
+        .modal-grid .full { grid-column: auto; }
+        .room-detail-grid { grid-template-columns: 1fr; }
+        .room-detail-item.full { grid-column: auto; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="booking-page" id="booking-top">
+    <section class="booking-toolbar">
+        <div class="toolbar-main">
+            <div>
+                <h2 style="margin: 0 0 6px; font-size: 1.35rem;">場地登記</h2>
+                <div style="color: var(--text-secondary);">{{ selected_date|date:'Y-m-d' }}（{{ selected_weekday }}） · 共 {{ entries|length }} 筆</div>
+            </div>
+            <form method="get" class="toolbar-form">
+                <div class="field">
+                    <label for="date">查看日期</label>
+                    <input id="date" type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+                </div>
+                <button class="btn" type="submit">查詢</button>
+                <a class="btn" href="?date={{ prev_day|date:'Y-m-d' }}">前一天</a>
+                <a class="btn" href="?date={{ next_day|date:'Y-m-d' }}">後一天</a>
+                <a class="btn" href="/facility/booking/export/?date={{ selected_date|date:'Y-m-d' }}">匯出報表</a>
+            </form>
+        </div>
+        <nav class="floor-nav" aria-label="樓層快速連結">
+            <span style="color: var(--text-secondary); font-weight: 700;">樓層</span>
+            {% for section in floor_sections %}
+                <button class="floor-link" type="button" data-target="floor-{{ section.id }}">{{ section.label }}</button>
+            {% endfor %}
+        </nav>
+    </section>
+    <div class="booking-toolbar-spacer" aria-hidden="true"></div>
+
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="message {{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% for section in floor_sections %}
+        <section class="schedule-section" id="floor-{{ section.id }}">
+            <div class="section-head">
+                <h2>{{ section.label }}</h2>
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <span style="color: var(--text-secondary);">{{ section.rooms|length }} 個場地</span>
+                    <a class="back-top-link" href="#booking-top">回上面</a>
+                </div>
+            </div>
+            <div class="schedule-wrap">
+                <table class="schedule-table">
+                    <thead>
+                        <tr>
+                            <th class="axis-time">時間</th>
+                            {% for room in section.rooms %}
+                                <th class="axis-room">
+                                    <button class="room-info-button" type="button"
+                                            data-room-name="{{ room.room_name }}"
+                                            data-room-floor="{{ room.floor }}"
+                                            data-room-capacity="{{ room.capacity|default:'' }}"
+                                            data-room-description="{{ room.description|default:'' }}"
+                                            data-room-photos="{% for photo_url in room.photo_urls %}{{ photo_url }}{% if not forloop.last %}|{% endif %}{% endfor %}"
+                                            aria-label="查看 {{ room.room_name }} 場地資料">
+                                        {{ room.room_name }}
+                                        {% if room.capacity %}<span class="room-capacity">{{ room.capacity }}人</span>{% endif %}
+                                        {% if room.photo_urls %}<span class="room-photo-badge">照片</span>{% endif %}
+                                    </button>
+                                </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in section.rows %}
+                            <tr>
+                                <td class="time-cell">{{ row.slot.label }}</td>
+                                {% for cell in row.cells %}
+                                    {% if cell.booking %}
+                                        {% if not cell.skip_booking %}
+                                            <td class="booked-cell" rowspan="{{ cell.rowspan }}" title="{{ cell.booking.name }} · {{ cell.booking.start_label }}-{{ cell.booking.end_label }}">
+                                                <button class="booked-button" type="button"
+                                                        data-entry-id="{{ cell.booking.id }}"
+                                                        data-room-id="{{ cell.booking.room_id }}"
+                                                        data-room-name="{{ cell.booking.room_name }}"
+                                                        data-start="{{ cell.booking.start_label }}"
+                                                        data-end="{{ cell.booking.end_label }}"
+                                                        data-name="{{ cell.booking.name }}"
+                                                        data-use-unit="{{ cell.booking.use_unit|default:'' }}"
+                                                        data-create-by="{{ cell.booking.create_by }}"
+                                                        data-description="{{ cell.booking.description|default:'' }}"
+                                                        data-can-edit="{% if cell.booking.can_edit %}1{% else %}0{% endif %}"
+                                                        aria-label="查看 {{ cell.booking.name }} {{ cell.booking.start_label }} 到 {{ cell.booking.end_label }} 的場地登記">
+                                                    <div class="booking-chip">
+                                                        <strong>{{ cell.booking.name }}</strong>
+                                                        {% if cell.booking.use_unit %}<span>{{ cell.booking.use_unit }}</span>{% endif %}
+                                                        <span>{{ cell.booking.start_label }}-{{ cell.booking.end_label }} · {{ cell.booking.create_by }}</span>
+                                                    </div>
+                                                </button>
+                                            </td>
+                                        {% endif %}
+                                    {% else %}
+                                        <td class="slot-cell">
+                                            <button class="slot-button" type="button"
+                                                    data-room-id="{{ cell.room.id }}"
+                                                    data-room-name="{{ cell.room.room_name }}"
+                                                    data-start="{{ row.slot.start_label }}"
+                                                    data-end="{{ row.slot.end_label }}"
+                                                    aria-label="新增 {{ cell.room.room_name }} {{ row.slot.start_label }} 的場地登記"></button>
+                                        </td>
+                                    {% endif %}
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    {% endfor %}
+</div>
+
+<div class="modal-backdrop" id="bookingModal" aria-hidden="true">
+    <div class="booking-modal" role="dialog" aria-modal="true" aria-labelledby="bookingModalTitle">
+        <div class="modal-head">
+            <h2 id="bookingModalTitle">新增場地登記</h2>
+            <button class="close-btn" type="button" id="closeBookingModal" aria-label="關閉">×</button>
+        </div>
+        <form method="post" id="bookingForm">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create" id="modalAction">
+            <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+            <input type="hidden" name="entry_id" id="modalEntryId">
+            <input type="hidden" name="room_id" id="modalRoomId">
+            <div class="modal-grid">
+                <div class="field full">
+                    <label>場地</label>
+                    <input type="text" id="modalRoomName" readonly>
+                </div>
+                <div class="field">
+                    <label for="modalStartTime">開始</label>
+                    <input id="modalStartTime" type="time" name="start_time" required>
+                </div>
+                <div class="field">
+                    <label for="modalEndTime">結束</label>
+                    <input id="modalEndTime" type="time" name="end_time" required>
+                </div>
+                <div class="field full">
+                    <label for="modalName">活動名稱</label>
+                    <input id="modalName" type="text" name="name" maxlength="80" required>
+                </div>
+                <div class="field full">
+                    <label for="modalUseUnit">使用單位</label>
+                    <input id="modalUseUnit" type="text" name="use_unit" maxlength="120">
+                </div>
+                <div class="field full">
+                    <label for="modalCreateBy">登記人</label>
+                    <input id="modalCreateBy" type="text" name="create_by" maxlength="80" value="{{ default_creator }}" required>
+                </div>
+                <div class="field full">
+                    <label for="modalDescription">備註</label>
+                    <textarea id="modalDescription" name="description" rows="3"></textarea>
+                </div>
+                <div class="field full recurrence-fields" id="recurrenceFields">
+                    <label for="modalRepeatType">週期性登記</label>
+                    <select id="modalRepeatType" name="repeat_type">
+                        <option value="none">不重複</option>
+                        <option value="weekly">每週</option>
+                        <option value="monthly_nth">每月第 X 週</option>
+                    </select>
+                </div>
+                <div class="field recurrence-fields">
+                    <label for="modalRepeatWeek">第 X 週</label>
+                    <select id="modalRepeatWeek" name="repeat_week">
+                        <option value="1">第 1 週</option>
+                        <option value="2">第 2 週</option>
+                        <option value="3">第 3 週</option>
+                        <option value="4">第 4 週</option>
+                        <option value="5">第 5 週</option>
+                    </select>
+                </div>
+                <div class="field recurrence-fields">
+                    <label for="modalRepeatUntil">重複到</label>
+                    <input id="modalRepeatUntil" type="date" name="repeat_until" value="{{ selected_date|date:'Y-m-d' }}">
+                </div>
+            </div>
+            <div class="booking-readonly-note" id="bookingReadonlyNote">這筆登記不是您建立的資料，只能查看，不能修改或刪除。</div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+                <button class="btn danger" type="submit" id="deleteBookingButton" name="action" value="delete" formnovalidate>刪除</button>
+                <button class="btn" type="button" id="cancelBookingModal">取消</button>
+                <button class="btn primary" type="submit" id="saveBookingButton">新增登記</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="roomModal" aria-hidden="true">
+    <div class="booking-modal room-modal" role="dialog" aria-modal="true" aria-labelledby="roomModalTitle">
+        <div class="modal-head">
+            <h2 id="roomModalTitle">場地資料</h2>
+            <button class="close-btn" type="button" id="closeRoomModal" aria-label="關閉">×</button>
+        </div>
+        <div class="room-detail-grid">
+            <div class="room-detail-item">
+                <span class="room-detail-label">樓層</span>
+                <div class="room-detail-value" id="roomModalFloor"></div>
+            </div>
+            <div class="room-detail-item">
+                <span class="room-detail-label">容量</span>
+                <div class="room-detail-value" id="roomModalCapacity"></div>
+            </div>
+            <div class="room-detail-item full">
+                <span class="room-detail-label">說明</span>
+                <div class="room-detail-value" id="roomModalDescription"></div>
+            </div>
+        </div>
+        <div id="roomPhotoGallery" class="room-photo-gallery"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    window.scrollTo(0, window.scrollY);
+    document.documentElement.scrollLeft = 0;
+    document.body.scrollLeft = 0;
+    const modal = document.getElementById('bookingModal');
+    const modalTitle = document.getElementById('bookingModalTitle');
+    const bookingForm = document.getElementById('bookingForm');
+    const modalAction = document.getElementById('modalAction');
+    const entryId = document.getElementById('modalEntryId');
+    const roomId = document.getElementById('modalRoomId');
+    const roomName = document.getElementById('modalRoomName');
+    const startTime = document.getElementById('modalStartTime');
+    const endTime = document.getElementById('modalEndTime');
+    const nameInput = document.getElementById('modalName');
+    const useUnit = document.getElementById('modalUseUnit');
+    const createBy = document.getElementById('modalCreateBy');
+    const description = document.getElementById('modalDescription');
+    const closeButtons = [document.getElementById('closeBookingModal'), document.getElementById('cancelBookingModal')];
+    const readonlyNote = document.getElementById('bookingReadonlyNote');
+    const saveBookingButton = document.getElementById('saveBookingButton');
+    const deleteBookingButton = document.getElementById('deleteBookingButton');
+    const currentUser = '{{ default_creator|escapejs }}';
+    const recurrenceFields = document.querySelectorAll('.recurrence-fields');
+    const repeatType = document.getElementById('modalRepeatType');
+    const repeatWeek = document.getElementById('modalRepeatWeek');
+    const repeatUntil = document.getElementById('modalRepeatUntil');
+    const roomModal = document.getElementById('roomModal');
+    const roomModalTitle = document.getElementById('roomModalTitle');
+    const roomModalFloor = document.getElementById('roomModalFloor');
+    const roomModalCapacity = document.getElementById('roomModalCapacity');
+    const roomModalDescription = document.getElementById('roomModalDescription');
+    const roomPhotoGallery = document.getElementById('roomPhotoGallery');
+    const closeRoomButton = document.getElementById('closeRoomModal');
+    const toolbar = document.querySelector('.booking-toolbar');
+    const toolbarSpacer = document.querySelector('.booking-toolbar-spacer');
+
+    function updateToolbarSpace() {
+        if (!toolbar || !toolbarSpacer) return;
+        const toolbarHeight = toolbar.offsetHeight;
+        toolbarSpacer.style.height = `${toolbarHeight + 14}px`;
+        document.documentElement.style.setProperty('--booking-fixed-clearance', `${toolbarHeight + 110}px`);
+    }
+
+    function setBookingFieldsReadonly(isReadonly) {
+        [startTime, endTime, nameInput, useUnit, description].forEach((field) => {
+            field.readOnly = isReadonly;
+        });
+        roomName.readOnly = true;
+        createBy.readOnly = isReadonly || Boolean(currentUser);
+        saveBookingButton.style.display = isReadonly ? 'none' : 'inline-flex';
+        deleteBookingButton.style.display = isReadonly || !entryId.value ? 'none' : 'inline-flex';
+        readonlyNote.classList.toggle('show', isReadonly);
+    }
+
+    function setRecurrenceVisible(isVisible) {
+        recurrenceFields.forEach((field) => {
+            field.style.display = isVisible ? '' : 'none';
+        });
+        if (isVisible) updateRepeatWeekVisibility();
+    }
+
+    function updateRepeatWeekVisibility() {
+        const weekField = repeatWeek.closest('.field');
+        weekField.style.display = repeatType.value === 'monthly_nth' ? '' : 'none';
+    }
+
+    function openModal(button) {
+        modalTitle.textContent = '新增場地登記';
+        modalAction.value = 'create';
+        entryId.value = '';
+        roomId.value = button.dataset.roomId;
+        roomName.value = button.dataset.roomName;
+        startTime.value = button.dataset.start;
+        endTime.value = button.dataset.end;
+        nameInput.value = '';
+        useUnit.value = '';
+        createBy.value = currentUser;
+        description.value = '';
+        repeatType.value = 'none';
+        repeatUntil.value = '{{ selected_date|date:'Y-m-d' }}';
+        saveBookingButton.textContent = '新增登記';
+        setBookingFieldsReadonly(false);
+        setRecurrenceVisible(true);
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        setTimeout(() => nameInput.focus(), 0);
+    }
+
+    function openBookedModal(button) {
+        const canEdit = button.dataset.canEdit === '1';
+        modalTitle.textContent = canEdit ? '修改場地登記' : '查看場地登記';
+        modalAction.value = 'update';
+        entryId.value = button.dataset.entryId;
+        roomId.value = button.dataset.roomId;
+        roomName.value = button.dataset.roomName;
+        startTime.value = button.dataset.start;
+        endTime.value = button.dataset.end;
+        nameInput.value = button.dataset.name || '';
+        useUnit.value = button.dataset.useUnit || '';
+        createBy.value = button.dataset.createBy || '';
+        description.value = button.dataset.description || '';
+        saveBookingButton.textContent = '儲存修改';
+        setBookingFieldsReadonly(!canEdit);
+        setRecurrenceVisible(false);
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        setTimeout(() => (canEdit ? nameInput : document.getElementById('closeBookingModal')).focus(), 0);
+    }
+
+    function closeModal() {
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    function openRoomModal(button) {
+        const photos = (button.dataset.roomPhotos || '').split('|').filter(Boolean);
+        roomModalTitle.textContent = button.dataset.roomName || '場地資料';
+        roomModalFloor.textContent = button.dataset.roomFloor || '-';
+        roomModalCapacity.textContent = button.dataset.roomCapacity ? `${button.dataset.roomCapacity}人` : '-';
+        roomModalDescription.textContent = button.dataset.roomDescription || '-';
+        roomPhotoGallery.innerHTML = '';
+
+        if (photos.length) {
+            photos.forEach((url) => {
+                const image = document.createElement('img');
+                image.src = url;
+                image.alt = `${button.dataset.roomName || '場地'} 照片`;
+                image.loading = 'lazy';
+                roomPhotoGallery.appendChild(image);
+            });
+        } else {
+            const empty = document.createElement('div');
+            empty.className = 'room-empty-photo';
+            empty.textContent = '目前沒有照片';
+            roomPhotoGallery.appendChild(empty);
+        }
+
+        roomModal.classList.add('open');
+        roomModal.setAttribute('aria-hidden', 'false');
+        setTimeout(() => closeRoomButton.focus(), 0);
+    }
+
+    function closeRoomModal() {
+        roomModal.classList.remove('open');
+        roomModal.setAttribute('aria-hidden', 'true');
+    }
+
+    document.querySelectorAll('.floor-link').forEach((button) => {
+        button.addEventListener('click', () => {
+            updateToolbarSpace();
+            document.querySelectorAll('.schedule-wrap').forEach((wrap) => { wrap.scrollLeft = 0; });
+            window.scrollTo({ left: 0, top: window.scrollY });
+            const target = document.getElementById(button.dataset.target);
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+            }
+        });
+    });
+
+    document.querySelectorAll('.slot-button').forEach((button) => {
+        button.addEventListener('click', () => openModal(button));
+    });
+    document.querySelectorAll('.booked-button').forEach((button) => {
+        button.addEventListener('click', () => openBookedModal(button));
+    });
+    document.querySelectorAll('.room-info-button').forEach((button) => {
+        button.addEventListener('click', () => openRoomModal(button));
+    });
+    closeButtons.forEach((button) => button && button.addEventListener('click', closeModal));
+    repeatType.addEventListener('change', updateRepeatWeekVisibility);
+    deleteBookingButton.addEventListener('click', (event) => {
+        if (!confirm('確定要刪除這筆場地登記嗎？')) {
+            event.preventDefault();
+            return;
+        }
+        modalAction.value = 'delete';
+    });
+    bookingForm.addEventListener('submit', () => {
+        if (document.activeElement !== deleteBookingButton && entryId.value) {
+            modalAction.value = 'update';
+        }
+    });
+    closeRoomButton.addEventListener('click', closeRoomModal);
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) closeModal();
+    });
+    roomModal.addEventListener('click', (event) => {
+        if (event.target === roomModal) closeRoomModal();
+    });
+    window.addEventListener('resize', updateToolbarSpace);
+    updateToolbarSpace();
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && modal.classList.contains('open')) closeModal();
+        if (event.key === 'Escape' && roomModal.classList.contains('open')) closeRoomModal();
+    });
+})();
+</script>
+{% endblock %}

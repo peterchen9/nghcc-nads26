@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if page %}{{ page.title }} | {{ site_name }}{% else %}{{ site_name }}{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    {% if page %}
+        <h2 style="margin-bottom: 20px;">{{ page.title }}</h2>
+        <div class="page-content" style="line-height: 1.8; color: var(--text-primary);">
+            {{ page.content|safe }}
+        </div>
+    {% else %}
+        {% if slug == 'home' %}
+            <h2>{{ home_title }}</h2>
+            <p style="color: var(--text-secondary); line-height: 1.6;">
+                {{ home_desc }}
+            </p>
+            <div style="margin-top: 30px; padding: 20px; border: 1px dashed var(--accent-color); border-radius: 12px; text-align: center;">
+                <p>您尚未建立標籤為 <strong>"home"</strong> 的網頁內容。</p>
+                <p>請前往 <a href="/admin/pages/page/add/" style="color: var(--accent-color);">後台</a> 新增一個網頁，並將「網址路徑 (Slug)」設為 <code>home</code>。</p>
+            </div>
+        {% else %}
+            <h2>網頁未找到</h2>
+            <p>抱歉，您請求的頁面不存在或已被停用。</p>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

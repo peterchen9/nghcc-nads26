@@ -1,0 +1,22 @@
+{
+  "name": "北門行政平台",
+  "short_name": "北門平台",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2f4156",
+  "theme_color": "#2f4156",
+  "icons": [
+    {
+      "src": "/static/images/logo.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/images/apple-touch-icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

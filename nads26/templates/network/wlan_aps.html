@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}無線網路 - {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .wlan-page { display: grid; gap: 18px; color: var(--text-primary); }
+    .wlan-sticky { position: sticky; top: 70px; z-index: 20; display: grid; gap: 14px; padding: 0 0 14px; background: var(--bg-color); }
+    .wlan-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .wlan-title { margin: 0; font-size: 1.7rem; letter-spacing: 0; }
+    .wlan-meta { margin-top: 6px; color: var(--text-secondary); font-size: 0.92rem; }
+    .wlan-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .wlan-search { width: min(340px, 100%); border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.06); color: var(--text-primary); border-radius: 8px; padding: 9px 11px; font: inherit; }
+    .wlan-btn { border: 1px solid rgba(188, 220, 255, 0.35); background: rgba(188, 220, 255, 0.12); color: var(--text-primary); border-radius: 8px; padding: 9px 14px; cursor: pointer; font: inherit; font-weight: 600; }
+    .wlan-btn:disabled { opacity: 0.55; cursor: wait; }
+    .wlan-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+    .wlan-stat, .ap-panel, .table-panel { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; }
+    .wlan-stat { padding: 16px; }
+    .wlan-stat .label { color: var(--text-secondary); font-size: 0.82rem; }
+    .wlan-stat .value { margin-top: 7px; font-size: 1.45rem; font-weight: 700; }
+    .ap-panel, .table-panel { padding: 16px; }
+    .panel-title { margin: 0 0 12px; font-size: 1.05rem; }
+    .ap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+    .ap-card { padding: 14px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.045); }
+    .ap-card.good { border-color: rgba(74, 222, 128, 0.45); background: rgba(22, 101, 52, 0.18); }
+    .ap-card.busy { border-color: rgba(250, 204, 21, 0.5); background: rgba(113, 63, 18, 0.2); }
+    .ap-card.hot { border-color: rgba(248, 113, 113, 0.56); background: rgba(127, 29, 29, 0.24); }
+    .ap-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .ap-name { font-weight: 800; overflow-wrap: anywhere; }
+    .level-pill { flex: 0 0 auto; border-radius: 999px; padding: 4px 8px; font-size: 0.78rem; font-weight: 800; }
+    .level-pill.good { color: #bbf7d0; background: rgba(22, 163, 74, 0.22); }
+    .level-pill.busy { color: #fef08a; background: rgba(202, 138, 4, 0.22); }
+    .level-pill.hot { color: #fecaca; background: rgba(220, 38, 38, 0.25); }
+    .ap-meta { margin-top: 5px; color: var(--text-secondary); font-size: 0.84rem; overflow-wrap: anywhere; }
+    .ap-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+    .metric { min-width: 0; }
+    .metric-label { color: var(--text-secondary); font-size: 0.78rem; }
+    .metric-value { margin-top: 3px; font-size: 1.2rem; font-weight: 800; overflow-wrap: anywhere; }
+    .flow-row { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.84rem; }
+    .flow-bar { height: 8px; background: rgba(255, 255, 255, 0.1); border-radius: 999px; overflow: hidden; }
+    .flow-fill { display: block; height: 100%; width: 0; background: #76d7b0; }
+    .flow-fill.tx { background: #7bb8ff; }
+    .table-wrap { overflow-x: auto; }
+    .ap-table { width: 100%; min-width: 900px; border-collapse: collapse; }
+    .ap-table th, .ap-table td { padding: 10px 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); text-align: left; vertical-align: middle; font-size: 0.9rem; }
+    .ap-table th { color: var(--text-secondary); font-weight: 600; white-space: nowrap; }
+    .status-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; background: #4ade80; }
+    .status-dot.busy { background: #facc15; }
+    .status-dot.hot { background: #f87171; }
+    .empty-row { color: var(--text-secondary); text-align: center; padding: 22px; }
+    .error-box { display: none; padding: 11px 13px; border: 1px solid rgba(248, 113, 113, 0.35); color: #fecaca; background: rgba(127, 29, 29, 0.22); border-radius: 8px; }
+    @media (max-width: 720px) {
+        .wlan-actions { width: 100%; }
+        .wlan-search { flex: 1 1 220px; }
+        .wlan-btn { flex: 0 0 auto; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wlan-page">
+    <div class="wlan-sticky">
+        <div class="wlan-toolbar">
+            <div>
+                <h2 class="wlan-title">無線網路</h2>
+                <div class="wlan-meta">最近掃描：<span id="scannedAt">-</span>，每小時整點自動更新</div>
+            </div>
+            <div class="wlan-actions">
+                <input class="wlan-search" id="apSearch" type="search" placeholder="搜尋 AP、IP、MAC、介面">
+                <button class="wlan-btn" id="scanBtn" type="button">掃描</button>
+            </div>
+        </div>
+
+        <div class="error-box" id="errorBox"></div>
+
+        <section class="wlan-summary">
+            <div class="wlan-stat"><div class="label">WLAN AP</div><div class="value" id="apCount">0</div></div>
+            <div class="wlan-stat"><div class="label">估算連線數</div><div class="value" id="clientCount">0</div></div>
+            <div class="wlan-stat"><div class="label">忙碌 AP</div><div class="value" id="busyCount">0</div></div>
+            <div class="wlan-stat"><div class="label">總估算網速</div><div class="value" id="totalSpeed">0 Kbps</div></div>
+        </section>
+    </div>
+
+    <section class="ap-panel">
+        <h3 class="panel-title">AP 狀態</h3>
+        <div class="ap-grid" id="apGrid"></div>
+    </section>
+
+    <section class="table-panel">
+        <h3 class="panel-title">AP 明細</h3>
+        <div class="table-wrap">
+            <table class="ap-table">
+                <thead>
+                    <tr>
+                        <th>狀態</th><th>名稱</th><th>IP</th><th>MAC</th><th>介面</th><th>連線數</th><th>Tx</th><th>Rx</th><th>最近出現</th>
+                    </tr>
+                </thead>
+                <tbody id="apBody"></tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<script>
+    const initialPayload = {{ snapshot_json|safe }};
+    const scanUrl = "{{ request.path }}scan/";
+    const csrfToken = "{{ csrf_token }}";
+    let aps = [];
+    let scanTimer = null;
+
+    function escapeHtml(value) {
+        return String(value || '').replace(/[&<>"']/g, (char) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[char]));
+    }
+    function levelLabel(level) {
+        return {good: '正常', busy: '偏忙', hot: '擁擠'}[level] || '正常';
+    }
+    function filteredAps() {
+        const keyword = document.getElementById('apSearch').value.trim().toLowerCase();
+        if (!keyword) return aps;
+        return aps.filter((ap) => [ap.name, ap.ip, ap.mac, ap.interface_name, ap.note].join(' ').toLowerCase().includes(keyword));
+    }
+    function maxFlow(items) {
+        return Math.max(1, ...items.flatMap((item) => [Number(item.tx_bps || 0), Number(item.rx_bps || 0)]));
+    }
+    function formatBps(value) {
+        const bytes = Number(value || 0);
+        if (bytes < 125000) return `${Math.round(bytes / 125)} Kbps`;
+        if (bytes < 125000000) return `${(Math.round(bytes / 1250) / 100).toFixed(2)} Mbps`;
+        return `${(Math.round(bytes / 1250000) / 100).toFixed(2)} Gbps`;
+    }
+    function renderSummary() {
+        const totalClients = aps.reduce((sum, ap) => sum + Number(ap.client_count || 0), 0);
+        const totalBps = aps.reduce((sum, ap) => sum + Number(ap.total_bps || 0), 0);
+        document.getElementById('apCount').textContent = aps.length;
+        document.getElementById('clientCount').textContent = totalClients;
+        document.getElementById('busyCount').textContent = aps.filter((ap) => ap.level === 'busy' || ap.level === 'hot').length;
+        document.getElementById('totalSpeed').textContent = formatBps(totalBps);
+    }
+    function renderCards() {
+        const grid = document.getElementById('apGrid');
+        const rows = filteredAps();
+        const max = maxFlow(aps);
+        if (!rows.length) {
+            grid.innerHTML = '<div class="empty-row">沒有找到 WLAN AP</div>';
+            return;
+        }
+        grid.innerHTML = rows.map((ap) => {
+            const txWidth = Math.max(2, Math.round((Number(ap.tx_bps || 0) / max) * 100));
+            const rxWidth = Math.max(2, Math.round((Number(ap.rx_bps || 0) / max) * 100));
+            return `<article class="ap-card ${escapeHtml(ap.level)}">
+                <div class="ap-head">
+                    <div class="ap-name">${escapeHtml(ap.name)}</div>
+                    <span class="level-pill ${escapeHtml(ap.level)}">${levelLabel(ap.level)}</span>
+                </div>
+                <div class="ap-meta">${escapeHtml(ap.ip)} · ${escapeHtml(ap.interface_name || '-')}</div>
+                <div class="ap-metrics">
+                    <div class="metric"><div class="metric-label">連線數</div><div class="metric-value">${escapeHtml(ap.client_count)}</div></div>
+                    <div class="metric"><div class="metric-label">網速</div><div class="metric-value">${escapeHtml(ap.total_label)}</div></div>
+                </div>
+                <div class="flow-row"><span>Tx</span><div class="flow-bar"><span class="flow-fill tx" style="width:${txWidth}%"></span></div><span>${escapeHtml(ap.tx_label)}</span></div>
+                <div class="flow-row"><span>Rx</span><div class="flow-bar"><span class="flow-fill" style="width:${rxWidth}%"></span></div><span>${escapeHtml(ap.rx_label)}</span></div>
+            </article>`;
+        }).join('');
+    }
+    function renderTable() {
+        const body = document.getElementById('apBody');
+        const rows = filteredAps();
+        if (!rows.length) {
+            body.innerHTML = '<tr><td class="empty-row" colspan="9">沒有符合條件的 AP</td></tr>';
+            return;
+        }
+        body.innerHTML = rows.map((ap) => `<tr>
+            <td><span class="status-dot ${escapeHtml(ap.level)}"></span>${levelLabel(ap.level)}</td>
+            <td>${escapeHtml(ap.name)}</td>
+            <td>${escapeHtml(ap.ip)}</td>
+            <td>${escapeHtml(ap.mac)}</td>
+            <td>${escapeHtml(ap.interface_name || '-')}</td>
+            <td>${escapeHtml(ap.client_count)}</td>
+            <td>${escapeHtml(ap.tx_label)}</td>
+            <td>${escapeHtml(ap.rx_label)}</td>
+            <td>${escapeHtml(ap.last_seen)}</td>
+        </tr>`).join('');
+    }
+    function renderPayload(payload) {
+        aps = payload.aps || [];
+        document.getElementById('scannedAt').textContent = payload.scanned_at || '-';
+        const errorBox = document.getElementById('errorBox');
+        if (payload.error_message) {
+            errorBox.textContent = payload.error_message;
+            errorBox.style.display = 'block';
+        } else {
+            errorBox.style.display = 'none';
+        }
+        renderSummary();
+        renderCards();
+        renderTable();
+    }
+    async function postForm(url, data) {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrfToken},
+            body: new URLSearchParams(data)
+        });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    }
+    async function scanNow(force) {
+        const btn = document.getElementById('scanBtn');
+        btn.disabled = true;
+        btn.textContent = '掃描中';
+        try {
+            renderPayload(await postForm(scanUrl, {force: force ? '1' : '0'}));
+        } catch (error) {
+            const errorBox = document.getElementById('errorBox');
+            errorBox.textContent = error.message || '掃描失敗';
+            errorBox.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '掃描';
+        }
+    }
+    function scheduleHourlyScan() {
+        if (scanTimer) clearTimeout(scanTimer);
+        const now = new Date();
+        const nextHour = new Date(now);
+        nextHour.setHours(now.getHours() + 1, 0, 0, 0);
+        scanTimer = setTimeout(async () => {
+            await scanNow(true);
+            scheduleHourlyScan();
+        }, nextHour.getTime() - now.getTime());
+    }
+
+    document.getElementById('scanBtn').addEventListener('click', () => scanNow(true));
+    document.getElementById('apSearch').addEventListener('input', () => {
+        renderCards();
+        renderTable();
+    });
+    renderPayload(initialPayload);
+    scheduleHourlyScan();
+</script>
+{% endblock %}

@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}條碼產生器 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .qr-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        padding: 35px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+    }
+
+    .generator-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        margin-top: 20px;
+    }
+
+    @media (max-width: 768px) {
+        .generator-grid {
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+    }
+
+    .form-group {
+        margin-bottom: 25px;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        margin-bottom: 10px;
+        font-weight: 600;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 12px 15px;
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #fff;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+        box-sizing: border-box;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--accent-color);
+        background: rgba(0, 0, 0, 0.3);
+        box-shadow: 0 0 10px rgba(188, 220, 255, 0.2);
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 12px 24px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        border-radius: 10px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+
+    .btn-primary {
+        background: var(--accent-color);
+        color: var(--sidebar-bg);
+    }
+
+    .btn-primary:hover {
+        background: #d0e7ff;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(188, 220, 255, 0.3);
+    }
+
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text-primary);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.15);
+        transform: translateY(-1px);
+    }
+
+    /* Preview section */
+    .preview-box {
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px dashed rgba(255, 255, 255, 0.15);
+        border-radius: 14px;
+        min-height: 250px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 20px;
+        position: relative;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    #qrcode {
+        padding: 15px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        display: none;
+    }
+
+    #qrcode img {
+        display: block;
+    }
+
+    .placeholder-text {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="qr-card">
+    <h2 style="margin-bottom: 10px; font-family: 'Outfit', sans-serif;">條碼產生器</h2>
+    <p style="color: var(--text-secondary); font-size: 0.92rem; margin-bottom: 30px;">
+        輸入任何網址或文字內容，快速生成可下載的二維條碼 (QR Code)。
+    </p>
+
+    <div class="generator-grid">
+        <!-- Left: Form -->
+        <div class="form-container">
+            <form id="qrForm" onsubmit="generateQRCode(event)">
+                <div class="form-group">
+                    <label for="qrContent">輸入網址或字串內容</label>
+                    <textarea id="qrContent" required class="form-control" rows="4" placeholder="請輸入您想轉換為 QR Code 的文字或網址..."></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="qrSize">條碼尺寸</label>
+                        <select id="qrSize" class="form-control">
+                            <option value="100">100 x 100</option>
+                            <option value="200" selected>200 x 200 (預設)</option>
+                            <option value="400">400 x 400</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="qrError">容錯率 (Error Correction)</label>
+                        <select id="qrError" class="form-control">
+                            <option value="M" selected>15% (預設 - 中等)</option>
+                            <option value="Q">25% (高強度)</option>
+                            <option value="H">30% (超強容錯)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="margin-top: 10px;">
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <span>⚡</span> 產生二維條碼
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Right: Preview & Download -->
+        <div style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div class="form-group" style="flex-grow: 1; display: flex; flex-direction: column;">
+                <label>條碼預覽</label>
+                <div class="preview-box" id="previewBox">
+                    <div class="placeholder-text" id="placeholderText">
+                        <span>📥</span><br>
+                        請在左側輸入內容並點擊「產生二維條碼」
+                    </div>
+                    <div id="qrcode"></div>
+                </div>
+            </div>
+
+            <div id="actionArea" style="display: none; gap: 15px; margin-top: 20px;">
+                <a id="downloadBtn" href="#" class="btn btn-primary" style="flex-grow: 1;">
+                    <span>💾</span> 下載圖片 (PNG)
+                </a>
+                <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                    清除
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Include QRCode.js with SRI hash -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+    function generateQRCode(e) {
+        e.preventDefault();
+
+        const content = document.getElementById("qrContent").value.trim();
+        const size = document.getElementById("qrSize").value;
+        const errorLevel = document.getElementById("qrError").value;
+
+        if (!content) return;
+
+        const qrContainer = document.getElementById("qrcode");
+        const placeholder = document.getElementById("placeholderText");
+        const actionArea = document.getElementById("actionArea");
+        const downloadBtn = document.getElementById("downloadBtn");
+
+        // Clear previous output
+        qrContainer.innerHTML = "";
+        qrContainer.style.display = "block";
+        placeholder.style.display = "none";
+
+        // Map correct levels
+        let correctLevel = QRCode.CorrectLevel.M;
+        if (errorLevel === 'L') correctLevel = QRCode.CorrectLevel.L;
+        if (errorLevel === 'Q') correctLevel = QRCode.CorrectLevel.Q;
+        if (errorLevel === 'H') correctLevel = QRCode.CorrectLevel.H;
+
+        // Generate QR code
+        try {
+            new QRCode(qrContainer, {
+                text: content,
+                width: parseInt(size),
+                height: parseInt(size),
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: correctLevel
+            });
+
+            // Retrieve image source or canvas data for downloading after rendering finishes
+            setTimeout(() => {
+                const img = qrContainer.querySelector("img");
+                const canvas = qrContainer.querySelector("canvas");
+                let dataUrl = "";
+
+                if (img && img.src) {
+                    dataUrl = img.src;
+                } else if (canvas) {
+                    dataUrl = canvas.toDataURL("image/png");
+                }
+
+                if (dataUrl) {
+                    downloadBtn.href = dataUrl;
+                    downloadBtn.download = `qrcode_${size}x${size}.png`;
+                    actionArea.style.display = "flex";
+                }
+            }, 150);
+
+        } catch (error) {
+            console.error("QR Code generation failed:", error);
+            alert("條碼產生失敗，請確認輸入內容是否過長。");
+        }
+    }
+
+    function resetForm() {
+        document.getElementById("qrForm").reset();
+        document.getElementById("qrcode").innerHTML = "";
+        document.getElementById("qrcode").style.display = "none";
+        document.getElementById("placeholderText").style.display = "block";
+        document.getElementById("actionArea").style.display = "none";
+    }
+</script>
+{% endblock %}

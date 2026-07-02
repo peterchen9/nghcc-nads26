@@ -1,0 +1,1390 @@
+{% extends "base.html" %}
+
+{% block title %}Eureka! 找人 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<!-- Include Bootstrap Icons and Leaflet CSS locally for Eureka layout compatibility -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+    /* Dark Theme Workspace wrapper matching screenshot aesthetics */
+    .eureka-workspace-wrapper {
+        background-color: #0d1527;
+        color: #f8fafc;
+        padding: 24px;
+        border-radius: 16px;
+        min-height: 85vh;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    /* Layout structure */
+    .eureka-layout {
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        gap: 24px;
+    }
+
+    @media (max-width: 992px) {
+        .eureka-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Search panel card styling */
+    .search-panel-card {
+        background-color: #131c2e;
+        border: 1px solid #223049;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+        height: fit-content;
+    }
+
+    .search-title {
+        color: #f8fafc;
+        font-size: 1.15rem;
+        font-weight: 700;
+    }
+
+    /* Compact Search Items */
+    .search-item {
+        margin-bottom: 10px;
+    }
+    
+    .search-item-label {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        margin-bottom: 3px;
+        display: block;
+        font-weight: 600;
+    }
+    
+    .search-item-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    
+    .search-select-op {
+        background-color: #1e293b;
+        color: #f8fafc;
+        border: 1px solid #334155;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        padding: 6px 8px;
+        width: 76px;
+        height: 34px;
+        outline: none;
+        cursor: pointer;
+        text-align-last: center;
+    }
+
+    .search-select-op option {
+        background-color: #1e293b;
+        color: #f8fafc;
+    }
+    
+    .search-input-wrapper {
+        position: relative;
+        flex-grow: 1;
+        display: flex;
+        align-items: center;
+    }
+    
+    .search-input {
+        background-color: #1e293b;
+        color: #f8fafc !important;
+        border: 1px solid #334155 !important;
+        border-radius: 6px !important;
+        font-size: 0.88rem !important;
+        padding: 6px 30px 6px 12px !important;
+        width: 100%;
+        height: 34px;
+        outline: none;
+        box-shadow: none !important;
+    }
+
+    .search-input::placeholder {
+        color: #475569;
+    }
+    
+    .search-input:focus, .search-select-op:focus {
+        border-color: #38bdf8 !important;
+    }
+    
+    .search-clear-btn {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #64748b;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        font-size: 0.85rem;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.2s;
+    }
+    
+    .search-clear-btn:hover {
+        color: #f8fafc;
+    }
+
+    /* Results list */
+    .results-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .results-count-title {
+        color: #f8fafc;
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin-bottom: 16px;
+    }
+
+    .member-card {
+        background-color: #131c2e;
+        border: 1px solid #223049;
+        border-radius: 10px;
+        padding: 12px 16px;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        position: relative;
+    }
+
+    .member-card:hover {
+        border-color: #38bdf8;
+        box-shadow: 0 4px 20px rgba(56, 189, 248, 0.15);
+    }
+
+    .member-photo {
+        width: 75px;
+        height: 95px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 1px solid #334155;
+        background-color: #1e293b;
+        flex-shrink: 0;
+    }
+
+    .member-details-container {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+    }
+
+    .member-title-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 2px;
+    }
+
+    .member-name-link {
+        font-weight: 700;
+        font-size: 1.15rem;
+        color: #f8fafc;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .member-name-link:hover {
+        color: #38bdf8;
+        text-decoration: underline;
+    }
+
+    .badge-section {
+        background-color: #166534;
+        color: #bbf7d0;
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
+
+    .member-id-text {
+        font-size: 0.88rem;
+        color: #64748b;
+    }
+
+    .info-row {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        font-size: 0.88rem;
+        color: #cbd5e1;
+        flex-wrap: wrap;
+        margin-top: 1px;
+    }
+
+    .info-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+    }
+
+    .info-item i {
+        color: #94a3b8;
+        font-size: 0.95rem;
+    }
+
+    .family-links a {
+        color: #38bdf8;
+        text-decoration: none;
+        margin-right: 8px;
+        font-weight: 500;
+    }
+
+    .family-links a:hover {
+        color: #7dd3fc;
+        text-decoration: underline;
+    }
+
+    .empty-state {
+        background-color: #131c2e;
+        border: 2px dashed #334155;
+        border-radius: 12px;
+        padding: 48px;
+        text-align: center;
+        color: #94a3b8;
+    }
+
+    .btn-submit {
+        background-color: #38bdf8;
+        color: #0f172a;
+        font-weight: 700;
+        border: none;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+
+    .btn-submit:hover {
+        background-color: #7dd3fc;
+        color: #0f172a;
+        transform: translateY(-1px);
+    }
+
+    .btn-clear {
+        background-color: #1e293b;
+        color: #94a3b8;
+        border: 1px solid #334155;
+        font-weight: 600;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+
+    .btn-clear:hover {
+        background-color: #334155;
+        color: #ffffff;
+    }
+
+    /* Modal Backdrop Overlay */
+    .eureka-modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(13, 21, 39, 0.85);
+        backdrop-filter: blur(4px);
+        z-index: 1050;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Modal Container matching screenshot exactly */
+    .eureka-modal-container {
+        background-color: #131c2e;
+        border: 1px solid #223049;
+        border-radius: 12px;
+        width: 900px;
+        max-width: 95vw;
+        max-height: 95vh;
+        overflow-y: auto;
+        position: relative;
+        padding: 24px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Close Button */
+    .eureka-modal-close {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        color: #94a3b8;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: color 0.2s;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1060;
+    }
+
+    .eureka-modal-close:hover {
+        color: #ffffff;
+    }
+
+    /* Modal Two Columns Grid Layout (Vanilla CSS Grid to avoid Bootstrap dependency) */
+    .modal-two-columns {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+    }
+
+    @media (max-width: 768px) {
+        .modal-two-columns {
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+    }
+
+    /* Header info layout next to photo */
+    .modal-header-flex {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+        margin-bottom: 12px;
+    }
+
+    .modal-member-photo-large {
+        width: 150px;
+        height: 185px;
+        object-fit: cover;
+        border: 2px solid #1e293b;
+        border-radius: 8px;
+        background-color: #1e293b;
+        flex-shrink: 0;
+    }
+
+    .modal-profile-meta-new {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .modal-profile-name-new {
+        font-size: 1.8rem;
+        font-weight: 800;
+        margin: 0;
+        color: #ffffff;
+        letter-spacing: -0.5px;
+    }
+
+    .modal-profile-sub-new {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.9rem;
+    }
+
+    .modal-badge-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .badge-gender {
+        background-color: #1e3a8a;
+        color: #93c5fd;
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
+
+    .badge-marital {
+        background-color: #312e81;
+        color: #c7d2fe;
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 4px;
+    }
+
+    .badge-section-green {
+        background-color: #14532d;
+        color: #bbf7d0;
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 2px 10px;
+        border-radius: 4px;
+    }
+
+    .badge-group-purple {
+        background-color: #4c1d95;
+        color: #ddd6fe;
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 2px 10px;
+        border-radius: 4px;
+    }
+
+    /* Non-card section titles */
+    .modal-section-title-new {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #38bdf8;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .modal-section-new {
+        padding: 4px 0;
+    }
+
+    .modal-data-row {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+    }
+
+    .modal-data-label {
+        font-weight: 600;
+        width: 100px;
+        flex-shrink: 0;
+        color: #94a3b8;
+    }
+
+    .modal-data-val {
+        color: #f8fafc;
+        word-break: break-all;
+    }
+
+    /* Family Avatars Row */
+    .modal-family-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 4px;
+    }
+
+    .modal-family-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 56px;
+        text-decoration: none;
+    }
+
+    .modal-family-avatar {
+        width: 46px;
+        height: 46px;
+        object-fit: cover;
+        border-radius: 50%;
+        border: 2px solid #334155;
+        transition: transform 0.2s;
+    }
+
+    .modal-family-item:hover .modal-family-avatar {
+        transform: scale(1.1);
+        border-color: #38bdf8;
+    }
+
+    .modal-family-name {
+        font-size: 0.75rem;
+        color: #cbd5e1;
+        margin-top: 4px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+        width: 100%;
+        text-align: center;
+    }
+
+    /* Map on the right */
+    #modal-map {
+        height: 280px;
+        width: 100%;
+        border: 1px solid #223049;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        z-index: 1;
+    }
+
+    /* Custom Leaflet Map Pin */
+    .triangle-marker {
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-top: 16px solid #ef4444;
+        position: relative;
+    }
+    
+    .triangle-marker::after {
+        content: '';
+        width: 5px;
+        height: 5px;
+        background: #ffffff;
+        border-radius: 50%;
+        position: absolute;
+        top: -12px;
+        left: -2.5px;
+    }
+
+    /* Attendance blocks */
+    .modal-attendance-blocks {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 3px;
+        padding: 4px 0;
+        margin-bottom: 12px;
+        align-items: center;
+    }
+
+    .modal-att-square {
+        display: inline-block;
+        width: 9px;
+        height: 12px;
+        border-radius: 1px;
+    }
+
+    .modal-att-square.attended {
+        background-color: #22c55e;
+    }
+
+    .modal-att-square.absent {
+        background-color: #334155;
+    }
+
+    .modal-att-square.spacer {
+        width: 6px;
+        background-color: transparent;
+    }
+
+    /* Annual Chart */
+    .modal-chart-container {
+        display: flex;
+        align-items: flex-end;
+        justify-content: flex-start;
+        gap: 8px;
+        height: 110px;
+        border-bottom: 1px solid #223049;
+        padding-bottom: 6px;
+        margin-top: 12px;
+    }
+
+    .modal-chart-column {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 0 0 auto;
+        height: 100%;
+        justify-content: flex-end;
+    }
+
+    .modal-chart-bar-wrapper {
+        width: 28px;
+        height: 75px;
+        display: flex;
+        align-items: flex-end;
+        background-color: #1e293b;
+        border-radius: 2px;
+        overflow: hidden;
+    }
+
+    .modal-chart-bar {
+        width: 100%;
+        transition: height 0.6s ease;
+    }
+
+    .modal-chart-bar.low {
+        background-color: #eab308;
+    }
+
+    .modal-chart-bar.high {
+        background-color: #22c55e;
+    }
+
+    .modal-chart-label-year {
+        font-size: 0.72rem;
+        color: #94a3b8;
+        margin-top: 4px;
+    }
+
+    .modal-chart-label-percent {
+        font-size: 0.72rem;
+        color: #cbd5e1;
+    }
+
+    /* Action buttons */
+    .modal-action-buttons {
+        display: flex;
+        gap: 16px;
+        margin-top: 16px;
+    }
+
+    .modal-btn-action {
+        background-color: #1e293b;
+        color: #cbd5e1;
+        border: 1px solid #334155;
+        font-weight: 600;
+        padding: 8px 22px;
+        font-size: 0.88rem;
+        border-radius: 6px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+
+    .modal-btn-action:hover {
+        background-color: #334155;
+        color: #ffffff;
+    }
+
+    .modal-btn-action-primary {
+        background-color: #0284c7;
+        color: #ffffff;
+        border: none;
+    }
+
+    .modal-btn-action-primary:hover {
+        background-color: #0369a1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="eureka-workspace-wrapper">
+    <div class="eureka-layout">
+        <!-- Sidebar search criteria -->
+        <div class="search-panel-card">
+            <h5 class="search-title mb-3 d-flex align-items-center">
+                <i class="bi bi-search me-2 text-info"></i>搜尋條件
+            </h5>
+            
+            <form method="get" action="{% url 'eureka:eureka' %}">
+                <!-- 1. 姓名 -->
+                <div class="search-item">
+                    <span class="search-item-label">姓名</span>
+                    <div class="search-item-row">
+                        <select name="l_name" class="search-select-op">
+                            <option value="A" {% if request.GET.l_name == 'A' or not request.GET.l_name %}selected{% endif %}>AND</option>
+                            <option value="O" {% if request.GET.l_name == 'O' %}selected{% endif %}>OR</option>
+                            <option value="X" {% if request.GET.l_name == 'X' %}selected{% endif %}>NOT</option>
+                        </select>
+                        <div class="search-input-wrapper">
+                            <input type="text" name="val_name" class="search-input" 
+                                   placeholder="輸入姓名..." value="{{ request.GET.val_name|default:'' }}">
+                            <button type="button" class="search-clear-btn"><i class="bi bi-x-lg"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. 姓名2(或) -->
+                <div class="search-item">
+                    <span class="search-item-label">姓名2(或)</span>
+                    <div class="search-item-row">
+                        <select name="l_name2" class="search-select-op">
+                            <option value="A" {% if request.GET.l_name2 == 'A' %}selected{% endif %}>AND</option>
+                            <option value="O" {% if request.GET.l_name2 == 'O' or not request.GET.l_name2 %}selected{% endif %}>OR</option>
+                            <option value="X" {% if request.GET.l_name2 == 'X' %}selected{% endif %}>NOT</option>
+                        </select>
+                        <div class="search-input-wrapper">
+                            <input type="text" name="val_name2" class="search-input" 
+                                   placeholder="輸入姓名(或)..." value="{{ request.GET.val_name2|default:'' }}">
+                            <button type="button" class="search-clear-btn"><i class="bi bi-x-lg"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. 手機 -->
+                <div class="search-item">
+                    <span class="search-item-label">手機</span>
+                    <div class="search-item-row">
+                        <select name="l_mobile1" class="search-select-op">
+                            <option value="A" {% if request.GET.l_mobile1 == 'A' or not request.GET.l_mobile1 %}selected{% endif %}>AND</option>
+                            <option value="O" {% if request.GET.l_mobile1 == 'O' %}selected{% endif %}>OR</option>
+                            <option value="X" {% if request.GET.l_mobile1 == 'X' %}selected{% endif %}>NOT</option>
+                        </select>
+                        <div class="search-input-wrapper">
+                            <input type="text" name="val_mobile1" class="search-input" 
+                                   placeholder="輸入電話號碼..." value="{{ request.GET.val_mobile1|default:'' }}">
+                            <button type="button" class="search-clear-btn"><i class="bi bi-x-lg"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. 車號 -->
+                <div class="search-item">
+                    <span class="search-item-label">車號</span>
+                    <div class="search-item-row">
+                        <select name="l_car_number" class="search-select-op">
+                            <option value="A" {% if request.GET.l_car_number == 'A' or not request.GET.l_car_number %}selected{% endif %}>AND</option>
+                            <option value="O" {% if request.GET.l_car_number == 'O' %}selected{% endif %}>OR</option>
+                            <option value="X" {% if request.GET.l_car_number == 'X' %}selected{% endif %}>NOT</option>
+                        </select>
+                        <div class="search-input-wrapper">
+                            <input type="text" name="val_car_number" class="search-input" 
+                                   placeholder="輸入車牌號碼..." value="{{ request.GET.val_car_number|default:'' }}">
+                            <button type="button" class="search-clear-btn"><i class="bi bi-x-lg"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. 牧區 -->
+                <div class="search-item">
+                    <span class="search-item-label">牧區</span>
+                    <div class="search-item-row">
+                        <select name="l_section" class="search-select-op">
+                            <option value="A" {% if request.GET.l_section == 'A' or not request.GET.l_section %}selected{% endif %}>AND</option>
+                            <option value="O" {% if request.GET.l_section == 'O' %}selected{% endif %}>OR</option>
+                            <option value="X" {% if request.GET.l_section == 'X' %}selected{% endif %}>NOT</option>
+                        </select>
+                        <div class="search-input-wrapper">
+                            <select name="val_section" class="search-input" style="cursor: pointer; padding-right: 28px;">
+                                <option value="全部分區" {% if request.GET.val_section == '全部分區' or not request.GET.val_section %}selected{% endif %}>全部牧區</option>
+                                {% for sec in sections %}
+                                    <option value="{{ sec }}" {% if request.GET.val_section == sec %}selected{% endif %}>{{ sec }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="button" class="search-clear-btn"><i class="bi bi-x-lg"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. 住址 -->
+                <div class="search-item">
+                    <span class="search-item-label">住址</span>
+                    <div class="search-item-row">
+                        <select name="l_address" class="search-select-op">
+                            <option value="A" {% if request.GET.l_address == 'A' or not request.GET.l_address %}selected{% endif %}>AND</option>
+                            <option value="O" {% if request.GET.l_address == 'O' %}selected{% endif %}>OR</option>
+                            <option value="X" {% if request.GET.l_address == 'X' %}selected{% endif %}>NOT</option>
+                        </select>
+                        <div class="search-input-wrapper">
+                            <input type="text" name="val_address" class="search-input" 
+                                   placeholder="輸入通訊地址..." value="{{ request.GET.val_address|default:'' }}">
+                            <button type="button" class="search-clear-btn"><i class="bi bi-x-lg"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. 備註 -->
+                <div class="search-item">
+                    <span class="search-item-label">備註</span>
+                    <div class="search-item-row">
+                        <select name="l_note" class="search-select-op">
+                            <option value="A" {% if request.GET.l_note == 'A' or not request.GET.l_note %}selected{% endif %}>AND</option>
+                            <option value="O" {% if request.GET.l_note == 'O' %}selected{% endif %}>OR</option>
+                            <option value="X" {% if request.GET.l_note == 'X' %}selected{% endif %}>NOT</option>
+                        </select>
+                        <div class="search-input-wrapper">
+                            <input type="text" name="val_note" class="search-input" 
+                                   placeholder="輸入備註資料..." value="{{ request.GET.val_note|default:'' }}">
+                            <button type="button" class="search-clear-btn"><i class="bi bi-x-lg"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-2 mt-3">
+                    <div class="col-6">
+                        <button type="submit" class="btn btn-submit btn-sm w-100 py-2">
+                            <i class="bi bi-search me-1"></i>搜尋
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <a href="{% url 'eureka:eureka' %}" class="btn btn-clear btn-sm w-100 py-2 text-center text-decoration-none d-block">
+                            清除
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Search results area -->
+        <div>
+            {% if results is not None %}
+                <h6 class="results-count-title">搜尋結果：共 {{ results|length }} 筆</h6>
+                
+                {% if results %}
+                    <div class="results-container">
+                        {% for r_m in results %}
+                        <div class="member-card">
+                            <!-- Photo -->
+                            <a href="{% url 'eureka:eureka-melos' r_m.church_id %}?{{ query_params.urlencode }}">
+                                <img src="{% url 'eureka:eureka-photo' r_m.church_id %}.jpg"
+                                     onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'85\' height=\'85\' viewBox=\'0 0 85 85\'%3E%3Crect width=\'85\' height=\'85\' fill=\'%231e293b\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'sans-serif\' font-size=\'12\' fill=\'%2364748b\'%3E無照片%3C/text%3E%3C/svg%3E';"
+                                     class="member-photo" alt="{{ r_m.name }}">
+                            </a>
+                            
+                            <!-- Information Details Container -->
+                            <div class="member-details-container">
+                                <!-- Row 1: Name, Section, ID -->
+                                <div class="member-title-row">
+                                    <a href="{% url 'eureka:eureka-melos' r_m.church_id %}?{{ query_params.urlencode }}" class="member-name-link">
+                                        {{ r_m.name }}
+                                    </a>
+                                    {% if r_m.section %}
+                                        <span class="badge-section">{{ r_m.section }}</span>
+                                    {% endif %}
+                                    <span class="member-id-text">#{{ r_m.church_id }}</span>
+                                </div>
+                                
+                                <!-- Row 2: Phone & Email -->
+                                <div class="info-row">
+                                    {% if r_m.mobile1 or r_m.email1 %}
+                                        {% if r_m.mobile1 %}
+                                        <div class="info-item">
+                                            <i class="bi bi-telephone"></i>
+                                            <span>{{ r_m.mobile1 }}</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if r_m.email1 %}
+                                        <div class="info-item">
+                                            <i class="bi bi-envelope"></i>
+                                            <span>{{ r_m.email1 }}</span>
+                                        </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="info-item text-muted small">無電話與信箱資料</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Row 3: Address -->
+                                <div class="info-row">
+                                    <div class="info-item">
+                                        <i class="bi bi-geo-alt"></i>
+                                        <span>{{ r_m.address|default:'無地址資料' }}</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Row 4: Family Members -->
+                                <div class="info-row">
+                                    <div class="info-item">
+                                        <i class="bi bi-people"></i>
+                                        <span class="family-links">
+                                            {% if r_m.family_list %}
+                                                {% for f_m in r_m.family_list %}
+                                                    <a href="{% url 'eureka:eureka-melos' f_m.church_id %}?{{ query_params.urlencode }}">
+                                                        {{ f_m.name }}
+                                                    </a>
+                                                {% endfor %}
+                                            {% else %}
+                                                <span class="text-muted">無家族成員</span>
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Row 5: Attendance rate summary -->
+                                <div class="info-row">
+                                    <div class="info-item">
+                                        <i class="bi bi-calendar-check"></i>
+                                        <span>出席狀況：{{ r_m.att_percent_display }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <i class="bi bi-exclamation-circle fs-2 text-secondary mb-2 d-block"></i>
+                        <span class="fw-bold">找不到符合條件的人員</span>
+                        <p class="small text-muted mt-1 mb-0">請嘗試更換其他搜尋關鍵字或條件。</p>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="empty-state" style="padding: 100px 48px;">
+                    <i class="bi bi-search fs-1 text-info mb-3 d-block"></i>
+                    <h5 class="fw-bold text-white">開始搜尋人員</h5>
+                    <p class="small text-muted mt-1 mb-0">請於左側輸入想要搜尋的欄位條件，然後點擊「搜尋」。</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Details Modal Overlay matching old website's exact layout style -->
+{% if show_modal %}
+<div class="eureka-modal-backdrop" id="eurekaDetailModal">
+    <div class="eureka-modal-container">
+        <!-- Close Button -->
+        <a href="/eureka/{% if query_params_url %}?{{ query_params_url }}{% endif %}" class="eureka-modal-close" id="modalCloseBtn">
+            <i class="bi bi-x-lg"></i>
+        </a>
+        
+        <div class="modal-two-columns">
+            <!-- Left Column: Member Photo, Header, Contact Info, Personal Info, Family -->
+            <div>
+                <!-- Photo and Header Details side-by-side -->
+                <div class="modal-header-flex">
+                    <img src="{% url 'eureka:eureka-photo' m.church_id %}.jpg"
+                         onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'185\' viewBox=\'0 0 150 185\'%3E%3Crect width=\'150\' height=\'185\' fill=\'%231e293b\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'sans-serif\' font-size=\'16\' fill=\'%2364748b\'%3E無照片%3C/text%3E%3C/svg%3E';"
+                         class="modal-member-photo-large" alt="{{ m.name }}">
+                    <div class="modal-profile-meta-new">
+                        <h2 class="modal-profile-name-new">{{ m.name }}</h2>
+                        <div class="modal-profile-sub-new">
+                            <span style="color: #64748b;">#{{ m.church_id }}</span>
+                            {% if m.gender %}
+                                <span class="badge-gender">{{ m.gender }}</span>
+                            {% endif %}
+                            {% if m.marital %}
+                                <span class="badge-marital">{{ m.marital }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="modal-badge-group">
+                            {% if m.section %}
+                                <span class="badge-section-green">{{ m.section }}</span>
+                            {% endif %}
+                            {% if m.family1 %}
+                                <span class="badge-group-purple">{{ m.family1 }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <hr style="border-top: 1px solid #223049; margin: 12px 0;">
+
+                <!-- 聯絡資訊 -->
+                <div class="modal-section-new">
+                    <h5 class="modal-section-title-new">
+                        <i class="bi bi-telephone text-info"></i>聯絡資訊
+                    </h5>
+                    <div class="modal-data-row">
+                        <span class="modal-data-label">手機</span>
+                        <span class="modal-data-val">{{ m.mobile1|default:"-" }}</span>
+                    </div>
+                    <div class="modal-data-row">
+                        <span class="modal-data-label">家電</span>
+                        <span class="modal-data-val">{{ m.mobile2|default:"-" }}</span>
+                    </div>
+                    <div class="modal-data-row">
+                        <span class="modal-data-label">email1</span>
+                        <span class="modal-data-val">{{ m.email1|default:"-" }}</span>
+                    </div>
+                    <div class="modal-data-row">
+                        <span class="modal-data-label">地址</span>
+                        <span class="modal-data-val" id="member_address">{{ m.address|default:"-" }}</span>
+                    </div>
+                </div>
+                
+                <hr style="border-top: 1px solid #223049; margin: 12px 0;">
+
+                <!-- 個人資訊 -->
+                <div class="modal-section-new">
+                    <h5 class="modal-section-title-new">
+                        <i class="bi bi-person text-info"></i>個人資訊
+                    </h5>
+                    <div class="modal-data-row">
+                        <span class="modal-data-label">生日</span>
+                        <span class="modal-data-val">{{ m.birthday|date:"Y-m-d"|default:"-" }}</span>
+                    </div>
+                    <div class="modal-data-row">
+                        <span class="modal-data-label">受洗</span>
+                        <span class="modal-data-val">{% if m.baptized == '是' or m.baptized == 'y' or m.baptized == '已受洗' %}足{% else %}{{ m.baptized|default:"-" }}{% endif %}</span>
+                    </div>
+                    <div class="modal-data-row">
+                        <span class="modal-data-label">加入日期</span>
+                        <span class="modal-data-val">{{ m.join_date|date:"Y-m-d"|default:"-" }}</span>
+                    </div>
+                    <div class="modal-data-row">
+                        <span class="modal-data-label">首次打卡</span>
+                        <span class="modal-data-val">{{ first_checkin|default:"-" }}</span>
+                    </div>
+                    <div class="modal-data-row align-items-start">
+                        <span class="modal-data-label">備註</span>
+                        <span class="modal-data-val" style="white-space: pre-line;">{{ m.note|default:"-" }}</span>
+                    </div>
+                </div>
+                
+                <hr style="border-top: 1px solid #223049; margin: 12px 0;">
+
+                <!-- 家人 -->
+                <div class="modal-section-new">
+                    <h5 class="modal-section-title-new">
+                        <i class="bi bi-people text-info"></i>家人
+                    </h5>
+                    <div class="modal-family-row">
+                        {% if family %}
+                            {% for member in family %}
+                            <a href="{% url 'eureka:eureka-melos' member.church_id %}{% if query_params_url %}?{{ query_params_url }}{% endif %}"
+                               class="modal-family-item">
+                                <img src="{% url 'eureka:eureka-photo' member.church_id %}.jpg"
+                                     onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'46\' height=\'46\' viewBox=\'0 0 46 46\'%3E%3Crect width=\'46\' height=\'46\' fill=\'%231e293b\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'sans-serif\' font-size=\'14\' fill=\'%2364748b\'%3E?%3C/text%3E%3C/svg%3E';"
+                                     class="modal-family-avatar" alt="{{ member.name }}">
+                                <div class="modal-family-name">{{ member.name }}</div>
+                            </a>
+                            {% endfor %}
+                        {% else %}
+                            <span class="small text-muted py-1 w-100">查無其他家族成員資料。</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column: Map and Attendance -->
+            <div>
+                <!-- 地圖 -->
+                <div class="modal-section-new">
+                    <h5 class="modal-section-title-new">地圖</h5>
+                    <div id="modal-map"></div>
+                </div>
+                
+                <hr style="border-top: 1px solid #223049; margin: 12px 0;">
+
+                <!-- 出席狀態 -->
+                <div class="modal-section-new">
+                    <h5 class="modal-section-title-new">
+                        <i class="bi bi-calendar-check text-info"></i>出席狀態
+                    </h5>
+                    
+                    <!-- Attendance Blocks -->
+                    <div class="modal-attendance-blocks">
+                        {% if m.data_str %}
+                            {% for char in m.data_str %}
+                                {% if char == '|' %}
+                                    <span class="modal-att-square attended" title="出席"></span>
+                                {% elif char == '_' %}
+                                    <span class="modal-att-square absent" title="缺席"></span>
+                                {% elif char == ' ' %}
+                                    <span class="modal-att-square spacer"></span>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <span class="small text-muted py-1">無出席歷史紀錄。</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Annual Attendance Bar Chart -->
+                    {% if yearly_attendance %}
+                        <div class="modal-chart-container">
+                            {% for item in yearly_attendance %}
+                            <div class="modal-chart-column">
+                                <div class="modal-chart-bar-wrapper">
+                                    <div class="modal-chart-bar {% if item.rate >= 70 %}high{% else %}low{% endif %}" 
+                                         style="height: {{ item.rate }}%;"></div>
+                                </div>
+                                <span class="modal-chart-label-year">{{ item.year }}</span>
+                                <span class="modal-chart-label-percent">{{ item.rate }}%</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bottom Action Buttons -->
+        <div class="modal-action-buttons">
+            <button onclick="copyTextInfo()" class="modal-btn-action">
+                <i class="bi bi-clipboard"></i> 複製文字資訊
+            </button>
+            <button onclick="downloadCard()" class="modal-btn-action modal-btn-action-primary">
+                <i class="bi bi-download"></i> 下載圖文小卡
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<!-- Leaflet Map JS script -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+    // Toggle Search Inputs clear button dynamically
+    document.querySelectorAll('.search-input').forEach(input => {
+        const wrapper = input.closest('.search-input-wrapper');
+        const clearBtn = wrapper.querySelector('.search-clear-btn');
+        
+        if (clearBtn) {
+            // Initial toggle
+            if (input.value && input.value !== '全部分區') {
+                clearBtn.style.display = 'flex';
+            }
+            
+            // Listen to input (or change for select)
+            const eventName = input.tagName === 'SELECT' ? 'change' : 'input';
+            input.addEventListener(eventName, function() {
+                if (this.value && this.value !== '全部分區') {
+                    clearBtn.style.display = 'flex';
+                } else {
+                    clearBtn.style.display = 'none';
+                }
+            });
+            
+            // Clear click
+            clearBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (input.tagName === 'SELECT') {
+                    input.value = '全部分區';
+                } else {
+                    input.value = '';
+                }
+                clearBtn.style.display = 'none';
+                input.focus();
+            });
+        }
+    });
+
+    // Close Modal on ESC key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const closeBtn = document.getElementById('modalCloseBtn');
+            if (closeBtn) {
+                closeBtn.click();
+            }
+        }
+    });
+
+    // Close Modal when clicking backdrop
+    const modalBackdrop = document.getElementById('eurekaDetailModal');
+    if (modalBackdrop) {
+        modalBackdrop.addEventListener('click', function(e) {
+            if (e.target === modalBackdrop) {
+                const closeBtn = document.getElementById('modalCloseBtn');
+                if (closeBtn) {
+                    closeBtn.click();
+                }
+            }
+        });
+    }
+
+    {% if show_modal %}
+    // Copy Text Information Function
+    function copyTextInfo() {
+        var noteRaw = `{{ m.note|default:"" }}`;
+        var cleanNote = noteRaw.replace(/\\n/g, '\n').trim();
+        
+        var text = `姓名：{{ m.name }} (#{{ m.church_id }})\n`;
+        text += `牧區：{{ m.section|default:"-" }} ({{ m.family1|default:"-" }})\n`;
+        text += `手機：{{ m.mobile1|default:"-" }}\n`;
+        text += `Email：{{ m.email1|default:"-" }}\n`;
+        text += `地址：{{ m.address|default:"-" }}\n\n`;
+        text += `生日：{{ m.birthday|date:"Y-m-d"|default:"-" }}\n`;
+        text += `受洗：{% if m.baptized == '是' or m.baptized == 'y' or m.baptized == '已受洗' %}足{% else %}{{ m.baptized|default:"-" }}{% endif %}\n`;
+        text += `加入日期：{{ m.join_date|date:"Y-m-d"|default:"-" }}\n`;
+        text += `首次打卡：{{ first_checkin|default:"-" }}\n`;
+        text += `備註：${cleanNote || '-'}\n`;
+        
+        navigator.clipboard.writeText(text).then(function() {
+            alert('複製成功！');
+        }, function(err) {
+            console.error('Copy failed: ', err);
+            // Fallback for older browsers
+            var textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            alert('複製成功！');
+        });
+    }
+
+    // Download Card Function utilizing Canvas
+    function downloadCard() {
+        var canvas = document.createElement('canvas');
+        canvas.width = 600;
+        canvas.height = 420;
+        var ctx = canvas.getContext('2d');
+        
+        // 1. Draw rich dark gradient background
+        var grad = ctx.createLinearGradient(0, 0, 600, 420);
+        grad.addColorStop(0, '#131c2e');
+        grad.addColorStop(1, '#0d1527');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 600, 420);
+        
+        // Draw thin accent border
+        ctx.strokeStyle = '#223049';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(2, 2, 596, 416);
+        
+        // 2. Load and draw member photo
+        var img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function() {
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(30, 40, 130, 162, 8);
+            ctx.clip();
+            ctx.drawImage(img, 30, 40, 130, 162);
+            ctx.restore();
+            
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(30, 40, 130, 162, 8);
+            ctx.stroke();
+            
+            drawTextDetails();
+        };
+        img.onerror = function() {
+            ctx.fillStyle = '#1e293b';
+            ctx.beginPath();
+            ctx.roundRect(30, 40, 130, 162, 8);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.fillStyle = '#64748b';
+            ctx.font = '16px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('無照片', 95, 126);
+            ctx.textAlign = 'left';
+            
+            drawTextDetails();
+        };
+        img.src = "{% url 'eureka:eureka-photo' m.church_id %}.jpg";
+        
+        function drawTextDetails() {
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 28px sans-serif';
+            ctx.fillText('{{ m.name }}', 190, 72);
+            
+            ctx.fillStyle = '#64748b';
+            ctx.font = 'bold 16px sans-serif';
+            ctx.fillText('#{{ m.church_id }}  {{ m.gender|default:"" }}', 190, 102);
+            
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = 'bold 15px sans-serif';
+            ctx.fillText('{{ m.section|default:"-" }} / {{ m.family1|default:"-" }}', 190, 132);
+            
+            ctx.strokeStyle = '#223049';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(190, 150);
+            ctx.lineTo(570, 150);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '14px sans-serif';
+            ctx.fillText('手機：', 190, 182);
+            ctx.fillText('Email：', 190, 212);
+            ctx.fillText('地址：', 190, 242);
+            
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillText('{{ m.mobile1|default:"-" }}', 250, 182);
+            ctx.fillText('{{ m.email1|default:"-" }}', 250, 212);
+            var addr = '{{ m.address|default:"-" }}';
+            if (addr.length > 22) {
+                ctx.fillText(addr.substring(0, 22), 250, 242);
+                ctx.fillText(addr.substring(22), 250, 262);
+            } else {
+                ctx.fillText(addr, 250, 242);
+            }
+            
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillText('生日：', 30, 310);
+            ctx.fillText('受洗：', 30, 340);
+            ctx.fillText('加入日期：', 30, 370);
+            
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillText('{{ m.birthday|date:"Y-m-d"|default:"-" }}', 110, 310);
+            ctx.fillText('{% if m.baptized == '是' or m.baptized == 'y' or m.baptized == '已受洗' %}足{% else %}{{ m.baptized|default:"-" }}{% endif %}', 110, 340);
+            ctx.fillText('{{ m.join_date|date:"Y-m-d"|default:"-" }}', 110, 370);
+            
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillText('首次打卡：', 310, 310);
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillText('{{ first_checkin|default:"-" }}', 390, 310);
+            
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillText('備註：', 310, 340);
+            
+            ctx.fillStyle = '#cbd5e1';
+            var noteRaw = `{{ m.note|default:"" }}`;
+            var cleanNote = noteRaw.replace(/\\n/g, ' ').replace(/\n/g, ' ').trim() || '-';
+            if (cleanNote.length > 18) {
+                ctx.fillText(cleanNote.substring(0, 18), 390, 340);
+                ctx.fillText(cleanNote.substring(18, 36), 390, 360);
+            } else {
+                ctx.fillText(cleanNote, 390, 340);
+            }
+            
+            var link = document.createElement('a');
+            link.download = 'member_card_{{ m.church_id }}.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+    }
+
+    // Leaflet Geocoding Map Initialization
+    document.addEventListener('DOMContentLoaded', function () {
+        var addr = document.getElementById('member_address').innerText;
+        var map = L.map('modal-map').setView([24.806, 120.968], 16);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+
+        if (addr && addr.trim() !== "" && addr.trim() !== "-") {
+            function tryGeocode(addressList, index) {
+                if (index >= addressList.length) {
+                    console.log("Geocoding failed for address list levels.");
+                    return;
+                }
+
+                var currentAddr = addressList[index];
+                fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(currentAddr))
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data && data.length > 0) {
+                            var pos = [data[0].lat, data[0].lon];
+                            map.setView(pos, 17);
+
+                            var customIcon = L.divIcon({
+                                className: 'custom-div-icon',
+                                html: "<div class='triangle-marker'></div>",
+                                iconSize: [24, 24],
+                                iconAnchor: [8, 16]
+                            });
+
+                            L.marker(pos, { icon: customIcon })
+                                .addTo(map)
+                                .bindPopup("<b>{{ m.name }}</b><br>" + addr +
+                                    (index > 0 ? "<br><small class='text-muted'>(標示路段中心點)</small>" : ""))
+                                .openPopup();
+                        } else {
+                            tryGeocode(addressList, index + 1);
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Geocoding Error:', err);
+                        tryGeocode(addressList, index + 1);
+                    });
+            }
+
+            var cleanAddr = addr.split(/[0-9]+[Ff樓]/)[0];
+            var roadOnly = cleanAddr.split(/[0-9]+[號]/)[0];
+
+            var searchLevels = [cleanAddr];
+            if (roadOnly !== cleanAddr) searchLevels.push(roadOnly);
+
+            tryGeocode(searchLevels, 0);
+        }
+        
+        // Fix Leaflet map sizing issue in hidden containers/modal
+        setTimeout(function(){ map.invalidateSize() }, 200);
+    });
+    {% endif %}
+</script>
+{% endblock %}
