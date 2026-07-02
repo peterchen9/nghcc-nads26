@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block title %}編輯預算項目 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .edit-wrap { max-width: 980px; display: flex; flex-direction: column; gap: 16px; }
+    .edit-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 18px; }
+    .edit-grid { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 12px; }
+    .edit-field { display: flex; flex-direction: column; gap: 6px; }
+    .edit-field label { color: var(--text-secondary); font-size: 0.82rem; }
+    .edit-input, .edit-textarea { box-sizing: border-box; width: 100%; border-radius: 7px; border: 1px solid rgba(255,255,255,0.12); background: rgba(15,23,42,0.35); color: var(--text-primary); padding: 9px 10px; font-family: inherit; font-size: 0.92rem; }
+    .edit-textarea { min-height: 110px; resize: vertical; }
+    .edit-actions { display: flex; gap: 8px; align-items: center; margin-top: 16px; }
+    .edit-btn { border: 0; border-radius: 7px; padding: 9px 13px; font-weight: 700; cursor: pointer; text-decoration: none; color: #17324d; background: var(--accent-color); font-family: inherit; }
+    .edit-btn.secondary { background: rgba(255,255,255,0.12); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.12); }
+    .edit-btn.danger { background: rgba(248,113,113,0.18); color: #fecaca; border: 1px solid rgba(248,113,113,0.35); }
+    @media (max-width: 760px) { .edit-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edit-wrap">
+    <div>
+        <h2>編輯預算項目</h2>
+        <p style="color: var(--text-secondary); margin-top: -8px;">{{ item.budget_code }} {{ item.ministry }}</p>
+    </div>
+    <div class="edit-card">
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="page" value="{{ request.GET.page|default:'1' }}">
+            <div class="edit-grid">
+                {% for field, label in fields %}
+                <div class="edit-field">
+                    <label for="id_{{ field }}">{{ label }}</label>
+                    {% if field == 'annual_goal' %}
+                    <textarea class="edit-textarea" id="id_{{ field }}" name="{{ field }}">{{ item.annual_goal }}</textarea>
+                    {% elif field == 'strategy_plan' %}
+                    <textarea class="edit-textarea" id="id_{{ field }}" name="{{ field }}">{{ item.strategy_plan }}</textarea>
+                    {% elif field == 'activity_budget' %}
+                    <textarea class="edit-textarea" id="id_{{ field }}" name="{{ field }}">{{ item.activity_budget }}</textarea>
+                    {% elif field == 'budget_2026' %}
+                    <input class="edit-input" id="id_{{ field }}" name="{{ field }}" type="number" step="0.01" value="{{ item.budget_2026|default_if_none:'' }}">
+                    {% elif field == 'category' %}
+                    <input class="edit-input" id="id_{{ field }}" name="{{ field }}" type="text" value="{{ item.category }}">
+                    {% elif field == 'budget_code' %}
+                    <input class="edit-input" id="id_{{ field }}" name="{{ field }}" type="text" value="{{ item.budget_code }}">
+                    {% elif field == 'ministry' %}
+                    <input class="edit-input" id="id_{{ field }}" name="{{ field }}" type="text" value="{{ item.ministry }}">
+                    {% elif field == 'lead_pastor' %}
+                    <input class="edit-input" id="id_{{ field }}" name="{{ field }}" type="text" value="{{ item.lead_pastor }}">
+                    {% elif field == 'accounting_subject' %}
+                    <input class="edit-input" id="id_{{ field }}" name="{{ field }}" type="text" value="{{ item.accounting_subject }}">
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <div class="edit-actions">
+                <button class="edit-btn" type="submit">儲存</button>
+                <a class="edit-btn secondary" href="{% url 'budget-list' %}?page={{ request.GET.page|default:'1' }}">返回</a>
+            </div>
+        </form>
+    </div>
+    <form method="post" action="{% url 'budget-delete' item.id %}" onsubmit="return confirm('確定刪除此預算項目？');">
+        {% csrf_token %}
+        <button class="edit-btn danger" type="submit">刪除</button>
+    </form>
+</div>
+{% endblock %}

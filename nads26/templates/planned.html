@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}功能規劃中 - {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .planned-page {
+        min-height: calc(100vh - 150px);
+        display: grid;
+        place-items: center;
+    }
+    .planned-message {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: clamp(1.4rem, 2.5vw, 2.2rem);
+        font-weight: 700;
+        letter-spacing: 0;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="planned-page">
+    <p class="planned-message">功能規劃中....</p>
+</div>
+{% endblock %}

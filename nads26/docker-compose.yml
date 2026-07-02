@@ -1,0 +1,28 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: nads26db
+    environment:
+      MYSQL_ROOT_PASSWORD: xara5463
+      MYSQL_DATABASE: nads26db
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: xara5463
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+    ports:
+      - "33069:3306"
+    restart: always
+
+  web:
+    build: .
+    container_name: nads26-web
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "26001:8000"
+    depends_on:
+      - db
+    env_file:
+      - .env
+    restart: always

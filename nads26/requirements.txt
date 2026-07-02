@@ -1,0 +1,15 @@
+Django>=5.0
+djangorestframework
+djangorestframework-simplejwt
+django-cors-headers
+mysqlclient
+requests
+pymysql
+openpyxl
+python-barcode==0.16.1
+django-ckeditor
+yt-dlp
+Pillow>=10.0.0
+paramiko
+
+reportlab

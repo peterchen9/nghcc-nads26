@@ -1,0 +1,1065 @@
+{% extends "base.html" %}
+
+{% block title %}使用者管理 - NADS 26{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Glassmorphism theme elements */
+    .user-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+    }
+    
+    .btn {
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+        font-size: 0.95rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .btn-primary {
+        background: var(--accent-color);
+        color: var(--sidebar-bg);
+    }
+    
+    .btn-primary:hover {
+        background: #d0e7ff;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(188, 220, 255, 0.3);
+    }
+    
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.15);
+    }
+    
+    .btn-danger {
+        background: #ef4444;
+        color: #fff;
+    }
+    
+    .btn-danger:hover {
+        background: #f87171;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);
+    }
+
+    .search-input {
+        width: 100%;
+        max-width: 320px;
+        padding: 12px 18px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: #fff;
+        font-size: 0.95rem;
+        transition: all 0.3s;
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: var(--accent-color);
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 0 15px rgba(188, 220, 255, 0.15);
+    }
+
+    /* Table styling */
+    .user-table {
+        width: 100%;
+        border-collapse: collapse;
+        color: var(--text-primary);
+        margin-top: 15px;
+    }
+
+    .user-table th {
+        padding: 16px 20px;
+        text-align: left;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+        color: var(--text-secondary);
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .user-table td {
+        padding: 16px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        font-size: 0.95rem;
+        vertical-align: middle;
+    }
+
+    .user-table tbody tr {
+        transition: background 0.2s;
+    }
+
+    .user-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Badges */
+    .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .badge-active {
+        background: rgba(34, 197, 94, 0.15);
+        color: #4ade80;
+        border: 1px solid rgba(74, 222, 128, 0.2);
+    }
+
+    .badge-inactive {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+        border: 1px solid rgba(248, 113, 113, 0.2);
+    }
+
+    /* Action buttons in table */
+    .action-btn {
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        text-decoration: none;
+        transition: all 0.2s;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border: none;
+        background: transparent;
+        font-weight: 500;
+    }
+
+    .action-btn-edit {
+        color: var(--accent-color);
+        background: rgba(188, 220, 255, 0.1);
+    }
+    .action-btn-edit:hover {
+        background: rgba(188, 220, 255, 0.25);
+        transform: translateY(-1px);
+    }
+
+    .action-btn-perm {
+        color: #34d399;
+        background: rgba(52, 211, 153, 0.1);
+    }
+    .action-btn-perm:hover {
+        background: rgba(52, 211, 153, 0.25);
+        transform: translateY(-1px);
+    }
+
+    .action-btn-delete {
+        color: #f87171;
+        background: rgba(248, 113, 113, 0.1);
+    }
+    .action-btn-delete:hover {
+        background: rgba(248, 113, 113, 0.25);
+        transform: translateY(-1px);
+    }
+
+    /* Modals styling */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(8px);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.25s ease;
+    }
+
+    .modal.open {
+        display: flex;
+        opacity: 1;
+    }
+
+    .modal-content {
+        background: rgba(43, 62, 85, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        border-radius: 20px;
+        width: 90%;
+        max-width: 580px;
+        padding: 35px;
+        color: #fff;
+        transform: scale(0.9);
+        transition: transform 0.25s ease;
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+
+    .modal.open .modal-content {
+        transform: scale(1);
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding-bottom: 15px;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.5rem;
+        color: #fff;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .modal-close:hover {
+        color: #fff;
+    }
+
+    /* Forms styling in modal */
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 12px 15px;
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #fff;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+        box-sizing: border-box;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--accent-color);
+        background: rgba(0, 0, 0, 0.3);
+        box-shadow: 0 0 10px rgba(188, 220, 255, 0.2);
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+
+    .form-check {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        font-size: 0.95rem;
+        user-select: none;
+    }
+
+    .form-check input {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--accent-color);
+        cursor: pointer;
+    }
+
+    /* Permission list styling */
+    .perm-tree {
+        max-height: 440px;
+        overflow-y: auto;
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.25);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .perm-group {
+        margin-bottom: 10px;
+        background: rgba(255, 255, 255, 0.01);
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .perm-group-title {
+        font-weight: bold;
+        font-size: 0.9rem;
+        color: var(--accent-color);
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        padding-bottom: 4px;
+    }
+
+    .perm-group-title input {
+        accent-color: var(--accent-color);
+        width: 14px;
+        height: 14px;
+        cursor: pointer;
+    }
+
+    .perm-children {
+        padding-left: 18px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px 12px;
+    }
+
+    .perm-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .perm-item input {
+        accent-color: #34d399;
+        width: 14px;
+        height: 14px;
+        cursor: pointer;
+    }
+
+    /* Toast Notification styles */
+    #toastContainer {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 1100;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .toast {
+        background: rgba(43, 62, 85, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #fff;
+        padding: 15px 25px;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+        transform: translateY(50px);
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 250px;
+    }
+
+    .toast.show {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    .toast-success {
+        border-left: 4px solid #34d399;
+    }
+
+    .toast-error {
+        border-left: 4px solid #f87171;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="user-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px;">
+        <h2>使用者管理</h2>
+        <button class="btn btn-primary" id="btnOpenCreateModal" onclick="openCreateModal()">
+            <span>➕</span> 新增使用者
+        </button>
+    </div>
+
+    <!-- Search filtration bar -->
+    <div style="margin-bottom: 25px;">
+        <input type="text" id="userSearchInput" placeholder="搜尋帳號、姓名、部門或角色..." class="search-input">
+    </div>
+
+    <!-- Table -->
+    <div style="overflow-x: auto;">
+        <table class="user-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>帳號</th>
+                    <th>顯示名稱</th>
+                    <th>部門</th>
+                    <th>角色</th>
+                    <th>Email</th>
+                    <th>狀態</th>
+                    <th>加入日期</th>
+                    <th style="text-align: center;">操作</th>
+                </tr>
+            </thead>
+            <tbody id="userTableBody">
+                {% for u in users %}
+                <tr id="user-row-{{ u.id }}">
+                    <td>{{ u.id }}</td>
+                    <td style="font-weight: 600;">{{ u.username }}</td>
+                    <td>{{ u.profile.display_name|default:"-" }}</td>
+                    <td>{{ u.profile.department|default:"-" }}</td>
+                    <td>{{ u.profile.role|default:"-" }}</td>
+                    <td>{{ u.email|default:"-" }}</td>
+                    <td>
+                        {% if u.is_active %}
+                            <span class="badge badge-active">啟用</span>
+                        {% else %}
+                            <span class="badge badge-inactive">停用</span>
+                        {% endif %}
+                    </td>
+                    <td style="color: var(--text-secondary);">{{ u.date_joined|date:"Y-m-d" }}</td>
+                    <td style="text-align: center; white-space: nowrap;">
+                        <button class="action-btn action-btn-edit" 
+                                data-id="{{ u.id }}"
+                                data-username="{{ u.username }}"
+                                data-display-name="{{ u.profile.display_name }}"
+                                data-email="{{ u.email }}"
+                                data-department="{{ u.profile.department }}"
+                                data-role="{{ u.profile.role }}"
+                                data-is-active="{{ u.is_active|yesno:'true,false' }}"
+                                onclick="openEditModal(this)">
+                            <span>✏️</span> 編輯
+                        </button>
+                        
+                        <button class="action-btn action-btn-perm" 
+                                data-id="{{ u.id }}"
+                                data-display-name="{{ u.profile.display_name|default:u.username }}"
+                                data-allowed-ids="[{% for item in u.profile.allowed_menu_items.all %}{{ item.id }}{% if not forloop.last %},{% endif %}{% endfor %}]"
+                                onclick="openPermModal(this)">
+                            <span>🔑</span> 權限
+                        </button>
+                        
+                        <button class="action-btn action-btn-delete" 
+                                data-id="{{ u.id }}"
+                                data-username="{{ u.username }}"
+                                {% if u.id == request.user.id %}disabled style="opacity: 0.5; cursor: not-allowed;"{% endif %}
+                                onclick="openDeleteModal(this)">
+                            <span>🗑️</span> 刪除
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ==================== CREATE USER MODAL ==================== -->
+<div class="modal" id="createModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>新增使用者</h3>
+            <button class="modal-close" onclick="closeModal('createModal')">×</button>
+        </div>
+        <form id="createForm" onsubmit="submitCreate(event)">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="create_username">使用者帳號 (必填)</label>
+                    <input type="text" id="create_username" required class="form-control" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="create_password">密碼 (必填)</label>
+                    <input type="password" id="create_password" required class="form-control" autocomplete="new-password">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="create_display_name">顯示名稱 (中文姓名)</label>
+                    <input type="text" id="create_display_name" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="create_email">電子信箱</label>
+                    <input type="email" id="create_email" class="form-control">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="create_department">部門</label>
+                    <input type="text" id="create_department" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="create_role">角色</label>
+                    <input type="text" id="create_role" class="form-control">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 10px;">
+                <label class="form-check">
+                    <input type="checkbox" id="create_is_active" checked>
+                    <span>啟用此帳號</span>
+                </label>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 30px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 20px;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createModal')">取消</button>
+                <button type="submit" class="btn btn-primary">確認新增</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ==================== EDIT USER MODAL ==================== -->
+<div class="modal" id="editModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>編輯使用者</h3>
+            <button class="modal-close" onclick="closeModal('editModal')">×</button>
+        </div>
+        <form id="editForm" onsubmit="submitEdit(event)">
+            <input type="hidden" id="edit_user_id">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="edit_username">使用者帳號</label>
+                    <input type="text" id="edit_username" required class="form-control" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="edit_password">變更密碼 (留空代表不修改)</label>
+                    <input type="password" id="edit_password" class="form-control" placeholder="******" autocomplete="new-password">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="edit_display_name">顯示名稱 (中文姓名)</label>
+                    <input type="text" id="edit_display_name" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="edit_email">電子信箱</label>
+                    <input type="email" id="edit_email" class="form-control">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="edit_department">部門</label>
+                    <input type="text" id="edit_department" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="edit_role">角色</label>
+                    <input type="text" id="edit_role" class="form-control">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 10px;">
+                <label class="form-check">
+                    <input type="checkbox" id="edit_is_active">
+                    <span>啟用此帳號</span>
+                </label>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 30px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 20px;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editModal')">取消</button>
+                <button type="submit" class="btn btn-primary">儲存修改</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ==================== PERMISSIONS MODAL ==================== -->
+<div class="modal" id="permModal">
+    <div class="modal-content" style="max-width: 650px; padding: 25px 30px;">
+        <div class="modal-header" style="margin-bottom: 15px; padding-bottom: 10px;">
+            <h3>設定 App 使用權限</h3>
+            <button class="modal-close" onclick="closeModal('permModal')">×</button>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <p style="margin: 0; font-size: 0.92rem; color: var(--text-secondary);">
+                正在設定使用者 <strong id="permUserTitle" style="color: var(--accent-color);"></strong> 的功能存取權限。
+            </p>
+            <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="selectAllPerms(true)">全選</button>
+                <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="selectAllPerms(false)">全不選</button>
+            </div>
+        </div>
+        
+        <div class="perm-tree" id="permTreeContainer">
+            <div style="text-align: center; padding: 30px; color: var(--text-secondary);">載入中...</div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 15px;">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('permModal')">取消</button>
+            <button type="button" class="btn btn-primary" onclick="submitPermissions()">儲存權限</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== CONFIRM DELETE MODAL ==================== -->
+<div class="modal" id="deleteModal">
+    <div class="modal-content" style="max-width: 450px;">
+        <div class="modal-header" style="border-bottom: none; margin-bottom: 15px;">
+            <h3>確認刪除使用者</h3>
+            <button class="modal-close" onclick="closeModal('deleteModal')">×</button>
+        </div>
+        <div style="margin-bottom: 25px;">
+            <p style="margin: 0; line-height: 1.6; color: var(--text-secondary);">
+                您確定要刪除使用者帳號 <strong id="deleteUserTitle" style="color: #f87171;"></strong> 嗎？<br>
+                此動作將永久移除此使用者，且無法復原。
+            </p>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 12px;">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('deleteModal')">取消</button>
+            <button type="button" class="btn btn-danger" onclick="submitDelete()">確認刪除</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notifications -->
+<div id="toastContainer"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Client-side search filtration
+    document.getElementById('userSearchInput').addEventListener('input', (e) => {
+        const term = e.target.value.trim().toLowerCase();
+        const rows = document.querySelectorAll('#userTableBody tr');
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            if (text.includes(term)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+
+    // Toast utility
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        
+        const icon = type === 'success' ? '✅' : '❌';
+        toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+        container.appendChild(toast);
+        
+        // Force reflow and show
+        setTimeout(() => toast.classList.add('show'), 10);
+        
+        // Remove toast after 3 seconds
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // Modal helpers
+    function openModal(id) {
+        const m = document.getElementById(id);
+        m.style.display = 'flex';
+        setTimeout(() => m.classList.add('open'), 10);
+    }
+
+    function closeModal(id) {
+        const m = document.getElementById(id);
+        m.classList.remove('open');
+        setTimeout(() => {
+            m.style.display = 'none';
+        }, 250);
+    }
+
+    // Modal click outside to close
+    window.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal')) {
+            closeModal(e.target.id);
+        }
+    });
+
+    // CRUD: Create user
+    function openCreateModal() {
+        document.getElementById('createForm').reset();
+        openModal('createModal');
+    }
+
+    function submitCreate(e) {
+        e.preventDefault();
+        
+        const username = document.getElementById('create_username').value;
+        const password = document.getElementById('create_password').value;
+        const display_name = document.getElementById('create_display_name').value;
+        const email = document.getElementById('create_email').value;
+        const department = document.getElementById('create_department').value;
+        const role = document.getElementById('create_role').value;
+        const is_active = document.getElementById('create_is_active').checked;
+
+        fetch('/users/create/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username, password, display_name, email, department, role, is_active
+            })
+        })
+        .then(async res => {
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || '新增失敗');
+            }
+            return data;
+        })
+        .then(data => {
+            showToast('使用者新增成功！', 'success');
+            closeModal('createModal');
+            // Reload page after a delay to show toast
+            setTimeout(() => location.reload(), 1000);
+        })
+        .catch(err => {
+            showToast(err.message, 'error');
+        });
+    }
+
+    // CRUD: Edit user
+    function openEditModal(btn) {
+        const id = btn.getAttribute('data-id');
+        const username = btn.getAttribute('data-username');
+        const displayName = btn.getAttribute('data-display-name');
+        const email = btn.getAttribute('data-email');
+        const department = btn.getAttribute('data-department');
+        const role = btn.getAttribute('data-role');
+        const isActive = btn.getAttribute('data-is-active') === 'true';
+
+        document.getElementById('editForm').reset();
+        document.getElementById('edit_user_id').value = id;
+        document.getElementById('edit_username').value = username;
+        document.getElementById('edit_display_name').value = displayName;
+        document.getElementById('edit_email').value = email;
+        document.getElementById('edit_department').value = department;
+        document.getElementById('edit_role').value = role;
+        document.getElementById('edit_is_active').checked = isActive;
+        
+        openModal('editModal');
+    }
+
+    function submitEdit(e) {
+        e.preventDefault();
+        
+        const id = document.getElementById('edit_user_id').value;
+        const username = document.getElementById('edit_username').value;
+        const password = document.getElementById('edit_password').value;
+        const display_name = document.getElementById('edit_display_name').value;
+        const email = document.getElementById('edit_email').value;
+        const department = document.getElementById('edit_department').value;
+        const role = document.getElementById('edit_role').value;
+        const is_active = document.getElementById('edit_is_active').checked;
+
+        fetch(`/users/${id}/`, {
+            method: 'POST', // Django backend supports POST/PUT for update
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username, password, display_name, email, department, role, is_active
+            })
+        })
+        .then(async res => {
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || '更新失敗');
+            }
+            return data;
+        })
+        .then(data => {
+            showToast('使用者更新成功！', 'success');
+            closeModal('editModal');
+            setTimeout(() => location.reload(), 1000);
+        })
+        .catch(err => {
+            showToast(err.message, 'error');
+        });
+    }
+
+    // CRUD: Delete user
+    let deleteUserId = null;
+
+    function openDeleteModal(btn) {
+        deleteUserId = btn.getAttribute('data-id');
+        document.getElementById('deleteUserTitle').textContent = btn.getAttribute('data-username');
+        openModal('deleteModal');
+    }
+
+    function submitDelete() {
+        if (!deleteUserId) return;
+        
+        fetch(`/users/${deleteUserId}/delete/`, {
+            method: 'POST', // POST delete is cleaner for general browser AJAX
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(async res => {
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || '刪除失敗');
+            }
+            return data;
+        })
+        .then(data => {
+            showToast('使用者刪除成功！', 'success');
+            closeModal('deleteModal');
+            setTimeout(() => location.reload(), 1000);
+        })
+        .catch(err => {
+            showToast(err.message, 'error');
+        });
+    }
+
+    // CRUD: Permissions management
+    let permUserId = null;
+    let cachedRoutes = null;
+
+    function openPermModal(btn) {
+        permUserId = btn.getAttribute('data-id');
+        document.getElementById('permUserTitle').textContent = btn.getAttribute('data-display-name');
+        
+        // Get allowed IDs from button attribute
+        const allowedIds = JSON.parse(btn.getAttribute('data-allowed-ids') || '[]');
+        
+        openModal('permModal');
+        
+        if (cachedRoutes) {
+            renderRoutes(cachedRoutes, allowedIds);
+        } else {
+            document.getElementById('permTreeContainer').innerHTML = '<div style="text-align: center; padding: 30px; color: var(--text-secondary);">載入中...</div>';
+            
+            fetch('/users/routes/')
+            .then(res => res.json())
+            .then(routes => {
+                cachedRoutes = routes;
+                renderRoutes(routes, allowedIds);
+            })
+            .catch(err => {
+                document.getElementById('permTreeContainer').innerHTML = '<div style="text-align: center; padding: 30px; color: #f87171;">無法載入選單項目。</div>';
+                showToast('載入選單失敗', 'error');
+            });
+        }
+    }
+
+    function selectAllPerms(checked) {
+        const container = document.getElementById('permTreeContainer');
+        const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = checked);
+    }
+
+    function renderRoutes(routes, allowedIds) {
+        const container = document.getElementById('permTreeContainer');
+        container.innerHTML = '';
+        
+        const groups = [];
+        const standalones = [];
+        
+        routes.forEach(item => {
+            if (item.children && item.children.length > 0) {
+                groups.push(item);
+            } else {
+                standalones.push(item);
+            }
+        });
+        
+        // 1. Render groups first
+        groups.forEach(item => {
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'perm-group';
+            
+            const titleDiv = document.createElement('div');
+            titleDiv.className = 'perm-group-title';
+            
+            const groupCheck = document.createElement('input');
+            groupCheck.type = 'checkbox';
+            groupCheck.id = `perm-item-${item.id}`;
+            groupCheck.value = item.id;
+            groupCheck.checked = allowedIds.includes(item.id);
+            
+            const titleLabel = document.createElement('label');
+            titleLabel.htmlFor = `perm-item-${item.id}`;
+            titleLabel.style.cursor = 'pointer';
+            titleLabel.textContent = item.title;
+            
+            titleDiv.appendChild(groupCheck);
+            titleDiv.appendChild(titleLabel);
+            groupDiv.appendChild(titleDiv);
+            
+            const childrenDiv = document.createElement('div');
+            childrenDiv.className = 'perm-children';
+            
+            item.children.forEach(child => {
+                const label = document.createElement('label');
+                label.className = 'perm-item';
+                
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.id = `perm-item-${child.id}`;
+                cb.value = child.id;
+                cb.checked = allowedIds.includes(child.id);
+                
+                cb.addEventListener('change', () => {
+                    if (cb.checked) {
+                        groupCheck.checked = true;
+                    }
+                });
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = child.title;
+                nameSpan.title = child.title;
+                
+                label.appendChild(cb);
+                label.appendChild(nameSpan);
+                childrenDiv.appendChild(label);
+            });
+            
+            groupCheck.addEventListener('change', (e) => {
+                const childChecks = childrenDiv.querySelectorAll('input[type="checkbox"]');
+                childChecks.forEach(cb => cb.checked = e.target.checked);
+            });
+            
+            const anyChildChecked = item.children.some(c => allowedIds.includes(c.id));
+            if (anyChildChecked) {
+                groupCheck.checked = true;
+            }
+            
+            groupDiv.appendChild(childrenDiv);
+            container.appendChild(groupDiv);
+        });
+        
+        // 2. Render all standalones in a single compact 3-column group
+        if (standalones.length > 0) {
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'perm-group';
+            
+            const titleDiv = document.createElement('div');
+            titleDiv.className = 'perm-group-title';
+            
+            const groupCheck = document.createElement('input');
+            groupCheck.type = 'checkbox';
+            groupCheck.id = 'perm-group-standalones';
+            
+            const titleLabel = document.createElement('label');
+            titleLabel.htmlFor = 'perm-group-standalones';
+            titleLabel.style.cursor = 'pointer';
+            titleLabel.textContent = "獨立功能 / 其他 App";
+            
+            titleDiv.appendChild(groupCheck);
+            titleDiv.appendChild(titleLabel);
+            groupDiv.appendChild(titleDiv);
+            
+            const childrenDiv = document.createElement('div');
+            childrenDiv.className = 'perm-children';
+            
+            standalones.forEach(item => {
+                const label = document.createElement('label');
+                label.className = 'perm-item';
+                
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.id = `perm-item-${item.id}`;
+                cb.value = item.id;
+                cb.checked = allowedIds.includes(item.id);
+                
+                cb.addEventListener('change', () => {
+                    if (cb.checked) {
+                        groupCheck.checked = true;
+                    }
+                });
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = item.title;
+                nameSpan.title = item.title;
+                
+                label.appendChild(cb);
+                label.appendChild(nameSpan);
+                childrenDiv.appendChild(label);
+            });
+            
+            groupCheck.addEventListener('change', (e) => {
+                const childChecks = childrenDiv.querySelectorAll('input[type="checkbox"]');
+                childChecks.forEach(cb => cb.checked = e.target.checked);
+            });
+            
+            const anyChildChecked = standalones.some(c => allowedIds.includes(c.id));
+            if (anyChildChecked) {
+                groupCheck.checked = true;
+            }
+            
+            groupDiv.appendChild(childrenDiv);
+            container.appendChild(groupDiv);
+        }
+    }
+
+    function submitPermissions() {
+        if (!permUserId) return;
+        
+        // Find all checked checkbox values
+        const container = document.getElementById('permTreeContainer');
+        const checkboxes = container.querySelectorAll('input[type="checkbox"]:checked');
+        const menuIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+        
+        fetch(`/users/${permUserId}/permissions/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ menu_ids: menuIds })
+        })
+        .then(async res => {
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || '設定失敗');
+            }
+            return data;
+        })
+        .then(data => {
+            showToast('功能權限更新成功！', 'success');
+            closeModal('permModal');
+            setTimeout(() => location.reload(), 1000);
+        })
+        .catch(err => {
+            showToast(err.message, 'error');
+        });
+    }
+</script>
+{% endblock %}

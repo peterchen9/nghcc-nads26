@@ -1,0 +1,390 @@
+{% extends "base.html" %}
+
+{% block title %}行事曆 - {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .church-calendar-page {
+        display: grid;
+        gap: 14px;
+        min-width: 0;
+    }
+    .calendar-toolbar,
+    .calendar-panel {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        box-sizing: border-box;
+    }
+    .calendar-toolbar {
+        position: sticky;
+        top: 70px;
+        z-index: 80;
+        padding: 14px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
+        display: grid;
+        gap: 12px;
+    }
+    .calendar-toolbar-main {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+    .calendar-toolbar h2,
+    .calendar-panel h3 {
+        margin: 0;
+    }
+    .calendar-toolbar h2 {
+        font-size: 1.35rem;
+    }
+    .muted {
+        color: var(--text-secondary);
+        font-size: 0.88rem;
+    }
+    .month-tabs {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 2px;
+    }
+    .month-tab,
+    .btn {
+        border: 1px solid rgba(188,220,255,0.35);
+        background: rgba(188,220,255,0.12);
+        color: var(--accent-color);
+        border-radius: 6px;
+        padding: 8px 11px;
+        text-decoration: none;
+        cursor: pointer;
+        font: inherit;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 36px;
+        white-space: nowrap;
+    }
+    .month-tab.active,
+    .btn.primary {
+        background: var(--accent-color);
+        color: var(--sidebar-bg);
+        font-weight: 800;
+    }
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: minmax(420px, 1fr) minmax(320px, 0.9fr);
+        gap: 14px;
+        align-items: start;
+        min-width: 0;
+    }
+    .calendar-panel {
+        padding: 14px;
+        min-width: 0;
+        overflow: hidden;
+    }
+    .panel-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    .messages {
+        display: grid;
+        gap: 8px;
+    }
+    .message {
+        border-radius: 6px;
+        padding: 10px 12px;
+        background: rgba(188,220,255,0.12);
+        color: var(--accent-color);
+    }
+    .message.warning {
+        background: rgba(250,204,21,0.1);
+        color: #fde68a;
+    }
+    .church-calendar-table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: separate;
+        border-spacing: 0;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 8px;
+        background: rgba(8, 13, 20, 0.18);
+    }
+    .church-calendar-table th,
+    .church-calendar-table td {
+        border-right: 1px solid rgba(255,255,255,0.08);
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        vertical-align: top;
+    }
+    .church-calendar-table th:last-child,
+    .church-calendar-table td:last-child {
+        border-right: 0;
+    }
+    .church-calendar-table tr:last-child td {
+        border-bottom: 0;
+    }
+    .church-calendar-table th {
+        color: var(--accent-color);
+        background: rgba(38, 56, 77, 0.94);
+        padding: 8px 4px;
+        font-size: 0.84rem;
+    }
+    .day-cell {
+        height: 88px;
+        padding: 6px;
+        background: rgba(255,255,255,0.025);
+    }
+    .day-cell.out-month {
+        opacity: 0.38;
+        background: rgba(255,255,255,0.012);
+    }
+    .day-number {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        margin-bottom: 6px;
+        font-weight: 800;
+        line-height: 1;
+    }
+    .event-count {
+        display: none;
+        min-width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        place-items: center;
+        background: #fde68a;
+        color: #102033;
+        font-size: 0.72rem;
+        font-weight: 900;
+    }
+    .day-cell.has-events .event-count {
+        display: grid;
+    }
+    .day-summary {
+        color: var(--text-secondary);
+        font-size: 0.78rem;
+        line-height: 1.35;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        white-space: pre-line;
+    }
+    .event-list {
+        display: grid;
+        gap: 9px;
+        align-content: start;
+        max-height: calc(100vh - 220px);
+        overflow: auto;
+        padding-right: 2px;
+    }
+    .event-row {
+        border: 1px solid rgba(255,255,255,0.09);
+        border-radius: 6px;
+        background: rgba(8, 13, 20, 0.18);
+        padding: 10px;
+        display: grid;
+        gap: 8px;
+    }
+    .event-date {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .event-date strong {
+        color: var(--text-primary);
+    }
+    .event-fields {
+        display: grid;
+        gap: 7px;
+    }
+    .event-field {
+        display: grid;
+        gap: 2px;
+    }
+    .event-field-label {
+        color: var(--accent-color);
+        font-size: 0.78rem;
+        font-weight: 800;
+    }
+    .event-text {
+        color: var(--text-secondary);
+        font-size: 0.86rem;
+        line-height: 1.5;
+    }
+    .empty-state {
+        color: var(--text-secondary);
+        border: 1px dashed rgba(255,255,255,0.16);
+        border-radius: 6px;
+        padding: 12px;
+    }
+    @media (max-width: 980px) {
+        .calendar-grid {
+            grid-template-columns: 1fr;
+        }
+        .event-list {
+            max-height: none;
+        }
+    }
+    @media (max-width: 620px) {
+        .day-cell {
+            height: 74px;
+            padding: 5px;
+        }
+        .day-summary {
+            -webkit-line-clamp: 2;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="church-calendar-page">
+    <section class="calendar-toolbar">
+        <div class="calendar-toolbar-main">
+            <div>
+                <h2>行事曆</h2>
+                <div class="muted">{{ selected_month|date:'Y年n月' }}，來自 Google Sheet「2026行事曆」</div>
+            </div>
+            <a class="btn primary" href="?month={{ selected_month|date:'Y-m' }}&refresh=1">重新匯入</a>
+        </div>
+        <nav class="month-tabs" aria-label="月份">
+            {% for month in month_options %}
+                <a class="month-tab {% if month.value == selected_month|date:'Y-m' %}active{% endif %}" href="?month={{ month.value }}">{{ month.label }}</a>
+            {% endfor %}
+        </nav>
+    </section>
+
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="message {{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="calendar-grid">
+        <section class="calendar-panel">
+            <div class="panel-head">
+                <h3>{{ selected_month|date:'Y年n月' }}</h3>
+                <span class="muted">月曆摘要</span>
+            </div>
+            <table class="church-calendar-table">
+                <thead>
+                    <tr>
+                        <th>日</th>
+                        <th>一</th>
+                        <th>二</th>
+                        <th>三</th>
+                        <th>四</th>
+                        <th>五</th>
+                        <th>六</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for week in calendar_weeks %}
+                        <tr>
+                            {% for day in week %}
+                                <td class="day-cell {% if not day.in_month %}out-month{% endif %}" data-date="{{ day.iso }}">
+                                    <div class="day-number">
+                                        <span>{{ day.day }}</span>
+                                        <span class="event-count"></span>
+                                    </div>
+                                    <div class="day-summary"></div>
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <section class="calendar-panel">
+            <div class="panel-head">
+                <h3>當月行程</h3>
+                <span class="muted">{{ church_calendar_entries|length }} 筆</span>
+            </div>
+            <div class="event-list">
+                {% if church_calendar_entries %}
+                    {% for event in church_calendar_entries %}
+                        <article class="event-row">
+                            <div class="event-date">
+                                <strong>{{ event.event_date }}（{{ event.weekday }}）</strong>
+                            </div>
+                            <div class="event-fields">
+                                {% if event.church_activity %}
+                                    <div class="event-field">
+                                        <span class="event-field-label">教會活動</span>
+                                        <span class="event-text">{{ event.church_activity|linebreaksbr }}</span>
+                                    </div>
+                                {% endif %}
+                                {% if event.work_plan %}
+                                    <div class="event-field">
+                                        <span class="event-field-label">工作計畫</span>
+                                        <span class="event-text">{{ event.work_plan|linebreaksbr }}</span>
+                                    </div>
+                                {% endif %}
+                                {% if event.staff_leave_note %}
+                                    <div class="event-field">
+                                        <span class="event-field-label">同工休假</span>
+                                        <span class="event-text">{{ event.staff_leave_note|linebreaksbr }}</span>
+                                    </div>
+                                {% endif %}
+                                {% if event.holiday_social %}
+                                    <div class="event-field">
+                                        <span class="event-field-label">假期&社會活動</span>
+                                        <span class="event-text">{{ event.holiday_social|linebreaksbr }}</span>
+                                    </div>
+                                {% endif %}
+                                {% if event.note %}
+                                    <div class="event-field">
+                                        <span class="event-field-label">備註</span>
+                                        <span class="event-text">{{ event.note|linebreaksbr }}</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </article>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">本月沒有行事曆資料。</div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(() => {
+    const entries = JSON.parse('{{ church_calendar_entries_json|escapejs }}');
+
+    function entrySummary(entry) {
+        return [
+            entry.church_activity,
+            entry.work_plan,
+            entry.staff_leave_note,
+            entry.holiday_social,
+            entry.note,
+        ].filter(Boolean).join('\n');
+    }
+
+    document.querySelectorAll('.day-cell[data-date]').forEach((cell) => {
+        const events = entries.filter((entry) => entry.event_date === cell.dataset.date);
+        if (!events.length) return;
+
+        cell.classList.add('has-events');
+        cell.querySelector('.event-count').textContent = events.length;
+        cell.querySelector('.day-summary').textContent = events.map(entrySummary).join('\n');
+    });
+})();
+</script>
+{% endblock %}

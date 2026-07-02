@@ -1,0 +1,7 @@
+mysql_data/
+media/
+db.sqlite3
+__pycache__/
+*.pyc
+.git/
+.env

@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ site_name }}{% endblock %}</title>
+    
+    <!-- PWA & Mobile Add-to-Home-Screen Configuration -->
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/images/apple-touch-icon.png">
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    <link rel="shortcut icon" href="/static/images/favicon.png">
+    <meta name="theme-color" content="#2f4156">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="北門行政平台">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #2f4156;
+            --sidebar-bg: #2b3e55;
+            --accent-color: #bcdcff;
+            --text-primary: #ffffff;
+            --text-secondary: #cbd5e1;
+            --sidebar-width: 280px;
+            --transition-speed: 0.3s;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--sidebar-bg);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 4px 0 15px rgba(0, 0, 0, 0.2);
+            transition: transform var(--transition-speed);
+            z-index: 100;
+        }
+
+        .sidebar nav {
+            flex-grow: 1;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        .sidebar-header {
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .sidebar-header h1 {
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        .nav-menu {
+            flex-grow: 1;
+            padding: 5px 5px 40px 5px !important;
+            list-style: none;
+            margin: 0;
+        }
+
+        .nav-item {
+            margin-bottom: 0px !important;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 6px 12px !important;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            font-weight: 400;
+            gap: 8px;
+            font-size: 0.92rem !important;
+            position: relative;
+        }
+
+        .nav-link .arrow {
+            font-size: 0.7rem;
+            width: 12px;
+            transition: transform 0.2s;
+            opacity: 0.5;
+            display: inline-block;
+        }
+
+        .nav-item.open > .nav-link .arrow {
+            transform: rotate(90deg);
+        }
+
+        /* Sub-menu styling */
+        .sub-menu {
+            list-style: none;
+            padding-left: 28px;
+            margin: 0;
+            display: none;
+        }
+
+        .nav-item.open .sub-menu {
+            display: block;
+        }
+
+        .sub-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 12px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.88rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .sub-link:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+            color: var(--accent-color);
+        }
+
+        .sub-link.active {
+            background-color: rgba(188, 220, 255, 0.1);
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        .sub-link .sub-icon {
+            font-size: 0.8rem;
+            width: 16px;
+            text-align: center;
+            opacity: 0.7;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--accent-color);
+        }
+
+        .sidebar-logo {
+            width: 120px;
+            height: auto;
+            margin-bottom: 10px;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--accent-color);
+            transform: translateX(5px);
+        }
+
+        .nav-link.active {
+            background-color: rgba(188, 220, 255, 0.1);
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        /* Main Content Styling */
+        .main-wrapper {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        header.top-bar {
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            background-color: rgba(47, 65, 86, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 90;
+        }
+
+        .content-area {
+            padding: 40px;
+            flex-grow: 1;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2rem;
+            margin-top: 0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Mobile Toggle Button */
+        .menu-toggle-btn {
+            display: none;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            align-items: center;
+            justify-content: center;
+            outline: none;
+        }
+
+        .menu-toggle-btn:hover, .menu-toggle-btn:focus {
+            background-color: rgba(255, 255, 255, 0.12);
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .menu-toggle-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Sidebar Close Button */
+        .sidebar-close-btn {
+            display: none;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-secondary);
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            align-items: center;
+            justify-content: center;
+            z-index: 101;
+        }
+
+        .sidebar-close-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: rotate(90deg);
+        }
+
+        /* Sidebar Overlay */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 99;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--transition-speed) ease;
+        }
+
+        .sidebar-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Responsive */
+        @media (min-width: 1025px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                width: var(--sidebar-width);
+                height: 100vh;
+                overflow-y: auto;
+                z-index: 100;
+            }
+            .main-wrapper {
+                margin-left: var(--sidebar-width);
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                position: fixed;
+                height: 100vh;
+                transform: translateX(-100%);
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .menu-toggle-btn {
+                display: flex;
+            }
+            .sidebar-close-btn {
+                display: flex;
+            }
+            header.top-bar {
+                padding: 0 20px;
+            }
+            .content-area {
+                padding: 20px;
+            }
+        }
+
+        /* Quick Links Dashboard Grid */
+        .quick-links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .quick-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 24px;
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 12px;
+        }
+
+        .quick-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent-color);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .quick-card .icon {
+            font-size: 2.5rem;
+        }
+
+        .quick-card .title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .quick-card .desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .account-toolbar,
+        .expense-toolbar,
+        .leave-toolbar,
+        .rooms-toolbar {
+            position: sticky;
+            top: 70px;
+            z-index: 70;
+        }
+
+        .content-area > .card > h2:first-child {
+            position: sticky;
+            top: 70px;
+            z-index: 70;
+            margin: -30px -30px 20px;
+            padding: 30px 30px 12px;
+            background: rgba(47, 65, 86, 0.92);
+            backdrop-filter: blur(10px);
+        }
+
+        .planned-inline-page {
+            min-height: calc(100vh - 150px);
+            display: grid;
+            place-items: center;
+        }
+
+        .planned-inline-message {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: clamp(1.4rem, 2.5vw, 2.2rem);
+            font-weight: 700;
+            letter-spacing: 0;
+            text-align: center;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <button id="sidebarClose" class="sidebar-close-btn" aria-label="Close Menu">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            <div class="sidebar-header" style="padding: 20px 30px; text-align: center;">
+                <img src="/static/images/logo.png" class="sidebar-logo" alt="Logo" onerror="this.style.display='none'">
+                <h1 style="font-size: 1.8rem;">{{ site_name }}</h1>
+                <p style="font-size: 0.75rem; opacity: 0.6; margin-top: 5px;">委身基督，發光發熱</p>
+            </div>
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+                            <span>首頁</span>
+                        </a>
+                    </li>
+                    {% for item in side_menu %}
+                    <li class="nav-item {% if item.children.all or item.title == '資訊網路' or item.title == '同工' or item.title == '同工項目' or item.title == '關懷' %}has-children{% endif %}" id="menu-{{ item.id }}">
+                        <a href="{{ item.route|default:'#' }}" class="nav-link {% if request.path == item.route %}active{% endif %}" onclick="toggleMenu(event, 'menu-{{ item.id }}', '{{ item.route }}')">
+                            <span class="arrow">{% if item.children.all or item.title == '資訊網路' or item.title == '同工' or item.title == '同工項目' or item.title == '關懷' %}▶{% endif %}</span>
+                            {% if item.icon %}<span>{{ item.icon }}</span>{% endif %}
+                            <span>{{ item.title }}</span>
+                        </a>
+                        {% if item.children.all or item.title == '資訊網路' or item.title == '同工' or item.title == '同工項目' or item.title == '關懷' %}
+                        <ul class="sub-menu">
+                            {% for child in item.children.all %}
+                            <li>
+                                <a href="{% if child.route and child.route != '#' %}{{ child.route }}{% else %}/planned/?item={{ child.id }}{% endif %}"
+                                   class="sub-link {% if request.path == child.route %}active{% endif %}"
+                                   data-menu-route="{{ child.route|default:'' }}"
+                                   data-planned-url="/planned/?item={{ child.id }}"
+                                   onclick="handleSubMenuClick(event, this)">
+                                    <span class="sub-icon">{{ child.icon|default:'●' }}</span>
+                                    <span>{{ child.title }}</span>
+                                </a>
+                            </li>
+                            {% endfor %}
+                            {% if item.title == '場地設施' %}
+                            <li>
+                                <a href="/facility/maintenance/"
+                                   class="sub-link {% if request.path == '/facility/maintenance/' %}active{% endif %}"
+                                   data-menu-route="/facility/maintenance/">
+                                    <span class="sub-icon">M</span>
+                                    <span>日常維護</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if item.title == '資訊網路' %}
+                            <li>
+                                <a href="/facility/lan-hosts/" class="sub-link {% if request.path == '/facility/lan-hosts/' %}active{% endif %}">
+                                    <span class="sub-icon">H</span>
+                                    <span>區網Hosts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="/facility/wlan-aps/" class="sub-link {% if request.path == '/facility/wlan-aps/' %}active{% endif %}">
+                                    <span class="sub-icon">W</span>
+                                    <span>無線網路</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if item.title == '關懷' %}
+                            <li>
+                                <a href="/facility/pastoral-reports/"
+                                   class="sub-link {% if request.path == '/facility/pastoral-reports/' %}active{% endif %}"
+                                   data-menu-route="/facility/pastoral-reports/">
+                                    <span class="sub-icon">C</span>
+                                    <span>牧養報告</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-wrapper">
+            <header class="top-bar">
+                <button id="sidebarToggle" class="menu-toggle-btn" aria-label="Toggle Menu">
+                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <div class="search-box"></div>
+                <div class="user-profile" style="position: relative; cursor: pointer;">
+                    {% if user.is_authenticated %}
+                        <div id="userMenuBtn" style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 32px; height: 32px; background: var(--accent-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--sidebar-bg); font-weight: bold;">
+                                {{ user.username|first|upper }}
+                            </div>
+                            <span>{{ user.username }}</span>
+                            <span style="font-size: 0.8rem;">▼</span>
+                        </div>
+                        <!-- Dropdown Menu -->
+                        <div id="userDropdown" style="display: none; position: absolute; top: 100%; right: 0; background: var(--sidebar-bg); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 10px; min-width: 180px; margin-top: 10px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);">
+                            <a href="/staff/password/" style="display: block; padding: 10px; color: var(--text-primary); text-decoration: none; border-radius: 8px;">修改密碼</a>
+                            <a href="/staff/profile/" style="display: block; padding: 10px; color: var(--text-primary); text-decoration: none; border-radius: 8px;">個人資料</a>
+                            <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 8px 0;">
+                            <form action="/admin/logout/" method="post" id="logoutForm">
+                                {% csrf_token %}
+                                <button type="submit" style="width: 100%; text-align: left; background: none; border: none; padding: 10px; color: #f87171; cursor: pointer; font-family: inherit;">登出</button>
+                            </form>
+                        </div>
+                    {% else %}
+                        <a href="/admin/login/?next=/" style="color: var(--accent-color); text-decoration: none;">登入</a>
+                    {% endif %}
+                </div>
+            </header>
+
+            <main class="content-area">
+                {% block content %}
+                <div class="card">
+                    <h2>{{ home_title }}</h2>
+                    <p style="color: var(--text-secondary); line-height: 1.6;">
+                        {{ home_desc }}
+                    </p>
+                </div>
+                {% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <script>
+        function toggleMenu(event, id, route) {
+            const item = document.getElementById(id);
+            const hasChildren = item.classList.contains('has-children');
+            
+            if (hasChildren) {
+                event.preventDefault();
+                item.classList.toggle('open');
+                
+                // Save state to localStorage
+                let states = {};
+                try {
+                    states = JSON.parse(localStorage.getItem('sidebar_menu_states') || '{}');
+                } catch (e) {}
+                states[id] = item.classList.contains('open');
+                localStorage.setItem('sidebar_menu_states', JSON.stringify(states));
+            }
+        }
+
+        function handleSubMenuClick(event, link) {
+            const rawRoute = (link.dataset.menuRoute || '').trim();
+            const href = (link.getAttribute('href') || '').trim();
+            const plannedUrl = link.dataset.plannedUrl || '/planned/';
+            const absoluteHref = link.href || '';
+            const normalizedHref = absoluteHref.replace(window.location.origin, '');
+            const hasRealHref =
+                href !== '' &&
+                href !== '#' &&
+                !href.startsWith('#') &&
+                !href.toLowerCase().startsWith('javascript:') &&
+                normalizedHref !== window.location.pathname &&
+                normalizedHref !== `${window.location.pathname}${window.location.search}`;
+            const emptyRoute =
+                (rawRoute === '' && !hasRealHref) ||
+                rawRoute === '#' ||
+                rawRoute.startsWith('#') ||
+                rawRoute.toLowerCase().startsWith('javascript:') ||
+                href === '' ||
+                href === '#' ||
+                href.startsWith('#') ||
+                href.toLowerCase().startsWith('javascript:') ||
+                normalizedHref === window.location.pathname ||
+                normalizedHref === `${window.location.pathname}${window.location.search}`;
+
+            if (emptyRoute) {
+                event.preventDefault();
+                showPlannedFeature(link, plannedUrl);
+            }
+        }
+
+        function showPlannedFeature(link, plannedUrl) {
+            const contentArea = document.querySelector('.content-area');
+            if (!contentArea) {
+                window.location.href = plannedUrl;
+                return;
+            }
+
+            document.querySelectorAll('.nav-link.active, .sub-link.active').forEach((activeLink) => {
+                activeLink.classList.remove('active');
+            });
+            if (link) {
+                link.classList.add('active');
+                const parentItem = link.closest('.has-children');
+                if (parentItem) {
+                    parentItem.classList.add('open');
+                }
+            }
+
+            contentArea.innerHTML = `
+                <div class="planned-inline-page">
+                    <p class="planned-inline-message">功能規劃中....</p>
+                </div>
+            `;
+
+            if (plannedUrl && window.history && window.history.replaceState) {
+                window.history.replaceState(null, '', plannedUrl);
+            }
+        }
+
+        function ensureMaintenanceMenu() {
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach((item) => {
+                const mainLabel = item.querySelector(':scope > .nav-link span:last-child');
+                if (!mainLabel || mainLabel.textContent.trim() !== '場地設施') return;
+
+                item.classList.add('has-children');
+                const arrow = item.querySelector(':scope > .nav-link .arrow');
+                if (arrow && !arrow.textContent.trim()) arrow.textContent = '▶';
+
+                let subMenu = item.querySelector(':scope > .sub-menu');
+                if (!subMenu) {
+                    subMenu = document.createElement('ul');
+                    subMenu.className = 'sub-menu';
+                    item.appendChild(subMenu);
+                }
+
+                if (subMenu.querySelector('a[href="/facility/maintenance/"]')) return;
+
+                const row = document.createElement('li');
+                row.innerHTML = `
+                    <a href="/facility/maintenance/"
+                       class="sub-link ${window.location.pathname === '/facility/maintenance/' ? 'active' : ''}"
+                       data-menu-route="/facility/maintenance/">
+                        <span class="sub-icon">M</span>
+                        <span>日常維護</span>
+                    </a>
+                `;
+                subMenu.appendChild(row);
+                const link = row.querySelector('a');
+                link.addEventListener('click', (event) => handleSubMenuClick(event, link));
+            });
+        }
+
+        function ensurePastoralReportMenu() {
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach((item) => {
+                const mainLabel = item.querySelector(':scope > .nav-link span:last-child');
+                if (!mainLabel || mainLabel.textContent.trim() !== '關懷') return;
+
+                item.classList.add('has-children');
+                const arrow = item.querySelector(':scope > .nav-link .arrow');
+                if (arrow && !arrow.textContent.trim()) arrow.textContent = '▶';
+
+                let subMenu = item.querySelector(':scope > .sub-menu');
+                if (!subMenu) {
+                    subMenu = document.createElement('ul');
+                    subMenu.className = 'sub-menu';
+                    item.appendChild(subMenu);
+                }
+
+                if (subMenu.querySelector('a[href="/facility/pastoral-reports/"]')) return;
+
+                const row = document.createElement('li');
+                row.innerHTML = `
+                    <a href="/facility/pastoral-reports/"
+                       class="sub-link ${window.location.pathname === '/facility/pastoral-reports/' ? 'active' : ''}"
+                       data-menu-route="/facility/pastoral-reports/">
+                        <span class="sub-icon">C</span>
+                        <span>牧養報告</span>
+                    </a>
+                `;
+                subMenu.appendChild(row);
+                const link = row.querySelector('a');
+                link.addEventListener('click', (event) => handleSubMenuClick(event, link));
+            });
+        }
+
+        function ensureNetworkMenu() {
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach((item) => {
+                const mainLabel = item.querySelector(':scope > .nav-link span:last-child');
+                if (!mainLabel || !mainLabel.textContent.replace(/\s+/g, '').includes('資訊網路')) return;
+
+                item.classList.add('has-children');
+                const arrow = item.querySelector(':scope > .nav-link .arrow');
+                if (arrow && !arrow.textContent.trim()) arrow.textContent = '▶';
+
+                let subMenu = item.querySelector(':scope > .sub-menu');
+                if (!subMenu) {
+                    subMenu = document.createElement('ul');
+                    subMenu.className = 'sub-menu';
+                    item.appendChild(subMenu);
+                }
+
+                const links = [
+                    {href: '/facility/lan-hosts/', icon: 'H', label: '區網Hosts'},
+                    {href: '/facility/wlan-aps/', icon: 'W', label: '無線網路'},
+                ];
+
+                links.forEach((entry) => {
+                    if (subMenu.querySelector(`a[href="${entry.href}"]`)) return;
+                    const row = document.createElement('li');
+                    row.innerHTML = `
+                        <a href="${entry.href}"
+                           class="sub-link ${window.location.pathname === entry.href ? 'active' : ''}"
+                           data-menu-route="${entry.href}">
+                            <span class="sub-icon">${entry.icon}</span>
+                            <span>${entry.label}</span>
+                        </a>
+                    `;
+                    subMenu.appendChild(row);
+                    const link = row.querySelector('a');
+                    link.addEventListener('click', (event) => handleSubMenuClick(event, link));
+                });
+            });
+        }
+
+        // Keep active menu open on load
+        document.addEventListener('DOMContentLoaded', () => {
+            ensureNetworkMenu();
+            ensureMaintenanceMenu();
+            ensurePastoralReportMenu();
+
+            document.querySelectorAll('.sub-link').forEach((link) => {
+                link.addEventListener('click', (event) => handleSubMenuClick(event, link));
+            });
+
+            // Restore from localStorage first
+            let states = {};
+            try {
+                states = JSON.parse(localStorage.getItem('sidebar_menu_states') || '{}');
+            } catch (e) {}
+            
+            for (const [id, open] of Object.entries(states)) {
+                const item = document.getElementById(id);
+                if (item && item.classList.contains('has-children')) {
+                    if (open) {
+                        item.classList.add('open');
+                    } else {
+                        item.classList.remove('open');
+                    }
+                }
+            }
+
+            // Also ensure the active item's parent is open (regardless of localStorage)
+            const activeLink = document.querySelector('.nav-link.active, .sub-link.active');
+            if (activeLink) {
+                const parentItem = activeLink.closest('.has-children');
+                if (parentItem) {
+                    parentItem.classList.add('open');
+                    // Update localStorage so it stays open
+                    states[parentItem.id] = true;
+                    localStorage.setItem('sidebar_menu_states', JSON.stringify(states));
+                }
+            }
+        });
+
+        // User Dropdown Logic
+        const btn = document.getElementById('userMenuBtn');
+        const dropdown = document.getElementById('userDropdown');
+        if (btn && dropdown) {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+            });
+            document.addEventListener('click', () => {
+                dropdown.style.display = 'none';
+            });
+        }
+
+        // Sidebar Toggle Logic for Mobile
+        const sidebar = document.querySelector('.sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebarClose = document.getElementById('sidebarClose');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+        function openSidebar() {
+            if (sidebar) sidebar.classList.add('open');
+            if (sidebarOverlay) sidebarOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSidebar() {
+            if (sidebar) sidebar.classList.remove('open');
+            if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openSidebar();
+            });
+        }
+
+        if (sidebarClose) {
+            sidebarClose.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeSidebar();
+            });
+        }
+
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener('click', closeSidebar);
+        }
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 1024) {
+                closeSidebar();
+            }
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

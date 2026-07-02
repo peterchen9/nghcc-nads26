@@ -1,0 +1,480 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}同工出勤狀態 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Premium Attendance Styling */
+    .attendance-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .attendance-title {
+        margin: 0;
+        font-family: 'Outfit', sans-serif;
+        font-size: 2.2rem;
+        background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .attendance-actions {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+    }
+
+    /* Datepicker form style */
+    .date-filter-form {
+        display: flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 5px 15px;
+        gap: 10px;
+        transition: border-color 0.3s;
+    }
+
+    .date-filter-form:focus-within {
+        border-color: var(--accent-color);
+    }
+
+    .date-filter-form input[type="date"] {
+        background: transparent;
+        border: none;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 1rem;
+        outline: none;
+        cursor: pointer;
+    }
+
+    .date-filter-form button {
+        background: none;
+        border: none;
+        color: var(--accent-color);
+        cursor: pointer;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        padding: 5px;
+        border-radius: 6px;
+        transition: background 0.2s;
+    }
+
+    .date-filter-form button:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    /* Premium Button Styles */
+    .btn-premium {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        box-shadow: 0 4px 15px rgba(29, 78, 216, 0.3);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn-premium:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(29, 78, 216, 0.4);
+        filter: brightness(1.1);
+    }
+
+    .btn-premium:active {
+        transform: translateY(0);
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 24px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        transition: all 0.3s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(188, 220, 255, 0.2);
+    }
+
+    .stat-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+        background: rgba(188, 220, 255, 0.1);
+        color: var(--accent-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+    }
+
+    .stat-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-label {
+        font-size: 0.88rem;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+    }
+
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        font-family: 'Outfit', sans-serif;
+    }
+
+    /* Main Table Card */
+    .table-card {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        overflow: hidden;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-header {
+        padding: 20px 30px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    /* Table styling */
+    .attendance-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+
+    .attendance-table th, .attendance-table td {
+        padding: 16px 24px;
+    }
+
+    .attendance-table th {
+        background: rgba(255, 255, 255, 0.02);
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .attendance-table tr {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        transition: background-color 0.2s;
+    }
+
+    .attendance-table tr:hover {
+        background-color: rgba(255, 255, 255, 0.02);
+    }
+
+    .attendance-table tr:last-child {
+        border-bottom: none;
+    }
+
+    /* Timeline Chip */
+    .timeline-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .time-chip {
+        display: inline-flex;
+        align-items: center;
+        background: rgba(188, 220, 255, 0.08);
+        color: var(--accent-color);
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        border: 1px solid rgba(188, 220, 255, 0.15);
+    }
+
+    .time-chip.first {
+        background: rgba(16, 185, 129, 0.1);
+        color: #34d399;
+        border-color: rgba(16, 185, 129, 0.2);
+    }
+
+    .time-chip.last {
+        background: rgba(239, 68, 68, 0.1);
+        color: #f87171;
+        border-color: rgba(239, 68, 68, 0.2);
+    }
+
+    /* Feedback messages */
+    .alert {
+        padding: 15px 20px;
+        border-radius: 12px;
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 500;
+    }
+
+    .alert-success {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .alert-warning {
+        background: rgba(245, 158, 11, 0.15);
+        color: #fbbf24;
+        border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+
+    .alert-danger {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .empty-state {
+        padding: 60px 40px;
+        text-align: center;
+        color: var(--text-secondary);
+    }
+
+    .empty-icon {
+        font-size: 3rem;
+        margin-bottom: 15px;
+        opacity: 0.5;
+    }
+
+    /* Detail Timeline list */
+    .detail-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .detail-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 20px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        border-radius: 12px;
+    }
+
+    .detail-time {
+        font-family: 'Outfit', sans-serif;
+        font-weight: 600;
+        color: var(--accent-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'warning' %}alert-warning{% else %}alert-danger{% endif %}">
+                <span>
+                    {% if message.tags == 'success' %}✓{% elif message.tags == 'warning' %}⚠{% else %}✕{% endif %}
+                </span>
+                <div>{{ message }}</div>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Header -->
+    <div class="attendance-header">
+        <div>
+            <h2 class="attendance-title">同工出勤狀態</h2>
+            <p style="color: var(--text-secondary); margin: 5px 0 0 0;">檢視並同步每日員工的臉部/卡片打卡記錄</p>
+        </div>
+
+        <div class="attendance-actions">
+            <!-- Datepicker -->
+            <form method="GET" class="date-filter-form" id="dateFilterForm">
+                <input type="date" name="date" value="{{ selected_date }}" onchange="document.getElementById('dateFilterForm').submit();">
+                <button type="submit" title="查詢">🔍</button>
+            </form>
+
+            <!-- Manual Sync Button -->
+            <a href="?sync=true" class="btn-premium" onclick="showLoadingSpinner(this)">
+                <span>🔄</span>
+                <span>手動更新資料</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-info">
+                <span class="stat-label">今日出勤人數</span>
+                <span class="stat-value">{{ stats.total_present }} <span style="font-size: 1rem; font-weight: normal; color: var(--text-secondary);">人</span></span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🌅</div>
+            <div class="stat-info">
+                <span class="stat-label">最早打卡時間</span>
+                <span class="stat-value" style="color: #34d399;">{{ stats.earliest_clockin }}</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🌆</div>
+            <div class="stat-info">
+                <span class="stat-label">最晚打卡時間</span>
+                <span class="stat-value" style="color: #f87171;">{{ stats.latest_clockin }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Two-column view for details and logs -->
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px; flex-wrap: wrap; align-items: start;" class="main-layout-grid">
+        <!-- Main Details Table Card -->
+        <div class="table-card">
+            <div class="card-header">
+                <h3 class="card-title">出勤彙整表 - {{ selected_date }}</h3>
+                <span style="font-size: 0.88rem; color: var(--text-secondary);">共 {{ attendance_list|length }} 筆記錄</span>
+            </div>
+            
+            {% if attendance_list %}
+                <div style="overflow-x: auto;">
+                    <table class="attendance-table">
+                        <thead>
+                            <tr>
+                                <th>員工編號</th>
+                                <th>姓名</th>
+                                <th>上班打卡 (最早)</th>
+                                <th>下班打卡 (最晚)</th>
+                                <th>今日打卡歷程</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in attendance_list %}
+                                <tr>
+                                    <td style="font-family: 'Outfit', sans-serif; font-weight: 600;">{{ item.employee_no }}</td>
+                                    <td style="font-weight: 600;">{{ item.name }}</td>
+                                    <td>
+                                        <span class="time-chip first">{{ item.first_in|date:"H:i:s" }}</span>
+                                    </td>
+                                    <td>
+                                        {% if item.count > 1 %}
+                                            <span class="time-chip last">{{ item.last_out|date:"H:i:s" }}</span>
+                                        {% else %}
+                                            <span style="color: var(--text-secondary); font-size: 0.85rem;">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="timeline-container">
+                                            {% for log in item.logs %}
+                                                <span class="time-chip" title="設備流水號: {{ log.serial_no }}">{{ log.timestamp|date:"H:i" }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">📅</div>
+                    <h4>所選日期無打卡資料</h4>
+                    <p style="font-size: 0.9rem; margin-top: 10px;">請點選右上方「手動更新資料」或查詢其他日期。</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Chronological Log Card -->
+        <div class="table-card">
+            <div class="card-header">
+                <h3 class="card-title">即時打卡動態</h3>
+            </div>
+            <div style="padding: 24px; max-height: 500px; overflow-y: auto;">
+                {% if raw_records %}
+                    <div class="detail-list">
+                        {% for r in raw_records %}
+                            <div class="detail-item">
+                                <div>
+                                    <div style="font-weight: 600;">{{ r.name }}</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">員工號: {{ r.employee_no }} | 卡號: {{ r.card_no|default:"無" }}</div>
+                                </div>
+                                <div class="detail-time">{{ r.timestamp|date:"H:i:s" }}</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div style="text-align: center; padding: 40px 10px; color: var(--text-secondary);">
+                        <p style="margin: 0; font-size: 0.9rem;">無即時動態</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showLoadingSpinner(element) {
+        element.style.pointerEvents = 'none';
+        element.style.opacity = '0.7';
+        element.querySelector('span').textContent = '⌛';
+        element.querySelectorAll('span')[1].textContent = '正在同步資料...';
+    }
+
+    // Add responsiveness adjustments via JS if needed
+    function adjustGrid() {
+        const grid = document.querySelector('.main-layout-grid');
+        if (!grid) return;
+        if (window.innerWidth < 1024) {
+            grid.style.gridTemplateColumns = '1fr';
+        } else {
+            grid.style.gridTemplateColumns = '2fr 1fr';
+        }
+    }
+    window.addEventListener('resize', adjustGrid);
+    document.addEventListener('DOMContentLoaded', adjustGrid);
+</script>
+{% endblock %}
