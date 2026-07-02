@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../../apps/DjangoCMS"
+		},
+		{
+			"path": "../../../apps/cms26_flutter"
+		}
+	],
+	"settings": {}
+}

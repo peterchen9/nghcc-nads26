@@ -1,0 +1,476 @@
+{% extends "base.html" %}
+
+{% block title %}場地資料維護 - {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .rooms-page {
+        display: grid;
+        gap: 14px;
+        min-width: 0;
+    }
+    .rooms-toolbar,
+    .rooms-list {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 16px;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+    .rooms-toolbar {
+        position: sticky;
+        top: 70px;
+        z-index: 70;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
+    }
+    .rooms-toolbar h2 {
+        margin: 0;
+        font-size: 1.35rem;
+    }
+    .toolbar-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 12px;
+    }
+    .field label {
+        color: var(--text-secondary);
+        font-size: 0.86rem;
+    }
+    .field input,
+    .field select,
+    .field textarea,
+    .room-table input,
+    .room-table select,
+    .room-table textarea {
+        box-sizing: border-box;
+        border: 1px solid rgba(255,255,255,0.14);
+        border-radius: 6px;
+        padding: 9px 10px;
+        background: rgba(8, 13, 20, 0.35);
+        color: var(--text-primary);
+        font: inherit;
+        width: 100%;
+    }
+    .field option,
+    .room-table option { color: #111827; }
+    .btn {
+        border: 1px solid rgba(188,220,255,0.35);
+        background: rgba(188,220,255,0.12);
+        color: var(--accent-color);
+        border-radius: 6px;
+        padding: 9px 12px;
+        text-decoration: none;
+        cursor: pointer;
+        font: inherit;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+    }
+    .btn.primary {
+        background: var(--accent-color);
+        color: var(--sidebar-bg);
+        font-weight: 700;
+    }
+    .btn.danger {
+        border-color: rgba(248,113,113,0.45);
+        color: #fecaca;
+        background: rgba(248,113,113,0.1);
+    }
+    .messages {
+        display: grid;
+        gap: 8px;
+    }
+    .message {
+        border-radius: 6px;
+        padding: 10px 12px;
+        background: rgba(188,220,255,0.12);
+        color: var(--accent-color);
+    }
+    .message.error {
+        background: rgba(248,113,113,0.12);
+        color: #fecaca;
+    }
+    .rooms-list {
+        padding: 0;
+        overflow: hidden;
+    }
+    .room-table-wrap {
+        overflow: auto;
+        max-height: calc(100vh - 190px);
+    }
+    .room-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        min-width: 960px;
+    }
+    .room-table th,
+    .room-table td {
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        padding: 10px 8px;
+        vertical-align: top;
+        background: #2f4156;
+    }
+    .room-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: #26384d;
+        color: var(--accent-color);
+        text-align: left;
+        font-size: 0.86rem;
+        font-weight: 800;
+    }
+    .photo-strip {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        max-width: 180px;
+    }
+    .photo-strip img {
+        width: 52px;
+        height: 42px;
+        object-fit: cover;
+        border-radius: 5px;
+        border: 1px solid rgba(255,255,255,0.14);
+    }
+    .room-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 16, 24, 0.68);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 500;
+        padding: 20px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .room-modal {
+        width: min(560px, 100%);
+        max-height: calc(100vh - 44px);
+        overflow: auto;
+        background: #2f4156;
+        border: 1px solid rgba(255,255,255,0.14);
+        border-radius: 8px;
+        box-shadow: 0 24px 80px rgba(0,0,0,0.45);
+        padding: 18px;
+    }
+    .modal-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 14px;
+    }
+    .modal-head h2 {
+        margin: 0;
+        font-size: 1.2rem;
+    }
+    .close-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 1px solid rgba(255,255,255,0.18);
+        background: rgba(255,255,255,0.06);
+        color: #fff;
+        cursor: pointer;
+    }
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 16px;
+    }
+    @media (max-width: 700px) {
+        .rooms-toolbar { position: static; }
+        .room-table-wrap { max-height: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rooms-page">
+    <section class="rooms-toolbar">
+        <h2>場地資料維護</h2>
+        <div class="toolbar-actions">
+            <button class="btn primary" type="button" id="openNewRoomModal">+新場地</button>
+            <button class="btn" type="button" id="openRecurringModal">週期性登記</button>
+            <button class="btn" type="button" id="openExportModal">匯出登記報表</button>
+        </div>
+    </section>
+
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="message {{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <section class="rooms-list">
+        <div class="room-table-wrap">
+            <table class="room-table">
+                <thead>
+                    <tr>
+                        <th>照片</th>
+                        <th>名稱</th>
+                        <th>樓層</th>
+                        <th>容量</th>
+                        <th>場地資料</th>
+                        <th>加入照片</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for room in rooms %}
+                        <tr>
+                            <td>
+                                <form id="room-form-{{ room.id }}" method="post" enctype="multipart/form-data">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="room_id" value="{{ room.id }}">
+                                </form>
+                                <div class="photo-strip">
+                                    {% for photo_url in room.photo_urls %}
+                                        <img src="{{ photo_url }}" alt="{{ room.room_name }} 照片" loading="lazy">
+                                    {% empty %}
+                                        <span style="color: var(--text-secondary);">無</span>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td><input form="room-form-{{ room.id }}" type="text" name="room_name" maxlength="25" value="{{ room.room_name }}" required></td>
+                            <td>
+                                <select form="room-form-{{ room.id }}" name="floor">
+                                    {% for floor in floor_order %}
+                                        <option value="{{ floor }}" {% if room.floor == floor %}selected{% endif %}>{{ floor }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td><input form="room-form-{{ room.id }}" type="number" name="capacity" min="0" value="{{ room.capacity }}"></td>
+                            <td><textarea form="room-form-{{ room.id }}" name="description" rows="3" maxlength="60">{{ room.description|default:'' }}</textarea></td>
+                            <td><input form="room-form-{{ room.id }}" type="file" name="photo" accept="image/jpeg,image/png,image/webp"></td>
+                            <td>
+                                <div class="room-actions">
+                                    <button form="room-form-{{ room.id }}" class="btn primary" type="submit" name="action" value="update_room">儲存</button>
+                                    <button form="room-form-{{ room.id }}" class="btn danger" type="submit" name="action" value="delete_room" formnovalidate onclick="return confirm('確定要刪除此場地嗎？');">刪除</button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<div class="modal-backdrop" id="newRoomModal" aria-hidden="true">
+    <div class="room-modal" role="dialog" aria-modal="true" aria-labelledby="newRoomModalTitle">
+        <div class="modal-head">
+            <h2 id="newRoomModalTitle">新增場地</h2>
+            <button class="close-btn" type="button" data-close-modal aria-label="關閉">×</button>
+        </div>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create_room">
+            <div class="field">
+                <label for="newRoomName">名稱</label>
+                <input id="newRoomName" type="text" name="room_name" maxlength="25" required>
+            </div>
+            <div class="field">
+                <label for="newFloor">所屬樓層</label>
+                <select id="newFloor" name="floor">
+                    {% for floor in floor_order %}
+                        <option value="{{ floor }}">{{ floor }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label for="newCapacity">容量</label>
+                <input id="newCapacity" type="number" name="capacity" min="0" value="0">
+            </div>
+            <div class="field">
+                <label for="newDescription">場地資料</label>
+                <textarea id="newDescription" name="description" rows="4" maxlength="60"></textarea>
+            </div>
+            <div class="field">
+                <label for="newPhoto">加入照片</label>
+                <input id="newPhoto" type="file" name="photo" accept="image/jpeg,image/png,image/webp">
+            </div>
+            <div class="modal-actions">
+                <button class="btn" type="button" data-close-modal>取消</button>
+                <button class="btn primary" type="submit">新增場地</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="exportModal" aria-hidden="true">
+    <div class="room-modal" role="dialog" aria-modal="true" aria-labelledby="exportModalTitle">
+        <div class="modal-head">
+            <h2 id="exportModalTitle">匯出登記報表</h2>
+            <button class="close-btn" type="button" data-close-modal aria-label="關閉">×</button>
+        </div>
+        <form method="get" action="/facility/booking/export/">
+            <div class="field">
+                <label for="exportDate">匯出日期</label>
+                <input id="exportDate" type="date" name="date" value="{% now 'Y-m-d' %}" required>
+            </div>
+            <div class="modal-actions">
+                <button class="btn" type="button" data-close-modal>取消</button>
+                <button class="btn primary" type="submit">匯出</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="recurringModal" aria-hidden="true">
+    <div class="room-modal" role="dialog" aria-modal="true" aria-labelledby="recurringModalTitle">
+        <div class="modal-head">
+            <h2 id="recurringModalTitle">週期性登記</h2>
+            <button class="close-btn" type="button" data-close-modal aria-label="關閉">×</button>
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create_recurring_booking">
+            <input type="hidden" name="create_by" value="{{ default_creator }}">
+            <div class="field">
+                <label for="recurringRoom">場地</label>
+                <select id="recurringRoom" name="room_id" required>
+                    {% for room in rooms %}
+                        <option value="{{ room.id }}">{{ room.floor }} · {{ room.room_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label for="recurringName">活動名稱</label>
+                <input id="recurringName" type="text" name="name" maxlength="80" required>
+            </div>
+            <div class="field">
+                <label for="recurringUseUnit">使用單位</label>
+                <input id="recurringUseUnit" type="text" name="use_unit" maxlength="120">
+            </div>
+            <div class="field">
+                <label for="recurringType">週期</label>
+                <select id="recurringType" name="recurrence_type">
+                    <option value="weekly">每週</option>
+                    <option value="monthly_nth">每月第 X 週</option>
+                </select>
+            </div>
+            <div class="field" id="recurringWeekField">
+                <label for="recurringWeek">第 X 週</label>
+                <select id="recurringWeek" name="repeat_week">
+                    <option value="1">第 1 週</option>
+                    <option value="2">第 2 週</option>
+                    <option value="3">第 3 週</option>
+                    <option value="4">第 4 週</option>
+                    <option value="5">第 5 週</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="recurringWeekday">星期幾</label>
+                <select id="recurringWeekday" name="weekday">
+                    <option value="0">星期一</option>
+                    <option value="1">星期二</option>
+                    <option value="2">星期三</option>
+                    <option value="3">星期四</option>
+                    <option value="4">星期五</option>
+                    <option value="5">星期六</option>
+                    <option value="6">星期日</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="recurringRangeStart">開始日期</label>
+                <input id="recurringRangeStart" type="date" name="range_start" value="{% now 'Y-m-d' %}" required>
+            </div>
+            <div class="field">
+                <label for="recurringRangeEnd">結束日期</label>
+                <input id="recurringRangeEnd" type="date" name="range_end" value="{% now 'Y-m-d' %}" required>
+            </div>
+            <div class="field">
+                <label for="recurringStartTime">開始時間</label>
+                <input id="recurringStartTime" type="time" name="start_time" value="09:00" required>
+            </div>
+            <div class="field">
+                <label for="recurringEndTime">結束時間</label>
+                <input id="recurringEndTime" type="time" name="end_time" value="10:00" required>
+            </div>
+            <div class="field">
+                <label for="recurringDescription">備註</label>
+                <textarea id="recurringDescription" name="description" rows="3"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn" type="button" data-close-modal>取消</button>
+                <button class="btn primary" type="submit">新增週期登記</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const newRoomModal = document.getElementById('newRoomModal');
+    const exportModal = document.getElementById('exportModal');
+    const recurringModal = document.getElementById('recurringModal');
+    const newRoomName = document.getElementById('newRoomName');
+    const exportDate = document.getElementById('exportDate');
+    const recurringName = document.getElementById('recurringName');
+    const recurringType = document.getElementById('recurringType');
+    const recurringWeekField = document.getElementById('recurringWeekField');
+
+    function openModal(modal, focusTarget) {
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        setTimeout(() => focusTarget && focusTarget.focus(), 0);
+    }
+
+    function closeModal(modal) {
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    document.getElementById('openNewRoomModal').addEventListener('click', () => openModal(newRoomModal, newRoomName));
+    document.getElementById('openRecurringModal').addEventListener('click', () => openModal(recurringModal, recurringName));
+    document.getElementById('openExportModal').addEventListener('click', () => openModal(exportModal, exportDate));
+    function updateRecurringWeekField() {
+        recurringWeekField.style.display = recurringType.value === 'monthly_nth' ? '' : 'none';
+    }
+    recurringType.addEventListener('change', updateRecurringWeekField);
+    updateRecurringWeekField();
+
+    document.querySelectorAll('[data-close-modal]').forEach((button) => {
+        button.addEventListener('click', () => closeModal(button.closest('.modal-backdrop')));
+    });
+    [newRoomModal, exportModal, recurringModal].forEach((modal) => {
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) closeModal(modal);
+        });
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        [newRoomModal, exportModal, recurringModal].forEach((modal) => {
+            if (modal.classList.contains('open')) closeModal(modal);
+        });
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,1278 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}辦公室座位圖 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .seats-container {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 100px);
+        gap: 20px;
+    }
+
+    /* Top Control Bar */
+    .seats-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 15px 25px;
+        flex-wrap: wrap;
+        gap: 15px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    .header-title-section h2 {
+        margin: 0;
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.8rem;
+        background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    /* Actions & Controls */
+    .header-controls {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    /* Search Input Box */
+    .search-seats-form {
+        display: flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 5px 15px;
+        gap: 10px;
+        transition: all 0.3s;
+    }
+
+    .search-seats-form:focus-within {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 10px rgba(188, 220, 255, 0.15);
+    }
+
+    .search-seats-form input[type="text"] {
+        background: transparent;
+        border: none;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 0.95rem;
+        outline: none;
+        width: 220px;
+    }
+
+    /* Mode toggle switch styling */
+    .mode-switch-container {
+        display: flex;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        padding: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .mode-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        padding: 8px 16px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.25s;
+    }
+
+    .mode-btn.active {
+        background: var(--accent-color);
+        color: #1e293b;
+    }
+
+    /* Main Editor Layout */
+    .seats-workspace {
+        display: flex;
+        flex: 1;
+        gap: 20px;
+        min-height: 0; /* Important for inner scrolling */
+    }
+
+    /* Left Toolbox Panel */
+    .seats-toolbox {
+        width: 180px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s, opacity 0.3s;
+    }
+
+    .toolbox-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        padding-bottom: 8px;
+        margin-bottom: 5px;
+    }
+
+    .tool-btn {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        color: var(--text-primary);
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.25s;
+    }
+
+    .tool-btn:hover {
+        background: rgba(188, 220, 255, 0.1);
+        border-color: var(--accent-color);
+        transform: translateY(-1px);
+    }
+
+    /* Canvas Drawing Area */
+    .canvas-card {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.01);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        position: relative;
+        overflow: auto;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Grid layout background on canvas */
+    .svg-canvas {
+        display: block;
+        background-color: rgba(30, 41, 59, 0.3);
+        background-image: 
+            radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+            radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+        background-size: 20px 20px;
+        background-position: 0 0, 10px 10px;
+        border-radius: 19px;
+        user-select: none;
+    }
+
+    /* Right Inspector Panel */
+    .seats-inspector {
+        width: 260px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        overflow-y: auto;
+    }
+
+    .inspector-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        padding-bottom: 8px;
+        margin-bottom: 5px;
+    }
+
+    .inspect-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .inspect-group label {
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .inspect-group input, .inspect-group select {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 8px 12px;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 0.88rem;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    .inspect-group input:focus, .inspect-group select:focus {
+        border-color: var(--accent-color);
+    }
+
+    /* Primary buttons */
+    .btn-save-layout {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);
+        transition: all 0.3s;
+        font-size: 0.9rem;
+    }
+
+    .btn-save-layout:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35);
+        filter: brightness(1.05);
+    }
+
+    .btn-delete-element {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        color: #f87171;
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.85rem;
+        margin-top: 10px;
+        text-align: center;
+    }
+
+    .btn-delete-element:hover {
+        background: rgba(239, 68, 68, 0.2);
+        border-color: #ef4444;
+    }
+
+    /* SVG Graphical element styling */
+    .draggable {
+        cursor: pointer;
+    }
+
+    .desk-rect {
+        fill: rgba(255, 255, 255, 0.03);
+        stroke: rgba(255, 255, 255, 0.15);
+        stroke-width: 2px;
+        transition: fill 0.2s, stroke 0.2s;
+    }
+
+    .draggable:hover .desk-rect, .draggable.selected .desk-rect {
+        stroke: var(--accent-color);
+        fill: rgba(188, 220, 255, 0.06);
+    }
+
+    .desk-text {
+        fill: var(--text-secondary);
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-anchor: middle;
+        pointer-events: none;
+    }
+
+    .seat-rect {
+        transition: all 0.2s;
+        stroke-width: 2.5px;
+    }
+
+    .seat-rect.occupied {
+        fill: rgba(16, 185, 129, 0.12);
+        stroke: #10b981;
+    }
+
+    .seat-rect.vacant {
+        fill: rgba(245, 158, 11, 0.1);
+        stroke: #f59e0b;
+    }
+
+    .draggable:hover .seat-rect, .draggable.selected .seat-rect {
+        stroke: #3b82f6;
+        filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.4));
+    }
+
+    .seat-label {
+        fill: #fff;
+        font-family: 'Outfit', sans-serif;
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-anchor: middle;
+        pointer-events: none;
+    }
+
+    .seat-staff-text {
+        fill: var(--text-secondary);
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-anchor: middle;
+        pointer-events: none;
+    }
+
+    .facility-rect {
+        fill: rgba(255, 255, 255, 0.02);
+        stroke: rgba(255, 255, 255, 0.12);
+        stroke-dasharray: 4 2;
+        stroke-width: 1.5px;
+    }
+
+    .facility-text {
+        fill: var(--text-secondary);
+        font-size: 0.78rem;
+        text-anchor: middle;
+        pointer-events: none;
+    }
+
+    .facility-icon {
+        font-size: 1.3rem;
+        text-anchor: middle;
+        pointer-events: none;
+    }
+
+    .door-rect {
+        fill: #94a3b8;
+        stroke: #64748b;
+        stroke-width: 1px;
+    }
+
+    .cabinet-rect {
+        fill: rgba(255, 255, 255, 0.03);
+        stroke: rgba(255, 255, 255, 0.15);
+        stroke-width: 2px;
+        transition: fill 0.2s, stroke 0.2s;
+    }
+    .draggable:hover .cabinet-rect, .draggable.selected .cabinet-rect {
+        stroke: var(--accent-color);
+        fill: rgba(188, 220, 255, 0.06);
+    }
+    .room-rect {
+        fill: rgba(255, 255, 255, 0.01);
+        stroke: rgba(255, 255, 255, 0.12);
+        stroke-width: 1.5px;
+        stroke-dasharray: 6 4;
+        transition: fill 0.2s, stroke 0.2s;
+    }
+    .draggable:hover .room-rect, .draggable.selected .room-rect {
+        stroke: var(--accent-color);
+        fill: rgba(188, 220, 255, 0.02);
+    }
+    .room-text {
+        fill: rgba(255, 255, 255, 0.25);
+        font-size: 1.1rem;
+        font-weight: 700;
+        font-family: 'Outfit', sans-serif;
+        text-anchor: middle;
+        pointer-events: none;
+        transition: fill 0.2s;
+    }
+    .draggable:hover .room-text, .draggable.selected .room-text {
+        fill: rgba(255, 255, 255, 0.45);
+    }
+
+    .custom-label-text {
+        fill: var(--text-secondary);
+        font-size: 0.95rem;
+        font-weight: 700;
+        text-anchor: middle;
+        font-family: 'Outfit', sans-serif;
+    }
+
+    /* Selected Outline helper */
+    .selection-outline {
+        fill: none;
+        stroke: #3b82f6;
+        stroke-width: 1.5px;
+        stroke-dasharray: 3 3;
+        pointer-events: none;
+    }
+
+    /* Seach highlighting animation */
+    @keyframes pulse-highlight {
+        0% {
+            stroke: #3b82f6;
+            stroke-width: 2px;
+            r: 20px;
+            opacity: 1;
+        }
+        100% {
+            stroke: #60a5fa;
+            stroke-width: 10px;
+            r: 32px;
+            opacity: 0;
+        }
+    }
+
+    .pulse-ring {
+        animation: pulse-highlight 1.4s infinite;
+        fill: none;
+        pointer-events: none;
+        stroke-linecap: round;
+    }
+
+    /* Alert Banner */
+    .alert-banner {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(16, 185, 129, 0.95);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 12px;
+        z-index: 1010;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        display: none;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.1);
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* Readonly user tip */
+    .view-mode-badge {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="seats-container">
+    
+    <!-- Top Control Bar -->
+    <div class="seats-header">
+        <div class="header-title-section">
+            <h2>辦公室座位配置圖</h2>
+            <p style="color: var(--text-secondary); margin: 3px 0 0 0; font-size: 0.85rem;">
+                檢視或搜尋同工座位配置，可使用關鍵字快速高亮同工位置
+            </p>
+        </div>
+
+        <div class="header-controls">
+            <!-- Search field -->
+            <div class="search-seats-form">
+                <span>🔍</span>
+                <input type="text" id="seatSearch" placeholder="輸入同工姓名搜尋..." oninput="handleSearch(this.value)">
+                <button type="button" id="clearSearch" style="background:none; border:none; color:var(--text-secondary); display:none; cursor:pointer;" onclick="clearSearchField()">✕</button>
+            </div>
+
+            {% if is_admin %}
+                <!-- Mode Toggle for Admins -->
+                <div class="mode-switch-container">
+                    <button type="button" class="mode-btn active" id="btn-view-mode" onclick="setMode('view')">👁️ 檢視模式</button>
+                    <button type="button" class="mode-btn" id="btn-edit-mode" onclick="setMode('edit')">✏️ 編輯模式</button>
+                </div>
+
+                <!-- Save Button (Only in edit mode) -->
+                <button type="button" class="btn-save-layout" id="btn-save" style="display: none;" onclick="saveLayout()">
+                    <span>💾</span>
+                    <span>儲存座位圖</span>
+                </button>
+            {% else %}
+                <div class="view-mode-badge">
+                    <span>🔒</span>
+                    <span>唯讀模式</span>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="seats-workspace">
+        
+        <!-- Toolbox (Left, Edit mode only) -->
+        <div class="seats-toolbox" id="toolbox" style="display: none;">
+            <div class="toolbox-title">新增元件</div>
+            <button type="button" class="tool-btn" onclick="addNewElement('seat')">🪑 新增座位</button>
+            <button type="button" class="tool-btn" onclick="addNewElement('desk')">🔲 新增辦公桌</button>
+            <button type="button" class="tool-btn" onclick="addNewElement('cabinet')">🗄️ 新增櫃子</button>
+            <button type="button" class="tool-btn" onclick="addNewElement('room')">🚪 新增房間</button>
+            <button type="button" class="tool-btn" onclick="addNewElement('door')">🚪 新增門</button>
+            <button type="button" class="tool-btn" onclick="addNewElement('printer')">🖨️ 新增事務機</button>
+            <button type="button" class="tool-btn" onclick="addNewElement('label')">🏷️ 新增標籤</button>
+
+            <div class="toolbox-title" style="margin-top: 15px;">對齊網格</div>
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-secondary);">
+                <input type="checkbox" id="snapToGrid" checked style="cursor: pointer;">
+                <label for="snapToGrid" style="cursor: pointer; user-select: none;">自動吸附 (10px)</label>
+            </div>
+        </div>
+
+        <!-- Canvas (Center) -->
+        <div class="canvas-card" id="canvas-card">
+            <svg id="seat-svg" class="svg-canvas" width="1000" height="700" viewBox="0 0 1000 700">
+                <!-- Group for drawing grid or background guidelines if needed -->
+                <g id="bg-group"></g>
+                
+                <!-- Group for static elements -->
+                <g id="elements-group"></g>
+                
+                <!-- Helper overlay group for highlight ring and selection boxes -->
+                <g id="overlay-group"></g>
+            </svg>
+        </div>
+
+        <!-- Inspector (Right, Edit mode only) -->
+        <div class="seats-inspector" id="inspector" style="display: none;">
+            <div class="inspector-title">屬性編輯</div>
+            
+            <div id="inspector-empty" style="color: var(--text-secondary); text-align: center; font-size: 0.85rem; padding: 40px 10px;">
+                點選畫布上的元件進行屬性編輯或指派同工。
+            </div>
+
+            <div id="inspector-form" style="display: none; flex-direction: column; gap: 15px;">
+                <div class="inspect-group">
+                    <label>元件類型</label>
+                    <input type="text" id="inspect-type" readonly style="opacity: 0.6;">
+                </div>
+
+                <div class="inspect-group">
+                    <label id="inspect-label-title">名稱/編號</label>
+                    <input type="text" id="inspect-label" oninput="updateSelectedElementProperty('label', this.value)">
+                </div>
+
+                <!-- Only visible for seat type -->
+                <div class="inspect-group" id="inspect-staff-group" style="display: none;">
+                    <label>分配同工</label>
+                    <select id="inspect-staff" onchange="assignCoworkerToSeat(this.value)">
+                        <option value="">-- 未指派 (工位) --</option>
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="inspect-group">
+                        <label>X 座標</label>
+                        <input type="number" id="inspect-x" oninput="updateSelectedElementProperty('x', parseInt(this.value) || 0)">
+                    </div>
+                    <div class="inspect-group">
+                        <label>Y 座標</label>
+                        <input type="number" id="inspect-y" oninput="updateSelectedElementProperty('y', parseInt(this.value) || 0)">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="inspect-group">
+                        <label>寬度</label>
+                        <input type="number" id="inspect-w" oninput="updateSelectedElementProperty('w', parseInt(this.value) || 0)">
+                    </div>
+                    <div class="inspect-group">
+                        <label>高度</label>
+                        <input type="number" id="inspect-h" oninput="updateSelectedElementProperty('h', parseInt(this.value) || 0)">
+                    </div>
+                </div>
+
+                <button type="button" class="btn-delete-element" onclick="deleteSelectedElement()">🗑️ 刪除此元件</button>
+            </div>
+            
+            <div class="inspector-title" style="margin-top: 20px;">畫布設定</div>
+            <div class="inspect-group">
+                <label>畫布寬度</label>
+                <input type="number" id="canvas-width" value="1000" min="600" max="2000" step="50" onchange="resizeCanvas('width', parseInt(this.value))">
+            </div>
+            <div class="inspect-group">
+                <label>畫布高度</label>
+                <input type="number" id="canvas-height" value="700" min="500" max="2000" step="50" onchange="resizeCanvas('height', parseInt(this.value))">
+            </div>
+        </div>
+    </div>
+<!-- Data Store for JS (escaped safely by Django template) -->
+<div id="seats-data-store" 
+     data-layout='{{ layout_json }}' 
+     data-coworkers='{{ coworkers_json }}' 
+     style="display: none;">
+</div>
+
+<!-- Alert Banner Toast -->
+<div class="alert-banner" id="successToast">
+    <span>✓</span>
+    <span id="toastMessage">配置儲存成功！</span>
+</div>
+
+<script>
+    // Seeding backend variables safely from data attributes
+    const storeNode = document.getElementById('seats-data-store');
+    let layoutData = JSON.parse(storeNode.getAttribute('data-layout'));
+    const coworkersList = JSON.parse(storeNode.getAttribute('data-coworkers'));
+    let currentMode = 'view'; // 'view' or 'edit'
+    
+    let selectedElementId = null;
+    let dragElement = null;
+    let dragOffset = { x: 0, y: 0 };
+    const gridSize = 10;
+    
+    const svg = document.getElementById('seat-svg');
+    const elementsGroup = document.getElementById('elements-group');
+    const overlayGroup = document.getElementById('overlay-group');
+    
+    // Set up staff list options in inspector select
+    const staffSelect = document.getElementById('inspect-staff');
+    if (staffSelect) {
+        coworkersList.forEach(cw => {
+            const opt = document.createElement('option');
+            opt.value = cw.staff_id;
+            opt.textContent = `${cw.name} (${cw.employee_no || '無工號'})`;
+            staffSelect.appendChild(opt);
+        });
+    }
+
+    // Initialize Seating chart drawing
+    function renderMap() {
+        // Clear SVG
+        elementsGroup.innerHTML = '';
+        
+        // Update SVG dimensions
+        svg.setAttribute('width', layoutData.width || 1000);
+        svg.setAttribute('height', layoutData.height || 700);
+        svg.setAttribute('viewBox', `0 0 ${layoutData.width || 1000} ${layoutData.height || 700}`);
+        
+        if (document.getElementById('canvas-width')) {
+            document.getElementById('canvas-width').value = layoutData.width || 1000;
+        }
+        if (document.getElementById('canvas-height')) {
+            document.getElementById('canvas-height').value = layoutData.height || 700;
+        }
+
+        // Draw each element
+        const elements = layoutData.elements || [];
+        elements.forEach(elem => {
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('class', 'draggable');
+            g.setAttribute('data-id', elem.id);
+            g.id = `g-${elem.id}`;
+            
+            // Mouse events for selection and dragging
+            g.addEventListener('mousedown', (evt) => handleMouseDown(evt, elem.id));
+            g.addEventListener('click', (evt) => handleElementClick(evt, elem.id));
+            
+            if (elem.type === 'desk') {
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', elem.x);
+                rect.setAttribute('y', elem.y);
+                rect.setAttribute('width', elem.w);
+                rect.setAttribute('height', elem.h);
+                rect.setAttribute('rx', '6');
+                rect.setAttribute('class', 'desk-rect');
+                g.appendChild(rect);
+                
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', elem.x + elem.w / 2);
+                text.setAttribute('y', elem.y + elem.h / 2 + 5);
+                text.setAttribute('class', 'desk-text');
+                text.textContent = elem.label;
+                g.appendChild(text);
+                
+            } else if (elem.type === 'seat') {
+                // Rectangle representing workstation/seat
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                const w = elem.w || 40;
+                const h = elem.h || 40;
+                rect.setAttribute('x', elem.x);
+                rect.setAttribute('y', elem.y);
+                rect.setAttribute('width', w);
+                rect.setAttribute('height', h);
+                rect.setAttribute('rx', '8');
+                rect.setAttribute('class', `seat-rect ${elem.staff_id ? 'occupied' : 'vacant'}`);
+                g.appendChild(rect);
+                
+                // Seat Number (inside the rect)
+                const textNo = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                textNo.setAttribute('x', elem.x + w / 2);
+                textNo.setAttribute('y', elem.y + h / 2 + 5);
+                textNo.setAttribute('class', 'seat-label');
+                textNo.textContent = elem.seat_no || 'S';
+                g.appendChild(textNo);
+                
+                // Coworker Name / '工位' (below the rect)
+                const textName = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                textName.setAttribute('x', elem.x + w / 2);
+                textName.setAttribute('y', elem.y + h + 16);
+                textName.setAttribute('class', 'seat-staff-text');
+                textName.textContent = elem.staff_name || '工位';
+                g.appendChild(textName);
+                
+            } else if (elem.type === 'printer') {
+                // Printer box
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', elem.x);
+                rect.setAttribute('y', elem.y);
+                rect.setAttribute('width', elem.w);
+                rect.setAttribute('height', elem.h);
+                rect.setAttribute('rx', '8');
+                rect.setAttribute('class', 'facility-rect');
+                g.appendChild(rect);
+                
+                // Emoji inside
+                const icon = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                icon.setAttribute('x', elem.x + elem.w / 2);
+                icon.setAttribute('y', elem.y + elem.h / 2 + 7);
+                icon.setAttribute('class', 'facility-icon');
+                icon.textContent = '🖨️';
+                g.appendChild(icon);
+                
+                // Label text
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', elem.x + elem.w / 2);
+                text.setAttribute('y', elem.y + elem.h + 16);
+                text.setAttribute('class', 'facility-text');
+                text.textContent = elem.label;
+                g.appendChild(text);
+                
+            } else if (elem.type === 'door') {
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', elem.x);
+                rect.setAttribute('y', elem.y);
+                rect.setAttribute('width', elem.w);
+                rect.setAttribute('height', elem.h);
+                rect.setAttribute('class', 'door-rect');
+                g.appendChild(rect);
+                
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', elem.x + elem.w / 2);
+                text.setAttribute('y', elem.y + elem.h + 16);
+                text.setAttribute('class', 'facility-text');
+                text.textContent = elem.label;
+                g.appendChild(text);
+                
+            } else if (elem.type === 'cabinet') {
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', elem.x);
+                rect.setAttribute('y', elem.y);
+                rect.setAttribute('width', elem.w);
+                rect.setAttribute('height', elem.h);
+                rect.setAttribute('rx', '4');
+                rect.setAttribute('class', 'cabinet-rect');
+                g.appendChild(rect);
+                
+                const icon = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                icon.setAttribute('x', elem.x + elem.w / 2);
+                icon.setAttribute('y', elem.y + elem.h / 2 + 7);
+                icon.setAttribute('class', 'facility-icon');
+                icon.textContent = '🗄️';
+                g.appendChild(icon);
+                
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', elem.x + elem.w / 2);
+                text.setAttribute('y', elem.y + elem.h + 16);
+                text.setAttribute('class', 'facility-text');
+                text.textContent = elem.label;
+                g.appendChild(text);
+                
+            } else if (elem.type === 'room') {
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', elem.x);
+                rect.setAttribute('y', elem.y);
+                rect.setAttribute('width', elem.w);
+                rect.setAttribute('height', elem.h);
+                rect.setAttribute('class', 'room-rect');
+                g.appendChild(rect);
+                
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', elem.x + elem.w / 2);
+                text.setAttribute('y', elem.y + elem.h / 2 + 6);
+                text.setAttribute('class', 'room-text');
+                text.textContent = elem.label;
+                g.appendChild(text);
+                
+            } else if (elem.type === 'label') {
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', elem.x);
+                text.setAttribute('y', elem.y);
+                text.setAttribute('class', 'custom-label-text');
+                text.textContent = elem.label;
+                g.appendChild(text);
+            }
+            
+            elementsGroup.appendChild(g);
+        });
+        
+        // Draw selected outline if selected element exists
+        updateSelectionHighlight();
+    }
+
+    // Convert Screen cursor to SVG coords
+    function getSVGCoords(evt) {
+        const pt = svg.createSVGPoint();
+        pt.x = evt.clientX;
+        pt.y = evt.clientY;
+        return pt.matrixTransform(svg.getScreenCTM().inverse());
+    }
+
+    // Element selection and drag handlers
+    function handleMouseDown(evt, elementId) {
+        if (currentMode !== 'edit') return;
+        evt.stopPropagation();
+        
+        selectedElementId = elementId;
+        const elem = (layoutData.elements || []).find(e => e.id === elementId);
+        if (!elem) return;
+        
+        const coords = getSVGCoords(evt);
+        dragElement = elem;
+        dragOffset.x = coords.x - elem.x;
+        dragOffset.y = coords.y - elem.y;
+        
+        updateSelectionHighlight();
+        populateInspector(elem);
+    }
+    
+    function handleElementClick(evt, elementId) {
+        evt.stopPropagation();
+        if (currentMode === 'edit') return;
+        
+        // In view mode, clicking a seat could show a tooltip or highlight it
+        const elem = (layoutData.elements || []).find(e => e.id === elementId);
+        if (elem && elem.type === 'seat' && elem.staff_name) {
+            // Highlight seat and display colleague name in search field
+            triggerPulseHighlight(elem);
+        }
+    }
+    
+    // Canvas MouseMove/MouseUp for dragging
+    window.addEventListener('mousemove', (evt) => {
+        if (!dragElement || currentMode !== 'edit') return;
+        
+        const coords = getSVGCoords(evt);
+        let targetX = coords.x - dragOffset.x;
+        let targetY = coords.y - dragOffset.y;
+        
+        // Snap to grid
+        const snap = document.getElementById('snapToGrid').checked;
+        if (snap) {
+            targetX = Math.round(targetX / gridSize) * gridSize;
+            targetY = Math.round(targetY / gridSize) * gridSize;
+        }
+        
+        // Limit bounds inside canvas
+        targetX = Math.max(0, Math.min(layoutData.width - (dragElement.w || 40), targetX));
+        targetY = Math.max(0, Math.min(layoutData.height - (dragElement.h || 40), targetY));
+        
+        dragElement.x = targetX;
+        dragElement.y = targetY;
+        
+        // Update DOM node position directly for smooth rendering
+        const gNode = document.getElementById(`g-${dragElement.id}`);
+        if (gNode) {
+            if (dragElement.type === 'desk') {
+                const rect = gNode.querySelector('.desk-rect');
+                const text = gNode.querySelector('.desk-text');
+                rect.setAttribute('x', targetX);
+                rect.setAttribute('y', targetY);
+                text.setAttribute('x', targetX + dragElement.w / 2);
+                text.setAttribute('y', targetY + dragElement.h / 2 + 5);
+            } else if (dragElement.type === 'seat') {
+                const rect = gNode.querySelector('.seat-rect');
+                const textNo = gNode.querySelector('.seat-label');
+                const textName = gNode.querySelector('.seat-staff-text');
+                const w = dragElement.w || 40;
+                const h = dragElement.h || 40;
+                rect.setAttribute('x', targetX);
+                rect.setAttribute('y', targetY);
+                textNo.setAttribute('x', targetX + w / 2);
+                textNo.setAttribute('y', targetY + h / 2 + 5);
+                textName.setAttribute('x', targetX + w / 2);
+                textName.setAttribute('y', targetY + h + 16);
+            } else if (dragElement.type === 'printer') {
+                const rect = gNode.querySelector('.facility-rect');
+                const icon = gNode.querySelector('.facility-icon');
+                const text = gNode.querySelector('.facility-text');
+                rect.setAttribute('x', targetX);
+                rect.setAttribute('y', targetY);
+                icon.setAttribute('x', targetX + dragElement.w / 2);
+                icon.setAttribute('y', targetY + dragElement.h / 2 + 7);
+                text.setAttribute('x', targetX + dragElement.w / 2);
+                text.setAttribute('y', targetY + dragElement.h + 16);
+            } else if (dragElement.type === 'door') {
+                const rect = gNode.querySelector('.door-rect');
+                const text = gNode.querySelector('.facility-text');
+                rect.setAttribute('x', targetX);
+                rect.setAttribute('y', targetY);
+                text.setAttribute('x', targetX + dragElement.w / 2);
+                text.setAttribute('y', targetY + dragElement.h + 16);
+            } else if (dragElement.type === 'label') {
+                const text = gNode.querySelector('.custom-label-text');
+                text.setAttribute('x', targetX);
+                text.setAttribute('y', targetY);
+            }
+        }
+        
+        // Update Inspector
+        document.getElementById('inspect-x').value = targetX;
+        document.getElementById('inspect-y').value = targetY;
+        
+        updateSelectionHighlight();
+    });
+    
+    window.addEventListener('mouseup', () => {
+        dragElement = null;
+    });
+
+    // Deselect elements on clicking blank canvas area
+    svg.addEventListener('mousedown', (evt) => {
+        if (evt.target === svg && currentMode === 'edit') {
+            selectedElementId = null;
+            updateSelectionHighlight();
+            clearInspector();
+        }
+    });
+
+    // Drawing helper for Selected Elements selection-outline
+    function updateSelectionHighlight() {
+        // Clear previous selection outlines
+        const oldOutlines = overlayGroup.querySelectorAll('.selection-outline');
+        oldOutlines.forEach(n => n.remove());
+        
+        if (!selectedElementId || currentMode !== 'edit') return;
+        
+        const elem = (layoutData.elements || []).find(e => e.id === selectedElementId);
+        if (!elem) return;
+        
+        // Add dotted border highlighting selected item
+        const outline = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        
+        // Calculate dimensions
+        let x = elem.x;
+        let y = elem.y;
+        let w = elem.w || 40;
+        let h = elem.h || 40;
+        
+        if (elem.type === 'label') {
+            // For text labels, show a bounding box estimate
+            x = elem.x - 50;
+            y = elem.y - 15;
+            w = 100;
+            h = 20;
+        }
+        
+        outline.setAttribute('x', x - 4);
+        outline.setAttribute('y', y - 4);
+        outline.setAttribute('width', w + 8);
+        outline.setAttribute('height', h + 8);
+        outline.setAttribute('rx', '4');
+        outline.setAttribute('class', 'selection-outline');
+        
+        overlayGroup.appendChild(outline);
+    }
+
+    // Inspector forms controller
+    function populateInspector(elem) {
+        document.getElementById('inspector-empty').style.display = 'none';
+        const form = document.getElementById('inspector-form');
+        form.style.display = 'flex';
+        
+        document.getElementById('inspect-type').value = 
+            elem.type === 'seat' ? '同工座位' :
+            elem.type === 'desk' ? '辦公桌' :
+            elem.type === 'door' ? '門口/隔間' :
+            elem.type === 'printer' ? '多功能設備' :
+            elem.type === 'cabinet' ? '櫃子' :
+            elem.type === 'room' ? '房間' : '文字標籤';
+            
+        document.getElementById('inspect-label-title').textContent = elem.type === 'seat' ? '座位編號' : '名稱標籤';
+        document.getElementById('inspect-label').value = elem.type === 'seat' ? elem.seat_no : elem.label;
+        
+        // Handle seat coworker mapping dropdown
+        const staffGroup = document.getElementById('inspect-staff-group');
+        if (elem.type === 'seat') {
+            staffGroup.style.display = 'flex';
+            document.getElementById('inspect-staff').value = elem.staff_id || '';
+        } else {
+            staffGroup.style.display = 'none';
+        }
+        
+        document.getElementById('inspect-x').value = elem.x;
+        document.getElementById('inspect-y').value = elem.y;
+        document.getElementById('inspect-w').value = elem.w || 40;
+        document.getElementById('inspect-h').value = elem.h || 40;
+    }
+    
+    function clearInspector() {
+        document.getElementById('inspector-form').style.display = 'none';
+        document.getElementById('inspector-empty').style.display = 'block';
+    }
+
+    // Attribute updates from Inspector
+    function updateSelectedElementProperty(prop, val) {
+        if (!selectedElementId) return;
+        const elem = (layoutData.elements || []).find(e => e.id === selectedElementId);
+        if (!elem) return;
+        
+        if (prop === 'label') {
+            if (elem.type === 'seat') {
+                elem.seat_no = val;
+            } else {
+                elem.label = val;
+            }
+        } else {
+            elem[prop] = val;
+        }
+        
+        // Render updates on SVG
+        renderMap();
+    }
+    
+    function assignCoworkerToSeat(staffId) {
+        if (!selectedElementId) return;
+        const elem = (layoutData.elements || []).find(e => e.id === selectedElementId);
+        if (!elem || elem.type !== 'seat') return;
+        
+        if (!staffId) {
+            // Unassign seat
+            elem.staff_id = '';
+            elem.staff_name = '';
+        } else {
+            const cw = coworkersList.find(c => c.staff_id == staffId);
+            if (cw) {
+                // Check if this coworker is already assigned to another seat and alert/remove if needed
+                layoutData.elements.forEach(other => {
+                    if (other.type === 'seat' && other.id !== elem.id && other.staff_id == staffId) {
+                        other.staff_id = '';
+                        other.staff_name = '';
+                    }
+                });
+                
+                elem.staff_id = cw.staff_id;
+                elem.staff_name = cw.name;
+            }
+        }
+        
+        renderMap();
+    }
+
+    // Add elements into editor layout
+    function addNewElement(type) {
+        const id = `${type}-${Date.now()}`;
+        const newElem = {
+            id: id,
+            type: type,
+            x: 100,
+            y: 100,
+            w: type === 'desk' ? 120 : type === 'door' ? 80 : type === 'room' ? 200 : 40,
+            h: type === 'desk' ? 60 : type === 'door' ? 10 : type === 'room' ? 150 : 40
+        };
+        
+        if (type === 'seat') {
+            newElem.seat_no = `S${(layoutData.elements.filter(e => e.type === 'seat').length + 1).toString().padStart(2, '0')}`;
+            newElem.staff_id = '';
+            newElem.staff_name = '';
+        } else if (type === 'desk') {
+            newElem.label = `辦公桌`;
+        } else if (type === 'door') {
+            newElem.label = `通道`;
+        } else if (type === 'printer') {
+            newElem.label = `事務機`;
+            newElem.w = 50;
+            newElem.h = 50;
+        } else if (type === 'cabinet') {
+            newElem.label = `置物櫃`;
+        } else if (type === 'room') {
+            newElem.label = `房間/會議室`;
+        } else if (type === 'label') {
+            newElem.label = `文字標記`;
+        }
+        
+        layoutData.elements.push(newElem);
+        renderMap();
+        
+        // Select newly added element
+        selectedElementId = id;
+        updateSelectionHighlight();
+        populateInspector(newElem);
+    }
+    
+    // Delete element
+    function deleteSelectedElement() {
+        if (!selectedElementId) return;
+        layoutData.elements = layoutData.elements.filter(e => e.id !== selectedElementId);
+        selectedElementId = null;
+        clearInspector();
+        renderMap();
+    }
+
+    // Canvas sizes setting
+    function resizeCanvas(dimension, value) {
+        if (value < 500) value = 500;
+        layoutData[dimension] = value;
+        renderMap();
+    }
+
+    // Editor View/Edit Modes Toggle
+    function setMode(mode) {
+        currentMode = mode;
+        
+        const btnView = document.getElementById('btn-view-mode');
+        const btnEdit = document.getElementById('btn-edit-mode');
+        const toolbox = document.getElementById('toolbox');
+        const inspector = document.getElementById('inspector');
+        const btnSave = document.getElementById('btn-save');
+        
+        if (mode === 'edit') {
+            btnEdit.classList.add('active');
+            btnView.classList.remove('active');
+            toolbox.style.display = 'flex';
+            inspector.style.display = 'flex';
+            btnSave.style.display = 'inline-flex';
+        } else {
+            btnView.classList.add('active');
+            btnEdit.classList.remove('active');
+            toolbox.style.display = 'none';
+            inspector.style.display = 'none';
+            btnSave.style.display = 'none';
+            selectedElementId = null;
+            clearInspector();
+        }
+        
+        renderMap();
+    }
+
+    // Search and highligh mapping
+    let pulseInterval = null;
+    
+    function handleSearch(query) {
+        query = query.trim().toLowerCase();
+        const clearBtn = document.getElementById('clearSearch');
+        
+        if (!query) {
+            clearBtn.style.display = 'none';
+            stopPulseHighlight();
+            return;
+        }
+        
+        clearBtn.style.display = 'inline-block';
+        
+        // Find matching seat by coworker name
+        const match = (layoutData.elements || []).find(elem => {
+            return elem.type === 'seat' && 
+                   elem.staff_name && 
+                   elem.staff_name.toLowerCase().includes(query);
+        });
+        
+        if (match) {
+            triggerPulseHighlight(match);
+        } else {
+            stopPulseHighlight();
+        }
+    }
+    
+    function clearSearchField() {
+        document.getElementById('seatSearch').value = '';
+        document.getElementById('clearSearch').style.display = 'none';
+        stopPulseHighlight();
+    }
+    
+    function triggerPulseHighlight(elem) {
+        stopPulseHighlight();
+        
+        const w = elem.w || 40;
+        const h = elem.h || 40;
+        const cx = elem.x + w / 2;
+        const cy = elem.y + h / 2;
+        
+        // Create glowing animated rings over element
+        const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        ring.setAttribute('cx', cx);
+        ring.setAttribute('cy', cy);
+        ring.setAttribute('class', 'pulse-ring');
+        ring.id = 'search-pulse-ring';
+        
+        overlayGroup.appendChild(ring);
+        
+        // Smoothly scroll container to center the seat
+        const card = document.getElementById('canvas-card');
+        const targetScrollLeft = cx - card.clientWidth / 2;
+        const targetScrollTop = cy - card.clientHeight / 2;
+        
+        card.scrollTo({
+            left: targetScrollLeft,
+            top: targetScrollTop,
+            behavior: 'smooth'
+        });
+    }
+    
+    function stopPulseHighlight() {
+        const ring = document.getElementById('search-pulse-ring');
+        if (ring) ring.remove();
+    }
+
+    // AJAX Save payload to Database
+    function saveLayout() {
+        const btn = document.getElementById('btn-save');
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+        btn.querySelector('span').textContent = '⌛';
+        
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        fetch("{% url 'eureka:seats-save' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ layout_data: layoutData })
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.querySelector('span').textContent = '💾';
+            
+            if (data.success) {
+                showToast("配置儲存與同工座位分配同步成功！");
+                setMode('view');
+            } else {
+                alert(`儲存失敗: ${data.error}`);
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.querySelector('span').textContent = '💾';
+            alert(`網路傳輸錯誤: ${err}`);
+        });
+    }
+    
+    function showToast(msg) {
+        const toast = document.getElementById('successToast');
+        document.getElementById('toastMessage').textContent = msg;
+        toast.style.display = 'inline-flex';
+        
+        setTimeout(() => {
+            toast.style.display = 'none';
+        }, 3500);
+    }
+
+    // Initial load
+    renderMap();
+</script>
+{% endblock %}

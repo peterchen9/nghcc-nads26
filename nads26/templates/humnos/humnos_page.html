@@ -1,0 +1,609 @@
+{% extends "base.html" %}
+
+{% block title %}網路影音下載 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Premium glassmorphism design */
+    .downloader-card {
+        background: rgba(255, 255, 255, 0.04);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 24px;
+        padding: 40px;
+        max-width: 600px;
+        margin: 20px auto;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .downloader-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+    }
+
+    .downloader-header {
+        text-align: center;
+        margin-bottom: 35px;
+    }
+
+    .downloader-header h2 {
+        font-family: 'Outfit', sans-serif;
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin: 0 0 10px 0;
+        background: linear-gradient(135deg, #ffffff 0%, var(--accent-color) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+    }
+
+    .downloader-header p {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        margin: 5px 0;
+    }
+
+    .warning-banner {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin-bottom: 25px;
+        color: #f87171;
+        font-size: 0.88rem;
+        text-align: center;
+        line-height: 1.5;
+    }
+
+    .form-group {
+        margin-bottom: 24px;
+    }
+
+    .form-label {
+        display: block;
+        color: var(--text-secondary);
+        font-size: 0.88rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
+    }
+
+    .input-row {
+        display: flex;
+        gap: 12px;
+    }
+
+    .input-control {
+        flex-grow: 1;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 14px 16px;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+        outline: none;
+    }
+
+    .input-control::placeholder {
+        color: rgba(255, 255, 255, 0.3);
+    }
+
+    .input-control:focus {
+        border-color: var(--accent-color);
+        background: rgba(0, 0, 0, 0.3);
+        box-shadow: 0 0 0 3px rgba(188, 220, 255, 0.15);
+    }
+
+    .btn-query {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: var(--text-primary);
+        border-radius: 12px;
+        padding: 0 24px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .btn-query:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .btn-query:active:not(:disabled) {
+        transform: scale(0.98);
+    }
+
+    .btn-query:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Video Info Block */
+    .video-info-box {
+        display: none;
+        background: rgba(16, 185, 129, 0.08);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+        border-radius: 14px;
+        padding: 16px;
+        margin-top: 12px;
+        animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .video-info-content {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+    }
+
+    .video-thumbnail {
+        width: 120px;
+        height: 68px;
+        object-fit: cover;
+        border-radius: 8px;
+        background: #1e293b;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .video-details {
+        flex-grow: 1;
+        min-width: 0;
+    }
+
+    .video-title {
+        color: #34d399;
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin: 0 0 6px 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .video-meta {
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.5);
+        margin: 0;
+        display: flex;
+        gap: 12px;
+    }
+
+    /* Form selectors row */
+    .selectors-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    select.input-control {
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='rgba(255, 255, 255, 0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 14px center;
+        background-size: 16px;
+        padding-right: 40px;
+        cursor: pointer;
+    }
+
+    /* Error & feedback alerts */
+    .alert-box {
+        display: none;
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 24px;
+        color: #f87171;
+        font-size: 0.9rem;
+        animation: fadeIn 0.25s ease-out;
+    }
+
+    /* Submit action button */
+    .btn-submit {
+        width: 100%;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        border: none;
+        border-radius: 14px;
+        padding: 16px;
+        color: white;
+        font-weight: 700;
+        font-size: 1.05rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .btn-submit:hover:not(:disabled) {
+        background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
+        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+        transform: translateY(-1px);
+    }
+
+    .btn-submit:active:not(:disabled) {
+        transform: translateY(1px);
+    }
+
+    .btn-submit:disabled {
+        background: #4b5563;
+        color: #9ca3af;
+        box-shadow: none;
+        cursor: not-allowed;
+    }
+
+    /* Progress visualizer */
+    .progress-box {
+        display: none;
+        margin-top: 24px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 20px;
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.9rem;
+        margin-bottom: 12px;
+    }
+
+    .status-text {
+        font-weight: 600;
+        color: var(--accent-color);
+    }
+
+    .spinner {
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        border-top-color: var(--accent-color);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    .pulse-bar {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 3px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .pulse-bar-fill {
+        height: 100%;
+        width: 40%;
+        background: linear-gradient(90deg, #3b82f6, var(--accent-color));
+        border-radius: 3px;
+        position: absolute;
+        animation: slidePulse 1.8s infinite ease-in-out;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    @keyframes slidePulse {
+        0% { left: -40%; }
+        50% { width: 60%; }
+        100% { left: 100%; }
+    }
+
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="downloader-card">
+    <div class="downloader-header">
+        <h2>🎬 網路影音下載</h2>
+        <p>支援 YouTube、Facebook 等主流影音平台</p>
+    </div>
+
+    <div class="warning-banner">
+        ⚠️ 影音平台常更新演算法，若遇無法下載情況，請聯繫管理員更新解析模組。
+    </div>
+
+    <!-- Error block -->
+    <div id="alertBox" class="alert-box"></div>
+
+    <form id="downloadForm" onsubmit="event.preventDefault();">
+        <!-- Video URL Input -->
+        <div class="form-group">
+            <label class="form-label" for="videoUrl">影片網址</label>
+            <div class="input-row">
+                <input type="url" id="videoUrl" class="input-control" placeholder="貼上 YouTube 或 Facebook 影片網址..." required autocomplete="off">
+                <button type="button" id="btnQuery" class="btn-query" onclick="fetchVideoInfo()">查詢</button>
+            </div>
+            <!-- Video Info display -->
+            <div id="videoInfoBox" class="video-info-box">
+                <div class="video-info-content">
+                    <img id="videoThumb" class="video-thumbnail" src="" alt="縮圖">
+                    <div class="video-details">
+                        <h4 id="videoTitleText" class="video-title"></h4>
+                        <p class="video-meta">
+                            <span id="videoUploader"></span>
+                            <span id="videoDuration"></span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Filename -->
+        <div class="form-group">
+            <label class="form-label" for="customName">自訂檔名 (選填)</label>
+            <input type="text" id="customName" class="input-control" placeholder="留空則自動採用影片標題..." autocomplete="off">
+        </div>
+
+        <!-- Form settings row -->
+        <div class="form-group selectors-row">
+            <div>
+                <label class="form-label" for="downloadFormat">下載形式</label>
+                <select id="downloadFormat" class="input-control" onchange="toggleFormatFields()">
+                    <option value="mp4">影片 (MP4)</option>
+                    <option value="mp3">音檔 (MP3)</option>
+                </select>
+            </div>
+            
+            <!-- Video Quality (Shown for mp4) -->
+            <div id="qualityGroup">
+                <label class="form-label" for="videoQuality">影片畫質</label>
+                <select id="videoQuality" class="input-control">
+                    <option value="1080">1080p (高畫質)</option>
+                    <option value="720" selected>720p (標準畫質)</option>
+                    <option value="480">480p</option>
+                    <option value="360">360p (節省流量)</option>
+                </select>
+            </div>
+
+            <!-- Audio Bitrate (Shown for mp3) -->
+            <div id="bitrateGroup" style="display: none;">
+                <label class="form-label" for="audioBitrate">音質位元率</label>
+                <select id="audioBitrate" class="input-control">
+                    <option value="320k">320k (極佳)</option>
+                    <option value="256k" selected>256k (標準)</option>
+                    <option value="128k">128k (普通)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Action submit -->
+        <button type="button" id="btnSubmit" class="btn-submit" onclick="startDownload()">
+            <span>開始下載</span>
+        </button>
+
+        <!-- Progress Area -->
+        <div id="progressBox" class="progress-box">
+            <div class="progress-header">
+                <span id="statusText" class="status-text">正在處理...</span>
+                <div class="spinner"></div>
+            </div>
+            <div class="pulse-bar">
+                <div class="pulse-bar-fill"></div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Get Cookie utility for Django CSRF if needed
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function toggleFormatFields() {
+        const format = document.getElementById('downloadFormat').value;
+        const qualityGroup = document.getElementById('qualityGroup');
+        const bitrateGroup = document.getElementById('bitrateGroup');
+
+        if (format === 'mp4') {
+            qualityGroup.style.display = 'block';
+            bitrateGroup.style.display = 'none';
+        } else {
+            qualityGroup.style.display = 'none';
+            bitrateGroup.style.display = 'block';
+        }
+    }
+
+    function showError(msg) {
+        const alertBox = document.getElementById('alertBox');
+        if (msg) {
+            alertBox.innerText = msg;
+            alertBox.style.display = 'block';
+            alertBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+            alertBox.style.display = 'none';
+        }
+    }
+
+    function formatDuration(secs) {
+        if (!secs) return '';
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    async function fetchVideoInfo() {
+        const urlInput = document.getElementById('videoUrl');
+        const url = urlInput.value.trim();
+        if (!url) return;
+
+        const btnQuery = document.getElementById('btnQuery');
+        const infoBox = document.getElementById('videoInfoBox');
+        
+        showError(null);
+        btnQuery.disabled = true;
+        btnQuery.innerText = '查詢中...';
+
+        try {
+            const response = await fetch('/api/humnos/info/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') || ''
+                },
+                body: JSON.stringify({ url: url })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                document.getElementById('videoTitleText').innerText = data.title || '無標題';
+                document.getElementById('videoUploader').innerText = data.uploader ? `👤 ${data.uploader}` : '';
+                document.getElementById('videoDuration').innerText = data.duration ? `⏱️ ${formatDuration(data.duration)}` : '';
+                
+                const thumb = document.getElementById('videoThumb');
+                if (data.thumbnail) {
+                    thumb.src = data.thumbnail;
+                    thumb.style.display = 'block';
+                } else {
+                    thumb.style.display = 'none';
+                }
+                
+                infoBox.style.display = 'block';
+            } else {
+                showError(data.error || '無法取得影片資訊');
+                infoBox.style.display = 'none';
+            }
+        } catch (e) {
+            showError('網路連線失敗，請檢查網路狀態或伺服器運作情形。');
+            infoBox.style.display = 'none';
+        } finally {
+            btnQuery.disabled = false;
+            btnQuery.innerText = '查詢';
+        }
+    }
+
+    async function startDownload() {
+        const urlInput = document.getElementById('videoUrl');
+        const url = urlInput.value.trim();
+        if (!url) {
+            showError('請輸入影片網址。');
+            return;
+        }
+
+        const format = document.getElementById('downloadFormat').value;
+        const quality = document.getElementById('videoQuality').value;
+        const bitrate = document.getElementById('audioBitrate').value;
+        const filename = document.getElementById('customName').value.trim();
+
+        const btnSubmit = document.getElementById('btnSubmit');
+        const progressBox = document.getElementById('progressBox');
+        const statusText = document.getElementById('statusText');
+
+        showError(null);
+        setFormDisabled(true);
+        progressBox.style.display = 'block';
+        statusText.innerText = '正在下載與轉檔影音 (這可能需要數十秒，請勿關閉視窗)...';
+
+        try {
+            const payload = {
+                url: url,
+                format: format,
+                quality: quality,
+                bitrate: bitrate,
+                filename: filename
+            };
+
+            const response = await fetch('/api/humnos/download/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') || ''
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                statusText.innerText = '影音下載完成，正在傳輸至您的設備...';
+                
+                // Extract filename from Content-Disposition header
+                const disposition = response.headers.get('content-disposition');
+                let outFilename = `download.${format}`;
+                if (disposition) {
+                    const match = disposition.match(/filename\*?=(?:UTF-8'')?(.+)/i);
+                    if (match && match[1]) {
+                        outFilename = decodeURIComponent(match[1].replace(/['"]/g, ''));
+                    }
+                }
+
+                // Download using Blob
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = outFilename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(blobUrl);
+
+                statusText.innerText = '檔案儲存成功！';
+                setTimeout(() => {
+                    progressBox.style.display = 'none';
+                }, 3000);
+            } else {
+                let errorMsg = '影音下載失敗';
+                try {
+                    const data = await response.json();
+                    errorMsg = data.error || errorMsg;
+                } catch (e) {}
+                showError(errorMsg);
+                progressBox.style.display = 'none';
+            }
+        } catch (e) {
+            showError('下載過程中發生錯誤，請稍後再試。');
+            progressBox.style.display = 'none';
+        } finally {
+            setFormDisabled(false);
+        }
+    }
+
+    function setFormDisabled(disabled) {
+        document.getElementById('videoUrl').disabled = disabled;
+        document.getElementById('btnQuery').disabled = disabled;
+        document.getElementById('customName').disabled = disabled;
+        document.getElementById('downloadFormat').disabled = disabled;
+        document.getElementById('videoQuality').disabled = disabled;
+        document.getElementById('audioBitrate').disabled = disabled;
+        document.getElementById('btnSubmit').disabled = disabled;
+    }
+</script>
+{% endblock %}

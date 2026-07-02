@@ -1,0 +1,835 @@
+{% extends "base.html" %}
+
+{% block title %}同工休假表 - {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .leave-page {
+        display: grid;
+        gap: 14px;
+        min-width: 0;
+    }
+    .leave-toolbar,
+    .leave-panel {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        box-sizing: border-box;
+    }
+    .leave-toolbar {
+        position: sticky;
+        top: 70px;
+        z-index: 80;
+        padding: 14px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
+        display: grid;
+        gap: 12px;
+    }
+    .leave-toolbar-main {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+    .leave-toolbar h2,
+    .leave-panel h3 {
+        margin: 0;
+    }
+    .leave-toolbar h2 {
+        font-size: 1.35rem;
+    }
+    .month-tabs {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 2px;
+    }
+    .month-tab,
+    .btn {
+        border: 1px solid rgba(188,220,255,0.35);
+        background: rgba(188,220,255,0.12);
+        color: var(--accent-color);
+        border-radius: 6px;
+        padding: 8px 11px;
+        text-decoration: none;
+        cursor: pointer;
+        font: inherit;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 36px;
+        white-space: nowrap;
+    }
+    .month-tab.active,
+    .btn.primary {
+        background: var(--accent-color);
+        color: var(--sidebar-bg);
+        font-weight: 800;
+    }
+    .btn.danger {
+        border-color: rgba(248,113,113,0.45);
+        color: #fecaca;
+        background: rgba(248,113,113,0.1);
+    }
+    .leave-grid {
+        display: grid;
+        grid-template-columns: minmax(420px, 1.35fr) minmax(320px, 0.85fr);
+        grid-template-areas:
+            "calendar side"
+            "notes side";
+        gap: 14px;
+        min-width: 0;
+        align-items: start;
+    }
+    .calendar-panel {
+        grid-area: calendar;
+    }
+    .notes-panel {
+        grid-area: notes;
+        margin-top: -8px;
+    }
+    .side-stack {
+        grid-area: side;
+        display: grid;
+        gap: 14px;
+        min-width: 0;
+    }
+    .leave-panel {
+        padding: 14px;
+        min-width: 0;
+        overflow: hidden;
+    }
+    .panel-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    .muted {
+        color: var(--text-secondary);
+        font-size: 0.88rem;
+    }
+    .messages {
+        display: grid;
+        gap: 8px;
+    }
+    .message {
+        border-radius: 6px;
+        padding: 10px 12px;
+        background: rgba(188,220,255,0.12);
+        color: var(--accent-color);
+    }
+    .message.error {
+        background: rgba(248,113,113,0.12);
+        color: #fecaca;
+    }
+    .locked-note {
+        border: 1px solid rgba(250,204,21,0.35);
+        background: rgba(250,204,21,0.08);
+        color: #fde68a;
+        border-radius: 6px;
+        padding: 9px 10px;
+    }
+    .calendar-table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: separate;
+        border-spacing: 0;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 8px;
+        background: rgba(8, 13, 20, 0.18);
+    }
+    .calendar-table th,
+    .calendar-table td {
+        border-right: 1px solid rgba(255,255,255,0.08);
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        vertical-align: top;
+    }
+    .calendar-table th:last-child,
+    .calendar-table td:last-child {
+        border-right: 0;
+    }
+    .calendar-table tr:last-child td {
+        border-bottom: 0;
+    }
+    .calendar-table th {
+        color: var(--accent-color);
+        background: rgba(38, 56, 77, 0.94);
+        padding: 8px 4px;
+        font-size: 0.84rem;
+    }
+    .day-cell {
+        height: 64px;
+        padding: 5px;
+        background: rgba(255,255,255,0.025);
+    }
+    .day-cell.out-month {
+        opacity: 0.38;
+        background: rgba(255,255,255,0.012);
+    }
+    .locked-month .day-cell:not(.out-month) {
+        background: rgba(251, 207, 232, 0.16);
+    }
+    .locked-month .part-button[data-part="am"] {
+        background: rgba(251, 207, 232, 0.22);
+    }
+    .locked-month .part-button[data-part="pm"] {
+        background: rgba(251, 207, 232, 0.12);
+    }
+    .day-cell.selected {
+        outline: 2px solid rgba(94,234,212,0.9);
+        outline-offset: -2px;
+    }
+    .day-number {
+        display: flex;
+        justify-content: space-between;
+        gap: 6px;
+        margin-bottom: 5px;
+        font-weight: 800;
+        line-height: 1;
+    }
+    .day-markers {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+    .part-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+    }
+    .part-button {
+        min-width: 0;
+        min-height: 26px;
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 6px;
+        color: var(--text-primary);
+        cursor: pointer;
+        font: inherit;
+        padding: 2px;
+        display: grid;
+        gap: 2px;
+        place-items: center;
+    }
+    .part-button[data-part="am"] {
+        background: rgba(250, 204, 21, 0.12);
+    }
+    .part-button[data-part="pm"] {
+        background: rgba(96, 165, 250, 0.16);
+    }
+    .part-button:hover,
+    .part-button:focus-visible {
+        border-color: rgba(94,234,212,0.85);
+        outline: none;
+    }
+    .part-button[disabled] {
+        cursor: default;
+        opacity: 0.65;
+    }
+    .code-chip {
+        border-radius: 999px;
+        padding: 2px 8px;
+        font-size: 0.82rem;
+        font-weight: 900;
+        color: #07111f;
+        background: #e5e7eb;
+    }
+    .code-chip.empty {
+        color: var(--text-secondary);
+        background: transparent;
+        border: 1px dashed rgba(255,255,255,0.18);
+    }
+    .code-chip.code-補 { background: #bfdbfe; }
+    .code-chip.code-休 { background: #a7f3d0; }
+    .code-chip.code-特 { background: #fde68a; }
+    .code-chip.code-公 { background: #fbcfe8; }
+    .code-chip.code-其他 { background: #ddd6fe; }
+    .list-panel {
+        display: grid;
+        gap: 9px;
+        align-content: start;
+        max-height: 100%;
+        overflow: auto;
+    }
+    .status-row,
+    .note-row,
+    .church-row {
+        border: 1px solid rgba(255,255,255,0.09);
+        border-radius: 6px;
+        background: rgba(8, 13, 20, 0.18);
+        padding: 10px;
+        display: grid;
+        gap: 4px;
+    }
+    .status-row strong,
+    .note-row strong,
+    .church-row strong {
+        color: var(--text-primary);
+    }
+    .status-meta {
+        color: var(--text-secondary);
+        font-size: 0.84rem;
+    }
+    .staff-status-grid {
+        display: flex;
+        flex-wrap: wrap;
+        align-content: flex-start;
+        gap: 5px;
+        padding: 8px;
+        border: 1px solid rgba(255,255,255,0.09);
+        border-radius: 6px;
+        background: rgba(8, 13, 20, 0.18);
+    }
+    .staff-status-card {
+        position: relative;
+        width: 52px;
+        height: 44px;
+        border: 1px solid rgba(255,255,255,0.13);
+        border-radius: 6px;
+        overflow: hidden;
+        display: grid;
+        grid-template-rows: 1fr 1fr;
+        color: #102033;
+        font-size: 0.78rem;
+        font-weight: 900;
+        line-height: 1;
+        text-align: center;
+    }
+    .staff-status-name {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 0 3px;
+        pointer-events: none;
+        color: #102033;
+        text-shadow: 0 1px 0 rgba(255,255,255,0.45);
+        overflow: hidden;
+        white-space: nowrap;
+    }
+    .staff-status-half {
+        display: grid;
+        place-items: center;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: clip;
+        white-space: nowrap;
+    }
+    .staff-status-half.present {
+        background: #fde68a;
+    }
+    .staff-status-half.absent {
+        background: #bfdbfe;
+    }
+    .staff-status-half + .staff-status-half {
+        border-top: 1px solid rgba(15, 23, 42, 0.18);
+    }
+    .church-date {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .church-fields {
+        display: grid;
+        gap: 7px;
+    }
+    .church-field {
+        display: grid;
+        gap: 2px;
+    }
+    .church-field-label {
+        color: var(--accent-color);
+        font-size: 0.78rem;
+        font-weight: 800;
+    }
+    .empty-state {
+        color: var(--text-secondary);
+        border: 1px dashed rgba(255,255,255,0.16);
+        border-radius: 6px;
+        padding: 12px;
+    }
+    .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 16, 24, 0.68);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 500;
+        padding: 20px;
+    }
+    .modal-backdrop.open {
+        display: flex;
+    }
+    .leave-modal {
+        width: min(500px, 100%);
+        background: #2f4156;
+        border: 1px solid rgba(255,255,255,0.14);
+        border-radius: 8px;
+        box-shadow: 0 24px 80px rgba(0,0,0,0.45);
+        padding: 18px;
+    }
+    .modal-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 14px;
+    }
+    .modal-head h2 {
+        margin: 0;
+        font-size: 1.2rem;
+    }
+    .close-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 1px solid rgba(255,255,255,0.18);
+        background: rgba(255,255,255,0.06);
+        color: #fff;
+        cursor: pointer;
+    }
+    .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 12px;
+    }
+    .field label {
+        color: var(--text-secondary);
+        font-size: 0.86rem;
+    }
+    .field select,
+    .field textarea,
+    .field input {
+        box-sizing: border-box;
+        border: 1px solid rgba(255,255,255,0.14);
+        border-radius: 6px;
+        padding: 9px 10px;
+        background: rgba(8, 13, 20, 0.35);
+        color: var(--text-primary);
+        font: inherit;
+        width: 100%;
+    }
+    .field option {
+        color: #111827;
+    }
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+    }
+    @media (max-width: 980px) {
+        .leave-grid {
+            grid-template-columns: 1fr;
+            grid-template-areas:
+                "calendar"
+                "side"
+                "notes";
+        }
+        .leave-toolbar {
+            top: 70px;
+        }
+    }
+    @media (max-width: 620px) {
+        .day-cell {
+            height: 70px;
+            padding: 5px;
+        }
+        .part-buttons {
+            grid-template-columns: 1fr;
+        }
+        .part-button {
+            min-height: 30px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="leave-page">
+    <section class="leave-toolbar">
+        <div class="leave-toolbar-main">
+            <div>
+                <h2>同工休假表</h2>
+                <div class="muted">{{ selected_month|date:'Y年n月' }}，{{ current_staff_name }}</div>
+            </div>
+            {% if is_locked %}
+                <div class="locked-note">{{ lock_note }}</div>
+            {% endif %}
+        </div>
+        <nav class="month-tabs" aria-label="月份">
+            {% for month in month_options %}
+                <a class="month-tab {% if month.value == selected_month|date:'Y-m' %}active{% endif %}" href="?month={{ month.value }}">{{ month.label }}</a>
+            {% endfor %}
+        </nav>
+    </section>
+
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="message {{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="leave-grid">
+        <section class="leave-panel calendar-panel">
+            <div class="panel-head">
+                <h3>{{ selected_month|date:'Y年n月' }}</h3>
+                <span class="muted">點選日期的上午或下午</span>
+            </div>
+            <table class="calendar-table {% if is_locked %}locked-month{% endif %}">
+                <thead>
+                    <tr>
+                        <th>日</th>
+                        <th>一</th>
+                        <th>二</th>
+                        <th>三</th>
+                        <th>四</th>
+                        <th>五</th>
+                        <th>六</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for week in calendar_weeks %}
+                        <tr>
+                            {% for day in week %}
+                                <td class="day-cell {% if not day.in_month %}out-month{% endif %}" data-date="{{ day.iso }}">
+                                    <div class="day-number">
+                                        <span>{{ day.day }}</span>
+                                        <span class="day-markers"></span>
+                                    </div>
+                                    <div class="part-buttons">
+                                        <button class="part-button" type="button" data-date="{{ day.iso }}" data-part="am" {% if not day.in_month %}disabled{% endif %}>
+                                            <span class="code-chip empty" data-chip-for="{{ day.iso }}:am"></span>
+                                        </button>
+                                        <button class="part-button" type="button" data-date="{{ day.iso }}" data-part="pm" {% if not day.in_month %}disabled{% endif %}>
+                                            <span class="code-chip empty" data-chip-for="{{ day.iso }}:pm"></span>
+                                        </button>
+                                    </div>
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <div class="side-stack">
+            <section class="leave-panel">
+                <div class="panel-head">
+                    <h3 id="dayStatusTitle">該日其他同工預定出席狀況</h3>
+                    <span class="muted" id="selectedDayLabel"></span>
+                </div>
+                <div class="list-panel" id="dayStatusList"></div>
+            </section>
+
+            <section class="leave-panel">
+                <div class="panel-head">
+                    <h3>當月教會行事曆</h3>
+                    <span class="muted">來自 2026行事曆</span>
+                </div>
+                <div class="list-panel">
+                    {% if church_calendar_entries %}
+                        {% for event in church_calendar_entries %}
+                            <div class="church-row">
+                                <div class="church-date">
+                                    <strong>{{ event.event_date }}（{{ event.weekday }}）</strong>
+                                </div>
+                                <div class="church-fields">
+                                    {% if event.church_activity %}
+                                        <div class="church-field">
+                                            <span class="status-meta">{{ event.church_activity|linebreaksbr }}</span>
+                                        </div>
+                                    {% endif %}
+                                    {% if event.work_plan %}
+                                        <div class="church-field">
+                                            <span class="status-meta">{{ event.work_plan|linebreaksbr }}</span>
+                                        </div>
+                                    {% endif %}
+                                    {% if event.staff_leave_note %}
+                                        <div class="church-field">
+                                            <span class="status-meta">{{ event.staff_leave_note|linebreaksbr }}</span>
+                                        </div>
+                                    {% endif %}
+                                    {% if event.holiday_social %}
+                                        <div class="church-field">
+                                            <span class="status-meta">{{ event.holiday_social|linebreaksbr }}</span>
+                                        </div>
+                                    {% endif %}
+                                    {% if event.note %}
+                                        <div class="church-field">
+                                            <span class="status-meta">{{ event.note|linebreaksbr }}</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">本月沒有教會行事曆資料。</div>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+
+        <section class="leave-panel notes-panel">
+            <div class="panel-head">
+                <h3>請公假或其他假請說明</h3>
+                <span class="muted">只列出你填寫的說明</span>
+            </div>
+            <div class="list-panel" id="monthlyNotesList"></div>
+        </section>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="leaveModal" aria-hidden="true">
+    <div class="leave-modal" role="dialog" aria-modal="true" aria-labelledby="leaveModalTitle">
+        <div class="modal-head">
+            <h2 id="leaveModalTitle">編輯休假</h2>
+            <button class="close-btn" type="button" id="closeLeaveModal" aria-label="關閉">x</button>
+        </div>
+        <form method="post" id="leaveForm">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save" id="leaveAction">
+            <input type="hidden" name="month" value="{{ selected_month|date:'Y-m' }}">
+            <input type="hidden" name="leave_date" id="leaveDate">
+            <input type="hidden" name="day_part" id="leavePart">
+
+            <div class="field">
+                <label for="leaveSlot">日期</label>
+                <input id="leaveSlot" type="text" readonly>
+            </div>
+            <div class="field">
+                <label for="leaveCode">假別</label>
+                <select id="leaveCode" name="code" required>
+                    {% for code in leave_codes %}
+                        <option value="{{ code }}">{{ code }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field" id="descriptionField">
+                <label for="leaveDescription">文字說明</label>
+                <textarea id="leaveDescription" name="description" rows="4" maxlength="500"></textarea>
+            </div>
+            {% if is_locked %}
+                <div class="locked-note">此月份已鎖定，只能閱讀。</div>
+            {% endif %}
+            <div class="modal-actions">
+                <button class="btn danger" type="submit" id="deleteLeaveButton" {% if is_locked %}style="display:none"{% endif %}>刪除</button>
+                <button class="btn" type="button" id="cancelLeaveModal">取消</button>
+                <button class="btn primary" type="submit" id="saveLeaveButton" {% if is_locked %}style="display:none"{% endif %}>儲存</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(() => {
+    const entries = JSON.parse('{{ entries_json|escapejs }}');
+    const staffNames = JSON.parse('{{ staff_names_json|escapejs }}');
+    const churchEntries = JSON.parse('{{ church_calendar_entries_json|escapejs }}');
+    const currentUser = '{{ current_user|escapejs }}';
+    const currentUserAliases = JSON.parse('{{ current_user_aliases_json|escapejs }}');
+    const selectedMonth = '{{ selected_month|date:'Y-m'|escapejs }}';
+    const initialDay = '{{ selected_day|date:'Y-m-d'|escapejs }}';
+    const isLocked = {% if is_locked %}true{% else %}false{% endif %};
+    const partLabels = { am: '上午', pm: '下午' };
+
+    const modal = document.getElementById('leaveModal');
+    const form = document.getElementById('leaveForm');
+    const actionInput = document.getElementById('leaveAction');
+    const dateInput = document.getElementById('leaveDate');
+    const partInput = document.getElementById('leavePart');
+    const slotInput = document.getElementById('leaveSlot');
+    const codeInput = document.getElementById('leaveCode');
+    const descriptionInput = document.getElementById('leaveDescription');
+    const descriptionField = document.getElementById('descriptionField');
+    const deleteButton = document.getElementById('deleteLeaveButton');
+    const saveButton = document.getElementById('saveLeaveButton');
+    const statusList = document.getElementById('dayStatusList');
+    const notesList = document.getElementById('monthlyNotesList');
+    const selectedDayLabel = document.getElementById('selectedDayLabel');
+
+    function entryKey(entry) {
+        return `${entry.leave_date}:${entry.day_part}`;
+    }
+
+    function currentUserEntry(date, part) {
+        return entries.find((entry) => isCurrentUserEntry(entry) && entry.leave_date === date && entry.day_part === part);
+    }
+
+    function isCurrentUserEntry(entry) {
+        return currentUserAliases.includes(entry.staff_user) || currentUserAliases.includes(entry.staff_name);
+    }
+
+    function entriesForDate(date) {
+        return entries.filter((entry) => entry.leave_date === date);
+    }
+
+    function leaveForStaff(date, staffName, part) {
+        return entries.find((entry) => {
+            return entry.leave_date === date
+                && entry.day_part === part
+                && (entry.staff_name === staffName || entry.staff_user === staffName);
+        });
+    }
+
+    function setChip(chip, entry) {
+        chip.className = 'code-chip';
+        if (!entry) {
+            chip.classList.add('empty');
+            chip.textContent = '';
+            return;
+        }
+        chip.classList.add(`code-${entry.code}`);
+        chip.textContent = entry.code;
+    }
+
+    function renderCalendarBadges() {
+        document.querySelectorAll('[data-chip-for]').forEach((chip) => {
+            const [date, part] = chip.dataset.chipFor.split(':');
+            setChip(chip, currentUserEntry(date, part));
+        });
+    }
+
+    function renderDayStatus(date) {
+        selectedDayLabel.textContent = date;
+        document.querySelectorAll('.day-cell').forEach((cell) => {
+            cell.classList.toggle('selected', cell.dataset.date === date);
+        });
+
+        statusList.innerHTML = '';
+        const visibleStaff = staffNames.filter((name) => !currentUserAliases.includes(name));
+        if (!visibleStaff.length) {
+            statusList.innerHTML = '<div class="empty-state">目前沒有同工名單。</div>';
+            return;
+        }
+        const grid = document.createElement('div');
+        grid.className = 'staff-status-grid';
+        visibleStaff.forEach((staffName) => {
+            const card = document.createElement('div');
+            card.className = 'staff-status-card';
+            ['am', 'pm'].forEach((part) => {
+                const leave = leaveForStaff(date, staffName, part);
+                const half = document.createElement('div');
+                half.className = `staff-status-half ${leave ? 'absent' : 'present'}`;
+                half.title = `${staffName} ${partLabels[part]}${leave ? ` ${leave.code}${leave.description ? ` ${leave.description}` : ''}` : ' 出席'}`;
+                card.appendChild(half);
+            });
+            const name = document.createElement('span');
+            name.className = 'staff-status-name';
+            name.textContent = staffName;
+            card.appendChild(name);
+            grid.appendChild(card);
+        });
+        statusList.appendChild(grid);
+    }
+
+    function renderMonthlyNotes() {
+        const notes = entries
+            .filter((entry) => isCurrentUserEntry(entry) && ['公', '其他'].includes(entry.code))
+            .sort((a, b) => entryKey(a).localeCompare(entryKey(b)));
+        notesList.innerHTML = '';
+        if (!notes.length) {
+            return;
+        }
+        notes.forEach((entry) => {
+            const row = document.createElement('div');
+            row.className = 'note-row';
+            const title = document.createElement('strong');
+            title.textContent = `${entry.leave_date} ${partLabels[entry.day_part]} ${entry.code}`;
+            const meta = document.createElement('span');
+            meta.className = 'status-meta';
+            meta.textContent = entry.description || '(未填說明)';
+            row.append(title, meta);
+            notesList.appendChild(row);
+        });
+    }
+
+    function updateDescriptionRequirement() {
+        const required = ['公', '其他'].includes(codeInput.value);
+        descriptionField.style.display = required ? '' : 'none';
+        descriptionInput.required = required;
+        if (!required) descriptionInput.value = '';
+    }
+
+    function openModal(date, part) {
+        const entry = currentUserEntry(date, part);
+        actionInput.value = 'save';
+        dateInput.value = date;
+        partInput.value = part;
+        slotInput.value = `${date} ${partLabels[part]}`;
+        codeInput.value = entry ? entry.code : '休';
+        descriptionInput.value = entry ? (entry.description || '') : '';
+        deleteButton.style.display = !isLocked && entry ? 'inline-flex' : 'none';
+        saveButton.style.display = isLocked ? 'none' : 'inline-flex';
+        codeInput.disabled = isLocked;
+        descriptionInput.readOnly = isLocked;
+        updateDescriptionRequirement();
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        renderDayStatus(date);
+        setTimeout(() => (isLocked ? document.getElementById('closeLeaveModal') : codeInput).focus(), 0);
+    }
+
+    function closeModal() {
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    document.querySelectorAll('.part-button').forEach((button) => {
+        button.addEventListener('click', () => {
+            if (button.disabled) return;
+            openModal(button.dataset.date, button.dataset.part);
+        });
+    });
+
+    document.querySelectorAll('.day-cell').forEach((cell) => {
+        cell.addEventListener('click', (event) => {
+            if (event.target.closest('.part-button')) return;
+            if (cell.classList.contains('out-month')) return;
+            renderDayStatus(cell.dataset.date);
+        });
+    });
+
+    codeInput.addEventListener('change', updateDescriptionRequirement);
+    deleteButton.addEventListener('click', (event) => {
+        if (!confirm('確定要刪除這筆休假資料？')) {
+            event.preventDefault();
+            return;
+        }
+        actionInput.value = 'delete';
+        codeInput.required = false;
+        descriptionInput.required = false;
+    });
+    form.addEventListener('submit', () => {
+        if (document.activeElement !== deleteButton) actionInput.value = 'save';
+    });
+    document.getElementById('closeLeaveModal').addEventListener('click', closeModal);
+    document.getElementById('cancelLeaveModal').addEventListener('click', closeModal);
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) closeModal();
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && modal.classList.contains('open')) closeModal();
+    });
+
+    renderCalendarBadges();
+    renderMonthlyNotes();
+    renderDayStatus(initialDay.startsWith(selectedMonth) ? initialDay : `${selectedMonth}-01`);
+})();
+</script>
+{% endblock %}

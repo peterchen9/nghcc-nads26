@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}區網Hosts - {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .lan-hosts-page { display: grid; gap: 18px; color: var(--text-primary); }
+    .lan-sticky { position: sticky; top: 70px; z-index: 20; display: grid; gap: 14px; padding: 0 0 14px; background: var(--bg-color); }
+    .lan-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .lan-title { margin: 0; font-size: 1.7rem; letter-spacing: 0; }
+    .lan-meta { margin-top: 6px; color: var(--text-secondary); font-size: 0.92rem; }
+    .lan-actions { display: flex; align-items: center; gap: 10px; }
+    .lan-btn { border: 1px solid rgba(188, 220, 255, 0.35); background: rgba(188, 220, 255, 0.12); color: var(--text-primary); border-radius: 8px; padding: 9px 14px; cursor: pointer; font: inherit; font-weight: 600; }
+    .lan-btn:disabled { opacity: 0.55; cursor: wait; }
+    .lan-search { width: min(360px, 100%); border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.06); color: var(--text-primary); border-radius: 8px; padding: 9px 11px; font: inherit; }
+    .lan-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+    .lan-stat, .bandwidth-panel, .hosts-panel { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; }
+    .lan-stat { padding: 16px; }
+    .lan-stat .label { color: var(--text-secondary); font-size: 0.82rem; }
+    .lan-stat .value { margin-top: 7px; font-size: 1.45rem; font-weight: 700; }
+    .bandwidth-panel, .hosts-panel { padding: 16px; }
+    .panel-title { margin: 0 0 12px; font-size: 1.05rem; }
+    .bandwidth-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+    .iface { padding: 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.045); border: 1px solid rgba(255, 255, 255, 0.07); }
+    .iface-head { display: flex; justify-content: space-between; gap: 12px; font-weight: 700; }
+    .iface-address { margin-top: 4px; color: var(--text-secondary); font-size: 0.82rem; min-height: 18px; }
+    .flow-row { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 8px; margin-top: 9px; font-size: 0.86rem; }
+    .flow-bar { height: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 999px; overflow: hidden; }
+    .flow-fill { display: block; height: 100%; width: 0; background: #76d7b0; }
+    .flow-fill.tx { background: #7bb8ff; }
+    .hosts-wrap { overflow-x: auto; }
+    .hosts-table { width: 100%; border-collapse: collapse; min-width: 940px; }
+    .hosts-table th, .hosts-table td { padding: 10px 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); text-align: left; vertical-align: middle; font-size: 0.9rem; }
+    .hosts-table th { color: var(--text-secondary); font-weight: 600; white-space: nowrap; }
+    .note-input { width: 100%; min-width: 180px; box-sizing: border-box; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.06); color: var(--text-primary); border-radius: 6px; padding: 7px 9px; font: inherit; }
+    .status-pill { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; color: #8ef0b2; font-weight: 700; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .empty-row { color: var(--text-secondary); text-align: center; }
+    .error-box { display: none; padding: 11px 13px; border: 1px solid rgba(248, 113, 113, 0.35); color: #fecaca; background: rgba(127, 29, 29, 0.22); border-radius: 8px; }
+    .icon-btn { border: 1px solid rgba(188, 220, 255, 0.28); background: rgba(188, 220, 255, 0.1); color: var(--text-primary); border-radius: 6px; padding: 6px 9px; cursor: pointer; font: inherit; font-size: 0.82rem; font-weight: 700; white-space: nowrap; }
+    .icon-btn:hover { border-color: rgba(188, 220, 255, 0.65); background: rgba(188, 220, 255, 0.18); }
+    .modal-overlay { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; padding: 24px; background: rgba(15, 23, 42, 0.68); backdrop-filter: blur(4px); }
+    .modal-overlay.active { display: flex; }
+    .ping-modal { width: min(720px, 100%); max-height: min(680px, 86vh); display: flex; flex-direction: column; background: #24364b; color: var(--text-primary); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 8px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.38); }
+    .ping-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+    .ping-modal-title { margin: 0; font-size: 1rem; letter-spacing: 0; }
+    .ping-close { width: 34px; height: 34px; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 6px; background: rgba(255, 255, 255, 0.06); color: var(--text-primary); cursor: pointer; font-size: 1.1rem; line-height: 1; }
+    .ping-output { margin: 0; padding: 16px; overflow: auto; white-space: pre-wrap; color: #dbeafe; background: rgba(15, 23, 42, 0.5); font-family: Consolas, "Liberation Mono", monospace; font-size: 0.9rem; line-height: 1.55; }
+    @media (max-width: 720px) { .lan-actions { width: 100%; } .lan-search { flex: 1; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="lan-hosts-page">
+    <div class="lan-sticky">
+        <div class="lan-toolbar">
+            <div>
+                <h2 class="lan-title">區網Hosts</h2>
+                <div class="lan-meta">最近掃描：<span id="scannedAt">-</span>，每小時整點自動更新</div>
+            </div>
+            <div class="lan-actions">
+                <input class="lan-search" id="hostSearch" type="search" placeholder="搜尋 IP、MAC、主機名稱、註記">
+                <button class="lan-btn" id="scanBtn" type="button">立即掃描</button>
+            </div>
+        </div>
+
+        <div class="error-box" id="errorBox"></div>
+
+        <section class="lan-summary">
+            <div class="lan-stat"><div class="label">Alive 裝置</div><div class="value" id="hostCount">0</div></div>
+            <div class="lan-stat"><div class="label">LAN / LAN2 介面</div><div class="value" id="lanCount">0</div></div>
+            <div class="lan-stat"><div class="label">WAN 介面</div><div class="value" id="wanCount">0</div></div>
+        </section>
+
+        <section class="bandwidth-panel">
+            <h3 class="panel-title">LAN / WAN 頻寬</h3>
+            <div class="bandwidth-grid" id="bandwidthGrid"></div>
+        </section>
+    </div>
+
+    <section class="hosts-panel">
+        <h3 class="panel-title">Alive 主機與裝置</h3>
+        <div class="hosts-wrap">
+            <table class="hosts-table">
+                <thead>
+                    <tr>
+                        <th>狀態</th><th>Ping</th><th>IP</th><th>MAC</th><th>OS</th><th>主機名稱</th><th>介面</th><th>更新時間</th><th>註記</th>
+                    </tr>
+                </thead>
+                <tbody id="hostsBody"></tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<div class="modal-overlay" id="pingModal" role="dialog" aria-modal="true" aria-labelledby="pingModalTitle">
+    <div class="ping-modal">
+        <div class="ping-modal-head">
+            <h3 class="ping-modal-title" id="pingModalTitle">Ping</h3>
+            <button class="ping-close" id="pingClose" type="button" aria-label="關閉">×</button>
+        </div>
+        <pre class="ping-output" id="pingOutput"></pre>
+    </div>
+</div>
+
+<script>
+    const initialPayload = {{ snapshot_json|safe }};
+    const scanUrl = "{{ request.path }}scan/";
+    const noteUrl = "{{ request.path }}note/";
+    const pingUrl = "{{ request.path }}ping/";
+    const csrfToken = "{{ csrf_token }}";
+    let hosts = [];
+    let bandwidth = [];
+    let scanTimer = null;
+
+    function escapeHtml(value) {
+        return String(value || '').replace(/[&<>"']/g, (char) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[char]));
+    }
+    function maxFlow(items) {
+        return Math.max(1, ...items.flatMap((item) => [Number(item.tx_bps || 0), Number(item.rx_bps || 0)]));
+    }
+    function renderBandwidth() {
+        const grid = document.getElementById('bandwidthGrid');
+        const max = maxFlow(bandwidth);
+        document.getElementById('lanCount').textContent = bandwidth.filter((item) => item.name.indexOf('LAN') >= 0).length;
+        document.getElementById('wanCount').textContent = bandwidth.filter((item) => item.name.indexOf('WAN') >= 0).length;
+        if (!bandwidth.length) {
+            grid.innerHTML = '<div class="empty-row">尚無頻寬資料</div>';
+            return;
+        }
+        grid.innerHTML = bandwidth.map((item) => {
+            const txWidth = Math.max(2, Math.round((Number(item.tx_bps || 0) / max) * 100));
+            const rxWidth = Math.max(2, Math.round((Number(item.rx_bps || 0) / max) * 100));
+            return `<article class="iface">
+                <div class="iface-head"><span>${escapeHtml(item.name)}</span><span>${item.link ? '已連線' : '未連線'}</span></div>
+                <div class="iface-address">${escapeHtml(item.device)} ${escapeHtml(item.address)}</div>
+                <div class="flow-row"><span>Tx</span><div class="flow-bar"><span class="flow-fill tx" style="width:${txWidth}%"></span></div><span>${escapeHtml(item.tx_label)}</span></div>
+                <div class="flow-row"><span>Rx</span><div class="flow-bar"><span class="flow-fill" style="width:${rxWidth}%"></span></div><span>${escapeHtml(item.rx_label)}</span></div>
+            </article>`;
+        }).join('');
+    }
+    function filteredHosts() {
+        const keyword = document.getElementById('hostSearch').value.trim().toLowerCase();
+        if (!keyword) return hosts;
+        return hosts.filter((host) => [host.ip, host.mac, host.os_name, host.hostname, host.interface_name, host.note].join(' ').toLowerCase().includes(keyword));
+    }
+    function renderHosts() {
+        const body = document.getElementById('hostsBody');
+        const rows = filteredHosts();
+        document.getElementById('hostCount').textContent = hosts.length;
+        if (!rows.length) {
+            body.innerHTML = '<tr><td class="empty-row" colspan="9">沒有符合條件的 alive 裝置</td></tr>';
+            return;
+        }
+        body.innerHTML = rows.map((host) => `<tr>
+            <td><span class="status-pill"><span class="status-dot"></span>alive</span></td>
+            <td><button class="icon-btn ping-btn" type="button" data-ip="${escapeHtml(host.ip)}">Ping</button></td>
+            <td>${escapeHtml(host.ip)}</td>
+            <td>${escapeHtml(host.mac)}</td>
+            <td>${escapeHtml(host.os_name || '未知')}</td>
+            <td>${escapeHtml(host.hostname)}</td>
+            <td>${escapeHtml(host.interface_name)}</td>
+            <td>${escapeHtml(host.last_seen)}</td>
+            <td><input class="note-input" value="${escapeHtml(host.note || '')}" data-ip="${escapeHtml(host.ip)}" data-mac="${escapeHtml(host.mac)}" aria-label="註記 ${escapeHtml(host.ip)}"></td>
+        </tr>`).join('');
+    }
+    function openPingModal(ip, output) {
+        document.getElementById('pingModalTitle').textContent = `Ping ${ip}`;
+        document.getElementById('pingOutput').textContent = output;
+        document.getElementById('pingModal').classList.add('active');
+    }
+    function closePingModal() {
+        document.getElementById('pingModal').classList.remove('active');
+    }
+    async function pingHost(ip) {
+        openPingModal(ip, 'Ping 執行中...');
+        try {
+            const payload = await postForm(pingUrl, {ip});
+            document.getElementById('pingOutput').textContent = payload.output || '沒有輸出';
+        } catch (error) {
+            document.getElementById('pingOutput').textContent = error.message || 'Ping 失敗';
+        }
+    }
+    function renderPayload(payload) {
+        hosts = payload.hosts || [];
+        bandwidth = payload.bandwidth || [];
+        document.getElementById('scannedAt').textContent = payload.scanned_at || '-';
+        const errorBox = document.getElementById('errorBox');
+        if (payload.error_message) {
+            errorBox.textContent = payload.error_message;
+            errorBox.style.display = 'block';
+        } else {
+            errorBox.style.display = 'none';
+        }
+        renderBandwidth();
+        renderHosts();
+    }
+    async function postForm(url, data) {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrfToken},
+            body: new URLSearchParams(data)
+        });
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    }
+    async function scanNow(force) {
+        const btn = document.getElementById('scanBtn');
+        btn.disabled = true;
+        btn.textContent = '掃描中';
+        try {
+            renderPayload(await postForm(scanUrl, {force: force ? '1' : '0'}));
+        } catch (error) {
+            const errorBox = document.getElementById('errorBox');
+            errorBox.textContent = error.message || '掃描失敗';
+            errorBox.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '立即掃描';
+        }
+    }
+    function scheduleHourlyScan() {
+        if (scanTimer) clearTimeout(scanTimer);
+        const now = new Date();
+        const nextHour = new Date(now);
+        nextHour.setHours(now.getHours() + 1, 0, 0, 0);
+        scanTimer = setTimeout(async () => {
+            await scanNow(true);
+            scheduleHourlyScan();
+        }, nextHour.getTime() - now.getTime());
+    }
+    document.getElementById('scanBtn').addEventListener('click', () => scanNow(true));
+    document.getElementById('hostSearch').addEventListener('input', renderHosts);
+    document.getElementById('hostsBody').addEventListener('change', (event) => {
+        if (!event.target.classList.contains('note-input')) return;
+        postForm(noteUrl, {ip: event.target.dataset.ip, mac: event.target.dataset.mac, note: event.target.value}).then((payload) => {
+            const target = hosts.find((host) => host.ip === payload.ip && host.mac === payload.mac);
+            if (target) target.note = payload.note;
+        }).catch(() => {
+            event.target.style.borderColor = '#f87171';
+        });
+    });
+    document.getElementById('hostsBody').addEventListener('click', (event) => {
+        const button = event.target.closest('.ping-btn');
+        if (!button) return;
+        pingHost(button.dataset.ip);
+    });
+    document.getElementById('pingClose').addEventListener('click', closePingModal);
+    document.getElementById('pingModal').addEventListener('click', (event) => {
+        if (event.target.id === 'pingModal') closePingModal();
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closePingModal();
+    });
+    renderPayload(initialPayload);
+    scheduleHourlyScan();
+</script>
+{% endblock %}

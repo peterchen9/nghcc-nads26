@@ -1,0 +1,669 @@
+{% extends "base.html" %}
+
+{% block title %}搜名單與管理 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<!-- Include Bootstrap Icons locally -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<style>
+    .eureka-workspace-wrapper {
+        background-color: #0d1527;
+        color: #f8fafc;
+        padding: 0;
+        border-radius: 16px;
+        min-height: 85vh;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        overflow: hidden;
+    }
+
+    /* Warning Banner */
+    .privacy-warning-banner {
+        background-color: #7f1d1d;
+        color: #fecaca;
+        text-align: center;
+        padding: 10px 16px;
+        font-weight: 700;
+        font-size: 0.88rem;
+        border-bottom: 1px solid #991b1b;
+        letter-spacing: 0.5px;
+    }
+
+    /* 2-Column Layout */
+    .modify-layout-grid {
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        min-height: 80vh;
+    }
+
+    @media (max-width: 992px) {
+        .modify-layout-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Left Sidebar: Search Box */
+    .search-criteria-card {
+        background-color: #131c2e;
+        border-right: 1px solid #223049;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    /* Search Tabs */
+    .search-tab-bar {
+        display: flex;
+        border-bottom: 1px solid #223049;
+        margin-bottom: 4px;
+    }
+
+    .search-tab-item {
+        flex: 1;
+        text-align: center;
+        padding: 8px 0;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #64748b;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        user-select: none;
+    }
+
+    .search-tab-item.active {
+        color: #38bdf8;
+        border-bottom-color: #38bdf8;
+    }
+
+    .search-tab-hint {
+        font-size: 0.78rem;
+        color: #64748b;
+        margin-bottom: 8px;
+    }
+
+    /* Input items layout */
+    .search-item-box {
+        margin-bottom: 10px;
+    }
+
+    .search-item-label {
+        font-size: 0.82rem;
+        color: #94a3b8;
+        margin-bottom: 4px;
+        display: block;
+        font-weight: 600;
+    }
+
+    .search-item-row {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+    }
+
+    .search-logic-select {
+        background-color: #1e293b;
+        color: #f8fafc;
+        border: 1px solid #334155;
+        border-radius: 6px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 6px 4px;
+        width: 64px;
+        height: 32px;
+        outline: none;
+        cursor: pointer;
+        text-align: center;
+    }
+
+    .search-input-wrapper {
+        position: relative;
+        flex-grow: 1;
+        display: flex;
+        align-items: center;
+    }
+
+    .glass-input {
+        background-color: #1e293b;
+        color: #f8fafc !important;
+        border: 1px solid #334155 !important;
+        border-radius: 6px !important;
+        font-size: 0.85rem !important;
+        padding: 6px 28px 6px 10px !important;
+        width: 100%;
+        height: 32px;
+        outline: none;
+        box-shadow: none !important;
+    }
+
+    .glass-input:focus {
+        border-color: #38bdf8 !important;
+    }
+
+    .search-clear-btn {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #64748b;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        font-size: 0.8rem;
+        display: none;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .search-clear-btn:hover {
+        color: #f8fafc;
+    }
+
+    .btn-generate-sql {
+        background-color: #2563eb;
+        color: #ffffff;
+        font-weight: 700;
+        border: none;
+        border-radius: 6px;
+        padding: 8px 16px;
+        font-size: 0.88rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        cursor: pointer;
+        flex-grow: 1;
+        transition: background-color 0.2s;
+    }
+
+    .btn-generate-sql:hover {
+        background-color: #1d4ed8;
+    }
+
+    .btn-clear-all {
+        background-color: #334155;
+        color: #cbd5e1;
+        border: none;
+        border-radius: 6px;
+        padding: 8px 16px;
+        font-size: 0.88rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .btn-clear-all:hover {
+        background-color: #475569;
+        color: #ffffff;
+    }
+
+    /* Right Panel: Results */
+    .results-panel-box {
+        padding: 24px;
+        background-color: #0d1527;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .results-header-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #223049;
+        padding-bottom: 12px;
+    }
+
+    .results-title-text {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin: 0;
+    }
+
+    .btn-download-excel {
+        background-color: #0284c7;
+        color: #ffffff;
+        font-weight: 700;
+        border: none;
+        border-radius: 6px;
+        padding: 8px 16px;
+        font-size: 0.88rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+    }
+
+    .btn-download-excel:hover {
+        background-color: #0369a1;
+    }
+
+    /* Table styles */
+    .results-table-container {
+        background-color: #131c2e;
+        border: 1px solid #223049;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+        overflow-x: auto;
+    }
+
+    .results-table {
+        width: 100%;
+        border-collapse: collapse;
+        color: #f8fafc;
+        font-size: 0.88rem;
+    }
+
+    .results-table th {
+        background-color: #1e293b;
+        color: #94a3b8;
+        font-weight: 700;
+        text-align: left;
+        padding: 12px 14px;
+        border-bottom: 2px solid #223049;
+        white-space: nowrap;
+    }
+
+    .results-table td {
+        padding: 12px 14px;
+        border-bottom: 1px solid #223049;
+        vertical-align: middle;
+        word-break: break-all;
+    }
+
+    .results-table tr:hover td {
+        background-color: rgba(56, 189, 248, 0.05);
+    }
+
+    .action-btn-group {
+        display: flex;
+        gap: 8px;
+    }
+
+    .btn-action-edit {
+        color: #38bdf8;
+        background: none;
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        padding: 4px 8px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.78rem;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+
+    .btn-action-edit:hover {
+        background-color: rgba(56, 189, 248, 0.1);
+        color: #7dd3fc;
+    }
+
+    .btn-action-delete {
+        color: #ef4444;
+        background: none;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        padding: 4px 8px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.78rem;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+
+    .btn-action-delete:hover {
+        background-color: rgba(239, 68, 68, 0.1);
+        color: #f87171;
+    }
+
+    .badge-section {
+        background-color: #166534;
+        color: #bbf7d0;
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+
+    .badge-group-purple {
+        background-color: #4c1d95;
+        color: #ddd6fe;
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 120px 48px;
+        color: #64748b;
+        text-align: center;
+    }
+
+    .empty-state-text {
+        font-size: 1rem;
+        color: #cbd5e1;
+        font-weight: 600;
+        margin-top: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="eureka-workspace-wrapper">
+    <!-- Warning Banner at the top -->
+    <div class="privacy-warning-banner">
+        為保護隱私，在此下載的資料切勿外流。使用本功能者將記錄username與網路IP以便日後追溯。
+    </div>
+
+    <!-- Render Django Messages if any -->
+    {% if messages %}
+        <div class="m-3">
+            {% for message in messages %}
+                <div class="alert alert-success alert-dismissible fade show bg-dark text-white border-secondary mb-0" role="alert">
+                    <span class="fw-bold me-2">✅ 成功：</span>
+                    {{ message }}
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- 2-Column Search and Results Grid -->
+    <div class="modify-layout-grid">
+        
+        <!-- Left Column: Search Form -->
+        <div class="search-criteria-card">
+            <!-- Tabs -->
+            <div class="search-tab-bar">
+                <div class="search-tab-item active" id="tab-general" onclick="switchTab('general')">一般搜尋</div>
+                <div class="search-tab-item" id="tab-sql" onclick="switchTab('sql')">SQL搜尋</div>
+            </div>
+            <div class="search-tab-hint" id="tab-hint-text">
+                設定一般搜尋條件後，將自動轉換為 SQL 語句
+            </div>
+
+            <!-- Form GET to /eureka/modify/ -->
+            <form method="get" action="{% url 'eureka:modify' %}" id="searchForm">
+                
+                <!-- 1. 姓名 -->
+                <div class="search-item-box">
+                    <span class="search-item-label">姓名</span>
+                    <div class="search-item-row">
+                        <select name="l_name" class="search-logic-select">
+                            <option value="A" {% if query_params.l_name == 'A' or not query_params.l_name %}selected{% endif %}>AND</option>
+                            <option value="O" {% if query_params.l_name == 'O' %}selected{% endif %}>OR</option>
+                            <option value="X" {% if query_params.l_name == 'X' %}selected{% endif %}>NOT</option>
+                        </select>
+                        <div class="search-input-wrapper">
+                            <input type="text" name="val_name" class="glass-input search-text-input" 
+                                   placeholder="輸入姓名..." value="{{ query_params.val_name|default:'' }}">
+                            <button type="button" class="search-clear-btn" onclick="clearInput(this)"><i class="bi bi-x"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. 姓名2(或) -->
+                <div class="search-item-box">
+                    <span class="search-item-label">姓名2(或)</span>
+                    <div class="search-item-row">
+                        <select name="l_name2" class="search-logic-select">
+                            <option value="A" {% if query_params.l_name2 == 'A' %}selected{% endif %}>AND</option>
+                            <option value="O" {% if query_params.l_name2 == 'O' or not query_params.l_name2 %}selected{% endif %}>OR</option>
+                            <option value="X" {% if query_params.l_name2 == 'X' %}selected{% endif %}>NOT</option>
+                        </select>
+                        <div class="search-input-wrapper">
+                            <input type="text" name="val_name2" class="glass-input search-text-input" 
+                                   placeholder="輸入姓名(或)..." value="{{ query_params.val_name2|default:'' }}">
+                            <button type="button" class="search-clear-btn" onclick="clearInput(this)"><i class="bi bi-x"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. 手機 -->
+                <div class="search-item-box">
+                    <span class="search-item-label">手機</span>
+                    <div class="search-item-row">
+                        <select name="l_mobile1" class="search-logic-select">
+                            <option value="A" {% if query_params.l_mobile1 == 'A' or not query_params.l_mobile1 %}selected{% endif %}>AND</option>
+                            <option value="O" {% if query_params.l_mobile1 == 'O' %}selected{% endif %}>OR</option>
+                            <option value="X" {% if query_params.l_mobile1 == 'X' %}selected{% endif %}>NOT</option>
+                        </select>
+                        <div class="search-input-wrapper">
+                            <input type="text" name="val_mobile1" class="glass-input search-text-input" 
+                                   placeholder="輸入電話號碼..." value="{{ query_params.val_mobile1|default:'' }}">
+                            <button type="button" class="search-clear-btn" onclick="clearInput(this)"><i class="bi bi-x"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. 車號 -->
+                <div class="search-item-box">
+                    <span class="search-item-label">車號</span>
+                    <div class="search-item-row">
+                        <select name="l_car_number" class="search-logic-select">
+                            <option value="A" {% if query_params.l_car_number == 'A' or not query_params.l_car_number %}selected{% endif %}>AND</option>
+                            <option value="O" {% if query_params.l_car_number == 'O' %}selected{% endif %}>OR</option>
+                            <option value="X" {% if query_params.l_car_number == 'X' %}selected{% endif %}>NOT</option>
+                        </select>
+                        <div class="search-input-wrapper">
+                            <input type="text" name="val_car_number" class="glass-input search-text-input" 
+                                   placeholder="輸入車牌號碼..." value="{{ query_params.val_car_number|default:'' }}">
+                            <button type="button" class="search-clear-btn" onclick="clearInput(this)"><i class="bi bi-x"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. 牧區 -->
+                <div class="search-item-box">
+                    <span class="search-item-label">牧區</span>
+                    <div class="search-item-row">
+                        <select name="l_section" class="search-logic-select">
+                            <option value="A" {% if query_params.l_section == 'A' or not query_params.l_section %}selected{% endif %}>AND</option>
+                            <option value="O" {% if query_params.l_section == 'O' %}selected{% endif %}>OR</option>
+                            <option value="X" {% if query_params.l_section == 'X' %}selected{% endif %}>NOT</option>
+                        </select>
+                        <div class="search-input-wrapper">
+                            <select name="val_section" class="glass-input" style="cursor: pointer; padding-right: 20px;">
+                                <option value="全部分區" {% if query_params.val_section == '全部分區' or not query_params.val_section %}selected{% endif %}>全部牧區</option>
+                                {% for sec in sections %}
+                                    <option value="{{ sec }}" {% if query_params.val_section == sec %}selected{% endif %}>{{ sec }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. 住址 -->
+                <div class="search-item-box">
+                    <span class="search-item-label">住址</span>
+                    <div class="search-item-row">
+                        <select name="l_address" class="search-logic-select">
+                            <option value="A" {% if query_params.l_address == 'A' or not query_params.l_address %}selected{% endif %}>AND</option>
+                            <option value="O" {% if query_params.l_address == 'O' %}selected{% endif %}>OR</option>
+                            <option value="X" {% if query_params.l_address == 'X' %}selected{% endif %}>NOT</option>
+                        </select>
+                        <div class="search-input-wrapper">
+                            <input type="text" name="val_address" class="glass-input search-text-input" 
+                                   placeholder="輸入通訊地址..." value="{{ query_params.val_address|default:'' }}">
+                            <button type="button" class="search-clear-btn" onclick="clearInput(this)"><i class="bi bi-x"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. 備註 -->
+                <div class="search-item-box">
+                    <span class="search-item-label">備註</span>
+                    <div class="search-item-row">
+                        <select name="l_note" class="search-logic-select">
+                            <option value="A" {% if query_params.l_note == 'A' or not query_params.l_note %}selected{% endif %}>AND</option>
+                            <option value="O" {% if query_params.l_note == 'O' %}selected{% endif %}>OR</option>
+                            <option value="X" {% if query_params.l_note == 'X' %}selected{% endif %}>NOT</option>
+                        </select>
+                        <div class="search-input-wrapper">
+                            <input type="text" name="val_note" class="glass-input search-text-input" 
+                                   placeholder="輸入備註資料..." value="{{ query_params.val_note|default:'' }}">
+                            <button type="button" class="search-clear-btn" onclick="clearInput(this)"><i class="bi bi-x"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Action Buttons -->
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn-generate-sql">
+                        <i class="bi bi-database-fill-gear"></i>產生 SQL 並執行
+                    </button>
+                    <button type="button" class="btn-clear-all" onclick="resetForm()">
+                        清除
+                    </button>
+                </div>
+            </form>
+            
+            <hr style="border-top: 1px solid #223049; margin: 20px 0;">
+            
+            <!-- Extra Search Options -->
+            <a href="{% url 'eureka:modify-duplicates' %}" class="btn btn-action-secondary w-100 text-center py-2" style="font-size: 0.85rem;">
+                <i class="bi bi-people-fill text-warning me-2"></i>搜尋重複姓名
+            </a>
+        </div>
+
+        <!-- Right Column: Results Table -->
+        <div class="results-panel-box">
+            <!-- Header Bar -->
+            <div class="results-header-bar">
+                <h5 class="results-title-text" id="resultsCountHeader">
+                    搜尋結果：共 {{ result_count }} 筆
+                </h5>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'eureka:modify-download' %}" class="btn-download-excel">
+                        <i class="bi bi-file-earmark-excel-fill"></i> 下載 Excel
+                    </a>
+                </div>
+            </div>
+
+            <!-- Table or Empty state -->
+            {% if people_list %}
+                <div class="results-table-container">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>編號 (ID)</th>
+                                <th>姓名</th>
+                                <th>所屬牧區</th>
+                                <th>小組</th>
+                                <th>手機號碼</th>
+                                <th>地址</th>
+                                <th>備註</th>
+                                <th style="text-align: center;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for person in people_list %}
+                                <tr>
+                                    <td class="fw-bold text-muted">#{{ person.church_id }}</td>
+                                    <td class="fw-bold text-white">{{ person.name }}</td>
+                                    <td>
+                                        {% if person.section %}
+                                            <span class="badge-section">{{ person.section }}</span>
+                                        {% else %}
+                                            <span class="text-muted small">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if person.family1 %}
+                                            <span class="badge-group-purple">{{ person.family1 }}</span>
+                                        {% else %}
+                                            <span class="text-muted small">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ person.mobile1|default:"-" }}</td>
+                                    <td style="max-width: 240px;" class="text-truncate" title="{{ person.address }}">{{ person.address|default:"-" }}</td>
+                                    <td style="max-width: 180px;" class="text-truncate" title="{{ person.note }}">{{ person.note|default:"-" }}</td>
+                                    <td align="center">
+                                        <div class="action-btn-group">
+                                            <a href="{% url 'eureka:eureka-melos' person.church_id %}?{{ query_params.urlencode }}" class="btn-action-edit">
+                                                <i class="bi bi-pencil-square"></i> 編輯
+                                            </a>
+                                            <a href="{% url 'eureka:modify-delete' person.church_id %}" 
+                                               class="btn-action-delete" 
+                                               onclick="return confirm('確定要刪除成員 [{{ person.name }}] 嗎？此動作將無法還原。');">
+                                                <i class="bi bi-trash"></i> 刪除
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-search fs-1"></i>
+                    <div class="empty-state-text">尚無資料，請執行搜尋</div>
+                    <p class="small text-muted mt-1 mb-0">請在左側輸入搜尋條件後點選「產生 SQL 並執行」。</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function switchTab(type) {
+        document.querySelectorAll('.search-tab-item').forEach(el => el.classList.remove('active'));
+        const activeTab = document.getElementById('tab-' + type);
+        if (activeTab) activeTab.classList.add('active');
+        
+        const hintText = document.getElementById('tab-hint-text');
+        if (type === 'sql') {
+            hintText.innerText = '直接以原始 SQL 語法進行進階條件查詢';
+        } else {
+            hintText.innerText = '設定一般搜尋條件後，將自動轉換為 SQL 語句';
+        }
+    }
+
+    function toggleClearButtons() {
+        document.querySelectorAll('.search-text-input').forEach(input => {
+            const wrapper = input.closest('.search-input-wrapper');
+            const clearBtn = wrapper.querySelector('.search-clear-btn');
+            if (clearBtn) {
+                if (input.value) {
+                    clearBtn.style.display = 'flex';
+                } else {
+                    clearBtn.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    function clearInput(button) {
+        const wrapper = button.closest('.search-input-wrapper');
+        const input = wrapper.querySelector('.search-text-input');
+        if (input) {
+            input.value = '';
+            button.style.display = 'none';
+            input.focus();
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('searchForm').reset();
+        document.querySelectorAll('.search-clear-btn').forEach(btn => btn.style.display = 'none');
+    }
+
+    // Attach listeners for show/hide clear button
+    document.addEventListener('DOMContentLoaded', () => {
+        toggleClearButtons();
+        document.querySelectorAll('.search-text-input').forEach(input => {
+            input.addEventListener('input', toggleClearButtons);
+        });
+    });
+</script>
+{% endblock %}

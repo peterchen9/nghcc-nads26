@@ -1,0 +1,6 @@
+from django.apps import AppConfig
+
+class PagesConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'modules.pages'
+    verbose_name = '靜態網頁管理'

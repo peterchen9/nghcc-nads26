@@ -1,0 +1,570 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}同工休假表 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Premium Vacation Styling */
+    .vacation-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .vacation-title {
+        margin: 0;
+        font-family: 'Outfit', sans-serif;
+        font-size: 2.2rem;
+        background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .vacation-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    /* Filters Form */
+    .filter-form {
+        display: flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        padding: 6px 16px;
+        gap: 12px;
+        transition: all 0.3s;
+    }
+
+    .filter-form:focus-within {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 10px rgba(188, 220, 255, 0.1);
+    }
+
+    .filter-form label {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    .filter-form select {
+        background: transparent;
+        border: none;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 0.95rem;
+        font-weight: 600;
+        outline: none;
+        cursor: pointer;
+        padding-right: 5px;
+    }
+
+    .filter-form select option {
+        background-color: var(--sidebar-bg);
+        color: var(--text-primary);
+    }
+
+    /* Premium Button */
+    .btn-premium {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        box-shadow: 0 4px 15px rgba(29, 78, 216, 0.3);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        font-size: 0.9rem;
+    }
+
+    .btn-premium:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(29, 78, 216, 0.4);
+        filter: brightness(1.1);
+    }
+
+    .btn-premium:active {
+        transform: translateY(0);
+    }
+
+    /* Cards Layout */
+    .dashboard-layout {
+        display: grid;
+        grid-template-columns: 3fr 1fr;
+        gap: 30px;
+        align-items: start;
+    }
+
+    @media (max-width: 1200px) {
+        .dashboard-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .panel-card {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        margin-bottom: 30px;
+    }
+
+    .panel-header {
+        padding: 20px 25px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.01);
+    }
+
+    .panel-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* Calendar Grid */
+    .calendar-container {
+        overflow-x: auto;
+        position: relative;
+        max-height: 800px;
+        overflow-y: auto;
+    }
+
+    .calendar-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: center;
+        font-size: 0.88rem;
+    }
+
+    /* Sticky Headers and Columns */
+    .calendar-table th {
+        background: #2b3e55; /* Solid dark color to prevent transparency issues */
+        color: var(--text-secondary);
+        font-weight: 600;
+        padding: 12px 8px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .calendar-table th.col-sticky-date,
+    .calendar-table td.col-sticky-date {
+        position: sticky;
+        left: 0;
+        background: #2f4156;
+        z-index: 8;
+        border-right: 2px solid rgba(255, 255, 255, 0.1);
+        text-align: left;
+        padding-left: 15px;
+        padding-right: 15px;
+        min-width: 100px;
+    }
+
+    .calendar-table th.col-sticky-date {
+        z-index: 12;
+        background: #2b3e55;
+    }
+
+    .calendar-table td {
+        padding: 8px 6px;
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        height: 40px;
+    }
+
+    /* Row highlight styles */
+    .calendar-table tr.row-weekend {
+        background-color: rgba(255, 255, 255, 0.02);
+    }
+
+    .calendar-table tr.row-weekend td.col-sticky-date {
+        background-color: #34485e;
+    }
+
+    .calendar-table tr:hover {
+        background-color: rgba(255, 255, 255, 0.04);
+    }
+
+    .calendar-table tr:hover td.col-sticky-date {
+        background-color: #395068;
+    }
+
+    /* Legend style */
+    .legend-box {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        font-size: 0.82rem;
+        margin-top: 15px;
+        padding: 10px 25px;
+        background: rgba(255, 255, 255, 0.01);
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* Leave cell slots design */
+    .cell-slots {
+        display: flex;
+        gap: 4px;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        min-width: 58px;
+    }
+
+    .slot {
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.72rem;
+        font-weight: 700;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px dashed rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.2);
+        transition: all 0.2s;
+    }
+
+    /* Badge classes based on leave types */
+    .slot.badge-rest {
+        background-color: rgba(71, 85, 105, 0.25);
+        color: #94a3b8;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+    }
+    
+    .slot.badge-special {
+        background-color: rgba(16, 185, 129, 0.2);
+        color: #34d399;
+        border: 1px solid rgba(52, 211, 153, 0.4);
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.1);
+    }
+
+    .slot.badge-comp {
+        background-color: rgba(139, 92, 246, 0.2);
+        color: #a78bfa;
+        border: 1px solid rgba(167, 139, 250, 0.4);
+        box-shadow: 0 0 8px rgba(139, 92, 246, 0.1);
+    }
+
+    .slot.badge-official {
+        background-color: rgba(245, 158, 11, 0.2);
+        color: #fbbf24;
+        border: 1px solid rgba(251, 191, 36, 0.4);
+        box-shadow: 0 0 8px rgba(245, 158, 11, 0.1);
+    }
+
+    .slot.badge-other {
+        background-color: rgba(236, 72, 153, 0.20);
+        color: #f472b6;
+        border: 1px solid rgba(244, 114, 182, 0.4);
+    }
+
+    /* Leaderboard Styles */
+    .stats-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 20px;
+        max-height: 720px;
+        overflow-y: auto;
+    }
+
+    .stats-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        transition: all 0.3s;
+    }
+
+    .stats-item:hover {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(188, 220, 255, 0.15);
+        transform: translateX(3px);
+    }
+
+    .stats-name {
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .stats-badges {
+        display: flex;
+        gap: 6px;
+    }
+
+    .stats-badge {
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 3px 6px;
+        border-radius: 4px;
+    }
+
+    .stats-badge.rest { background: rgba(148, 163, 184, 0.15); color: #94a3b8; }
+    .stats-badge.special { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+    .stats-badge.comp { background: rgba(167, 139, 250, 0.15); color: #a78bfa; }
+    .stats-badge.official { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+    .stats-badge.total { background: rgba(255, 255, 255, 0.1); color: var(--text-primary); font-weight: bold; border-left: 2px solid var(--accent-color); }
+
+    /* Messages Alert */
+    .alert {
+        padding: 15px 20px;
+        border-radius: 12px;
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 500;
+    }
+
+    .alert-success {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .alert-danger {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}">
+                <span>{% if message.tags == 'success' %}✓{% else %}✕{% endif %}</span>
+                <div>{{ message }}</div>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Header -->
+    <div class="vacation-header">
+        <div>
+            <h2 class="vacation-title">同工休假表</h2>
+            <p style="color: var(--text-secondary); margin: 5px 0 0 0;">檢視、追蹤並統計同工月度與年度休假明細</p>
+        </div>
+
+        <div class="vacation-actions">
+            <!-- Year/Month Filter Form -->
+            <form method="GET" class="filter-form" id="filterForm">
+                <div>
+                    <label for="year">年份 </label>
+                    <select name="year" id="year" onchange="document.getElementById('filterForm').submit();">
+                        {% for y in available_years %}
+                            <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }} 年</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="border-left: 1px solid rgba(255, 255, 255, 0.1); height: 18px;"></div>
+                <div>
+                    <label for="month">月份 </label>
+                    <select name="month" id="month" onchange="document.getElementById('filterForm').submit();">
+                        {% for m in months %}
+                            <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }} 月</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+
+            <!-- Sync Button for Admin -->
+            {% if user.is_superuser %}
+                <a href="{% url 'eureka:vacation-sync' %}" class="btn-premium" onclick="showLoadingSpinner(this)">
+                    <span>🔄</span>
+                    <span>同步雲端休假表</span>
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Main Layout Dashboard Grid -->
+    <div class="dashboard-layout">
+        <!-- Calendar Grid Card -->
+        <div class="panel-card">
+            <div class="panel-header">
+                <h3 class="panel-title">📅 {{ selected_year }}年 {{ selected_month }}月 休假一覽</h3>
+                <span style="font-size: 0.85rem; color: var(--text-secondary);">水平拖曳或滾動檢視所有同工</span>
+            </div>
+
+            <div class="calendar-container">
+                <table class="calendar-table">
+                    <thead>
+                        <tr>
+                            <th class="col-sticky-date">日期</th>
+                            <th style="min-width: 150px; text-align: left; padding-left: 15px;">行政/教會備註</th>
+                            {% for staff in staff_names %}
+                                <th style="min-width: 76px;">{{ staff }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for day in days_list %}
+                            <tr class="{% if day.is_weekend %}row-weekend{% endif %}">
+                                <!-- Sticky Date column -->
+                                <td class="col-sticky-date">
+                                    <div style="font-weight: 700; font-family: 'Outfit', sans-serif;">{{ day.day }}</div>
+                                    <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 1px;">{{ day.weekday_name }}</div>
+                                </td>
+
+                                <!-- Admin / event note -->
+                                <td style="text-align: left; padding-left: 15px; color: var(--accent-color); font-size: 0.82rem; font-weight: 500;">
+                                    {{ day.note }}
+                                </td>
+
+                                <!-- Staff leave cells -->
+                                {% for leave_data in day.leaves %}
+                                    <td>
+                                        <div class="cell-slots">
+                                            <!-- AM Slot -->
+                                            {% with am_val=leave_data.AM %}
+                                                <div class="slot {% if am_val %}has-leave
+                                                    {% if '休' in am_val %}badge-rest
+                                                    {% elif '特' in am_val %}badge-special
+                                                    {% elif '補' in am_val %}badge-comp
+                                                    {% elif '公' in am_val %}badge-official
+                                                    {% else %}badge-other{% endif %}
+                                                    {% endif %}" title="上午: {{ am_val|default:'上班' }}">
+                                                    {% if am_val %}
+                                                        {{ am_val|slice:":1" }}
+                                                    {% else %}
+                                                        上
+                                                    {% endif %}
+                                                </div>
+                                            {% endwith %}
+
+                                            <!-- PM Slot -->
+                                            {% with pm_val=leave_data.PM %}
+                                                <div class="slot {% if pm_val %}has-leave
+                                                    {% if '休' in pm_val %}badge-rest
+                                                    {% elif '特' in pm_val %}badge-special
+                                                    {% elif '補' in pm_val %}badge-comp
+                                                    {% elif '公' in pm_val %}badge-official
+                                                    {% else %}badge-other{% endif %}
+                                                    {% endif %}" title="下午: {{ pm_val|default:'上班' }}">
+                                                    {% if pm_val %}
+                                                        {{ pm_val|slice:":1" }}
+                                                    {% else %}
+                                                        下
+                                                    {% endif %}
+                                                </div>
+                                            {% endwith %}
+                                        </div>
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Legend Box -->
+            <div class="legend-box">
+                <div class="legend-item"><span class="slot badge-rest" style="display:inline-flex; width:20px; height:20px; font-size:0.65rem; border-radius:4px;">休</span> 一般公休/例休</div>
+                <div class="legend-item"><span class="slot badge-special" style="display:inline-flex; width:20px; height:20px; font-size:0.65rem; border-radius:4px;">特</span> 年度特休</div>
+                <div class="legend-item"><span class="slot badge-comp" style="display:inline-flex; width:20px; height:20px; font-size:0.65rem; border-radius:4px;">補</span> 補休</div>
+                <div class="legend-item"><span class="slot badge-official" style="display:inline-flex; width:20px; height:20px; font-size:0.65rem; border-radius:4px;">公</span> 公假/差假</div>
+                <div class="legend-item"><span class="slot badge-other" style="display:inline-flex; width:20px; height:20px; font-size:0.65rem; border-radius:4px;">？</span> 其他假別/備註</div>
+                <div class="legend-item" style="color: var(--text-secondary); margin-left: auto;">* 每一小格代表半天 (AM/PM)</div>
+            </div>
+        </div>
+
+        <!-- Right statistics list card -->
+        <div class="panel-card">
+            <div class="panel-header">
+                <h3 class="panel-title">📊 本月休假統計</h3>
+            </div>
+            
+            <div class="stats-list">
+                {% if stats %}
+                    {% for item in stats %}
+                        {% if item.data.總計 > 0 %}
+                            <div class="stats-item">
+                                <span class="stats-name">{{ item.name }}</span>
+                                <div class="stats-badges">
+                                    {% if item.data.特 > 0 %}
+                                        <span class="stats-badge special" title="特休: {{ item.data.特 }}天">特:{{ item.data.特|floatformat:"-1" }}</span>
+                                    {% endif %}
+                                    {% if item.data.補 > 0 %}
+                                        <span class="stats-badge comp" title="補休: {{ item.data.補 }}天">補:{{ item.data.補|floatformat:"-1" }}</span>
+                                    {% endif %}
+                                    {% if item.data.公 > 0 %}
+                                        <span class="stats-badge official" title="公假: {{ item.data.公 }}天">公:{{ item.data.公|floatformat:"-1" }}</span>
+                                    {% endif %}
+                                    {% if item.data.休 > 0 %}
+                                        <span class="stats-badge rest" title="例休: {{ item.data.休 }}天">例:{{ item.data.休|floatformat:"-1" }}</span>
+                                    {% endif %}
+                                    <span class="stats-badge total" title="本月總休假: {{ item.data.總計 }}天">共:{{ item.data.總計|floatformat:"-1" }}天</span>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    <!-- If no leaves found this month -->
+                    {% if not any_leaves_exist %}
+                        <div id="no-leaves-msg" style="display:none; text-align: center; color: var(--text-secondary); padding: 40px 10px;">
+                            本月無人休假。
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div style="text-align: center; color: var(--text-secondary); padding: 40px 0;">
+                        無休假統計。
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showLoadingSpinner(element) {
+        element.style.pointerEvents = 'none';
+        element.style.opacity = '0.7';
+        element.querySelector('span').textContent = '⌛';
+        element.querySelectorAll('span')[1].textContent = '正在同步資料...';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Double check if any stats items were rendered. If none, show the message.
+        const statsItems = document.querySelectorAll('.stats-item');
+        const noLeavesMsg = document.getElementById('no-leaves-msg');
+        if (statsItems.length === 0 && noLeavesMsg) {
+            noLeavesMsg.style.display = 'block';
+        }
+    });
+</script>
+{% endblock %}

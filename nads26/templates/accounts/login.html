@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登入 | 北門行政平台</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #2F4156;
+            --sidebar-bg: #2B3E55;
+            --accent-color: #BCDCFF;
+            --text-primary: #FFFFFF;
+            --text-secondary: #CBD5E1;
+            --glass-bg: rgba(43, 62, 85, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.06);
+            --glow-color: rgba(188, 220, 255, 0.15);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            background: radial-gradient(circle at 20% 30%, #3a536e 0%, var(--bg-color) 70%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Glowing background circles for aesthetic depth */
+        .decor-circle {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: 1;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .circle-1 {
+            width: 300px;
+            height: 300px;
+            background: var(--accent-color);
+            top: 15%;
+            left: 25%;
+            animation: floatCircle 8s infinite alternate ease-in-out;
+        }
+        .circle-2 {
+            width: 400px;
+            height: 400px;
+            background: #4F709C;
+            bottom: 10%;
+            right: 20%;
+            animation: floatCircle 12s infinite alternate-reverse ease-in-out;
+        }
+
+        @keyframes floatCircle {
+            0% { transform: translateY(0) scale(1); }
+            100% { transform: translateY(-30px) scale(1.1); }
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+            padding: 20px;
+            box-sizing: border-box;
+            z-index: 10;
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px 35px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+            animation: borderGlow 4s infinite linear;
+        }
+
+        @keyframes borderGlow {
+            0% { left: -100%; }
+            50% { left: 100%; }
+            100% { left: 100%; }
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .login-header h2 {
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #FFF 0%, var(--accent-color) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .login-header p {
+            margin: 8px 0 0 0;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .form-group {
+            margin-bottom: 22px;
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 14px 18px;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            box-sizing: border-box;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            background: rgba(0, 0, 0, 0.35);
+            box-shadow: 0 0 15px var(--glow-color);
+        }
+
+        /* Focus label style animation */
+        .form-group:focus-within label {
+            color: var(--accent-color);
+        }
+
+        .options-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            font-size: 0.9rem;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+            color: var(--text-secondary);
+            transition: color 0.2s;
+        }
+
+        .remember-me:hover {
+            color: var(--text-primary);
+        }
+
+        .remember-me input {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent-color);
+            cursor: pointer;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: transparent;
+        }
+
+        .forgot-password {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .forgot-password:hover {
+            color: #FFF;
+            text-decoration: underline;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            background: var(--accent-color);
+            color: var(--sidebar-bg);
+            border: none;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-login:hover {
+            background: #FFF;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(188, 220, 255, 0.35);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            color: #F87171;
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: shake 0.3s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+
+        .footer-text {
+            text-align: center;
+            margin-top: 25px;
+            font-size: 0.82rem;
+            color: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="decor-circle circle-1"></div>
+    <div class="decor-circle circle-2"></div>
+
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h2>北門行政平台</h2>
+                <p>NADS 26 Administrative System</p>
+            </div>
+
+            {% if error_msg %}
+                <div class="error-message">
+                    <span>⚠️</span>
+                    <span>{{ error_msg }}</span>
+                </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'login' %}{% if next %}?next={{ next }}{% endif %}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="username">使用者帳號</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="username" name="username" required 
+                               class="form-control" autocomplete="username" placeholder="請輸入帳號" autofocus>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">密碼</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="password" name="password" required 
+                               class="form-control" autocomplete="current-password" placeholder="請輸入密碼">
+                    </div>
+                </div>
+
+                <div class="options-row">
+                    <label class="remember-me">
+                        <input type="checkbox" id="remember_me" name="remember_me">
+                        <span>記住我的登入</span>
+                    </label>
+                    <a href="{% url 'password_reset' %}" class="forgot-password">忘記密碼？</a>
+                </div>
+
+                <button type="submit" class="btn-login">登入</button>
+            </form>
+        </div>
+        <div class="footer-text">
+            &copy; 2026 北門教會. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>
