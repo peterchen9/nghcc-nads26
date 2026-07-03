@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}個人資料 - {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .staff-form-page {
+        max-width: 720px;
+        display: grid;
+        gap: 14px;
+    }
+    .staff-form-panel {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 18px;
+        box-sizing: border-box;
+        display: grid;
+        gap: 16px;
+    }
+    .staff-form-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .staff-form-head h2 {
+        margin: 0;
+        font-size: 1.45rem;
+    }
+    .muted {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+    .messages,
+    .field-errors {
+        display: grid;
+        gap: 8px;
+    }
+    .message,
+    .field-error,
+    .form-error {
+        border-radius: 6px;
+        padding: 10px 12px;
+    }
+    .message {
+        background: rgba(188, 220, 255, 0.12);
+        color: var(--accent-color);
+    }
+    .message.error,
+    .field-error,
+    .form-error {
+        background: rgba(248, 113, 113, 0.12);
+        color: #fecaca;
+    }
+    .staff-form {
+        display: grid;
+        gap: 14px;
+    }
+    .field {
+        display: grid;
+        gap: 7px;
+    }
+    .field label {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+    .field input {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 6px;
+        padding: 10px 11px;
+        background: rgba(8, 13, 20, 0.35);
+        color: var(--text-primary);
+        font: inherit;
+    }
+    .field input[disabled] {
+        opacity: 0.72;
+        cursor: not-allowed;
+    }
+    .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 4px;
+    }
+    .btn {
+        border: 1px solid rgba(188, 220, 255, 0.35);
+        background: rgba(188, 220, 255, 0.12);
+        color: var(--accent-color);
+        border-radius: 6px;
+        padding: 9px 13px;
+        min-height: 38px;
+        text-decoration: none;
+        cursor: pointer;
+        font: inherit;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+    }
+    .btn.primary {
+        background: var(--accent-color);
+        color: var(--sidebar-bg);
+        font-weight: 800;
+    }
+    @media (max-width: 620px) {
+        .staff-form-panel {
+            padding: 14px;
+        }
+        .actions {
+            justify-content: stretch;
+        }
+        .btn {
+            flex: 1 1 auto;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="staff-form-page">
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="message {{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <section class="staff-form-panel">
+        <div class="staff-form-head">
+            <div>
+                <h2>個人資料</h2>
+                <div class="muted">更新姓名與電子郵件。</div>
+            </div>
+            <a class="btn" href="/">返回首頁</a>
+        </div>
+
+        <form class="staff-form" method="post" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="form-error">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="field">
+                <label for="{{ form.username.id_for_label }}">帳號</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                    <div class="field-errors">
+                        {% for error in form.username.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="field">
+                <label for="{{ form.last_name.id_for_label }}">姓氏</label>
+                {{ form.last_name }}
+                {% if form.last_name.errors %}
+                    <div class="field-errors">
+                        {% for error in form.last_name.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="field">
+                <label for="{{ form.first_name.id_for_label }}">名字</label>
+                {{ form.first_name }}
+                {% if form.first_name.errors %}
+                    <div class="field-errors">
+                        {% for error in form.first_name.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="field">
+                <label for="{{ form.email.id_for_label }}">電子郵件</label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                    <div class="field-errors">
+                        {% for error in form.email.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="actions">
+                <a class="btn" href="/staff/password/">修改密碼</a>
+                <button class="btn primary" type="submit">儲存</button>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}
