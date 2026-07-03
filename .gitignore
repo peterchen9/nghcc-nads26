@@ -25,6 +25,7 @@ nads26/backups/
 nads26/.env
 .env
 .env.*
+.agents/local-secrets.md
 
 # Python/runtime artifacts
 __pycache__/
