@@ -120,20 +120,20 @@
 
     /* Table Styling */
     .staff-table-container {
-        overflow-x: auto;
+        overflow-x: visible;
     }
 
     .staff-table {
         width: 100%;
-        min-width: 1760px;
+        min-width: 0;
         table-layout: fixed;
         border-collapse: collapse;
         text-align: left;
-        font-size: 0.9rem;
+        font-size: 0.86rem;
     }
 
     .staff-table th, .staff-table td {
-        padding: 14px 12px;
+        padding: 12px 8px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.03);
         vertical-align: middle;
         white-space: nowrap;
@@ -164,22 +164,35 @@
         border-bottom: none;
     }
 
-    .col-staff-id { width: 64px; text-align: center; }
-    .col-employee-no { width: 84px; }
+    .col-staff-id { width: 48px; text-align: center; }
+    .col-employee-no { width: 76px; }
     .col-name { width: 92px; }
-    .col-identity { width: 90px; }
-    .col-active { width: 90px; text-align: center; }
-    .col-mobile { width: 110px; }
-    .col-seat { width: 72px; }
-    .col-locker { width: 72px; }
-    .col-bank { width: 160px; }
-    .col-account { width: 150px; }
-    .col-user { width: 110px; }
-    .col-leave { width: 90px; text-align: center; }
-    .col-date { width: 110px; }
-    .col-email { width: 210px; }
-    .col-cc-email { width: 210px; }
-    .col-actions { width: 90px; text-align: center; }
+    .col-identity { width: 64px; }
+    .col-active { width: 72px; text-align: center; }
+    .col-mobile { width: 118px; }
+    .col-seat { width: 54px; }
+    .col-locker,
+    .col-bank,
+    .col-account,
+    .col-cc-email {
+        display: none;
+    }
+    .col-user { width: 92px; }
+    .col-leave { width: 72px; text-align: center; }
+    .col-date { width: 96px; }
+    .col-email { width: auto; min-width: 180px; }
+    .col-actions { width: 82px; text-align: center; }
+
+    .td-name,
+    .td-email {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        line-height: 1.4;
+    }
+
+    .td-email {
+        font-size: 0.82rem;
+    }
 
     /* Badges */
     .badge {
@@ -419,11 +432,39 @@
         display: inline-flex;
         align-items: center;
         gap: 5px;
+        white-space: nowrap;
     }
 
     .btn-action-edit:hover {
         background: rgba(188, 220, 255, 0.15);
         border-color: var(--accent-color);
+    }
+
+    @media (max-width: 1100px) {
+        .staff-table-container {
+            overflow-x: auto;
+        }
+
+        .staff-table {
+            min-width: 920px;
+        }
+    }
+
+    @media (max-width: 760px) {
+        .card-header,
+        .staff-header {
+            align-items: stretch;
+        }
+
+        .search-filter-form {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .search-filter-form input[type="text"] {
+            width: 100%;
+            min-width: 0;
+        }
     }
 </style>
 {% endblock %}
