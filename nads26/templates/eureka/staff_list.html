@@ -129,27 +129,28 @@
         table-layout: fixed;
         border-collapse: collapse;
         text-align: left;
-        font-size: 0.86rem;
+        font-size: 0.78rem;
     }
 
     .staff-table th, .staff-table td {
-        padding: 12px 8px;
+        padding: 10px 5px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-        vertical-align: middle;
-        white-space: nowrap;
+        vertical-align: top;
+        white-space: normal;
         overflow: hidden;
-        text-overflow: ellipsis;
+        overflow-wrap: anywhere;
+        line-height: 1.35;
     }
 
     .staff-table th {
         background: rgba(255, 255, 255, 0.02);
         font-weight: 600;
         color: var(--text-secondary);
-        font-size: 0.85rem;
+        font-size: 0.74rem;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0;
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        white-space: nowrap;
+        line-height: 1.25;
     }
 
     .staff-table tr {
@@ -164,34 +165,43 @@
         border-bottom: none;
     }
 
-    .col-staff-id { width: 48px; text-align: center; }
-    .col-employee-no { width: 76px; }
-    .col-name { width: 92px; }
-    .col-identity { width: 64px; }
-    .col-active { width: 72px; text-align: center; }
-    .col-mobile { width: 118px; }
-    .col-seat { width: 54px; }
-    .col-locker,
-    .col-bank,
-    .col-account,
-    .col-cc-email {
-        display: none;
-    }
-    .col-user { width: 92px; }
-    .col-leave { width: 72px; text-align: center; }
-    .col-date { width: 96px; }
-    .col-email { width: auto; min-width: 180px; }
-    .col-actions { width: 82px; text-align: center; }
+    .col-staff-id { width: 3.3%; text-align: center; }
+    .col-employee-no { width: 5.2%; }
+    .col-name { width: 6.2%; }
+    .col-identity { width: 4.3%; }
+    .col-active { width: 5.1%; text-align: center; }
+    .col-mobile { width: 7.4%; }
+    .col-seat { width: 3.7%; }
+    .col-locker { width: 3.7%; }
+    .col-bank { width: 7.2%; }
+    .col-account { width: 7.4%; }
+    .col-user { width: 6.4%; }
+    .col-leave { width: 5.0%; text-align: center; }
+    .col-date { width: 6.7%; }
+    .col-email { width: 11.1%; }
+    .col-cc-email { width: 11.1%; }
+    .col-actions { width: 5.2%; text-align: center; }
 
-    .td-name,
-    .td-email {
-        white-space: normal;
-        overflow-wrap: anywhere;
-        line-height: 1.4;
+    .td-name {
+        font-size: 0.84rem;
+        line-height: 1.35;
     }
 
+    .td-mobile,
+    .td-bank-account,
+    .td-user,
+    .td-onboard-date {
+        font-size: 0.76rem;
+    }
+
+    .td-bank-branch,
+    .td-email,
+    .td-cc-email {
+        font-size: 0.72rem;
+    }
+
     .td-email {
-        font-size: 0.82rem;
+        color: var(--text-secondary);
     }
 
     /* Badges */
@@ -200,9 +210,10 @@
         align-items: center;
         padding: 4px 8px;
         border-radius: 8px;
-        font-size: 0.78rem;
+        font-size: 0.72rem;
         font-weight: 600;
         border: 1px solid transparent;
+        white-space: nowrap;
     }
 
     .badge-active {
@@ -221,7 +232,7 @@
         display: inline-flex;
         padding: 2px 6px;
         border-radius: 6px;
-        font-size: 0.72rem;
+        font-size: 0.68rem;
         font-weight: 700;
         font-family: 'Outfit', sans-serif;
     }
@@ -423,9 +434,9 @@
         background: rgba(255, 255, 255, 0.04);
         border: 1px solid rgba(255, 255, 255, 0.08);
         color: var(--accent-color);
-        padding: 6px 12px;
-        border-radius: 8px;
-        font-size: 0.82rem;
+        padding: 5px 7px;
+        border-radius: 7px;
+        font-size: 0.74rem;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
@@ -440,13 +451,13 @@
         border-color: var(--accent-color);
     }
 
-    @media (max-width: 1100px) {
+    @media (max-width: 1300px) {
         .staff-table-container {
             overflow-x: auto;
         }
 
         .staff-table {
-            min-width: 920px;
+            min-width: 1180px;
         }
     }
 
