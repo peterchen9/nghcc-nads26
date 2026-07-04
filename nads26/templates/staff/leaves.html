@@ -355,23 +355,6 @@
         border-radius: 6px;
         padding: 12px;
     }
-    .notes-form {
-        display: grid;
-        gap: 12px;
-    }
-    .notes-controls {
-        display: grid;
-        grid-template-columns: minmax(130px, 0.4fr) minmax(130px, 0.4fr) auto;
-        gap: 10px;
-        align-items: end;
-    }
-    .notes-form .field {
-        margin-bottom: 0;
-    }
-    .notes-form textarea {
-        min-height: 96px;
-        resize: vertical;
-    }
     .modal-backdrop {
         position: fixed;
         inset: 0;
@@ -458,9 +441,6 @@
         }
         .leave-toolbar {
             top: 70px;
-        }
-        .notes-controls {
-            grid-template-columns: 1fr;
         }
     }
     @media (max-width: 620px) {
@@ -552,35 +532,8 @@
         <section class="leave-panel notes-panel">
             <div class="panel-head">
                 <h3>請公假或其他假請說明</h3>
-                <span class="muted" id="quickDescriptionDateLabel"></span>
+                <span class="muted">只列出上方已登記的說明</span>
             </div>
-            <form method="post" class="notes-form" id="quickDescriptionForm">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="save">
-                <input type="hidden" name="month" value="{{ selected_month|date:'Y-m' }}">
-                <input type="hidden" name="leave_date" id="quickDescriptionDate" value="{{ selected_day|date:'Y-m-d' }}">
-                <div class="notes-controls">
-                    <div class="field">
-                        <label for="quickDescriptionPart">時段</label>
-                        <select id="quickDescriptionPart" name="day_part" {% if is_locked %}disabled{% endif %}>
-                            <option value="am">上午</option>
-                            <option value="pm">下午</option>
-                        </select>
-                    </div>
-                    <div class="field">
-                        <label for="quickDescriptionCode">假別</label>
-                        <select id="quickDescriptionCode" name="code" {% if is_locked %}disabled{% endif %}>
-                            <option value="公">公</option>
-                            <option value="其他">其他</option>
-                        </select>
-                    </div>
-                    <button class="btn primary" type="submit" {% if is_locked %}style="display:none"{% endif %}>儲存說明</button>
-                </div>
-                <div class="field">
-                    <label for="quickDescriptionText">說明內容</label>
-                    <textarea id="quickDescriptionText" name="description" rows="4" maxlength="500" required {% if is_locked %}readonly{% endif %}></textarea>
-                </div>
-            </form>
             <div class="list-panel" id="monthlyNotesList"></div>
         </section>
         </div>
@@ -713,11 +666,6 @@
     const statusList = document.getElementById('dayStatusList');
     const notesList = document.getElementById('monthlyNotesList');
     const selectedDayLabel = document.getElementById('selectedDayLabel');
-    const quickDescriptionDate = document.getElementById('quickDescriptionDate');
-    const quickDescriptionDateLabel = document.getElementById('quickDescriptionDateLabel');
-    const quickDescriptionPart = document.getElementById('quickDescriptionPart');
-    const quickDescriptionCode = document.getElementById('quickDescriptionCode');
-    const quickDescriptionText = document.getElementById('quickDescriptionText');
 
     function entryKey(entry) {
         return `${entry.leave_date}:${entry.day_part}`;
@@ -763,7 +711,6 @@
 
     function renderDayStatus(date) {
         selectedDayLabel.textContent = date;
-        updateQuickDescriptionForm(date);
         document.querySelectorAll('.day-cell').forEach((cell) => {
             cell.classList.toggle('selected', cell.dataset.date === date);
         });
@@ -793,19 +740,6 @@
             grid.appendChild(card);
         });
         statusList.appendChild(grid);
-    }
-
-    function updateQuickDescriptionForm(date) {
-        if (!quickDescriptionDate) return;
-        quickDescriptionDate.value = date;
-        quickDescriptionDateLabel.textContent = date;
-        const entry = currentUserEntry(date, quickDescriptionPart.value);
-        if (entry && ['公', '其他'].includes(entry.code)) {
-            quickDescriptionCode.value = entry.code;
-            quickDescriptionText.value = entry.description || '';
-            return;
-        }
-        quickDescriptionText.value = '';
     }
 
     function renderMonthlyNotes() {
@@ -893,7 +827,6 @@
     modal.addEventListener('click', (event) => {
         if (event.target === modal) closeModal();
     });
-    quickDescriptionPart.addEventListener('change', () => updateQuickDescriptionForm(quickDescriptionDate.value));
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && modal.classList.contains('open')) closeModal();
     });
