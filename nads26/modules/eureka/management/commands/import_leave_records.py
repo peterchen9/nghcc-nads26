@@ -43,8 +43,31 @@ def get_member_for_name(full_name):
 class Command(BaseCommand):
     help = 'Import staff leave records and staff info from Google Sheets'
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--file',
+            dest='file_path',
+            help='Import leave records from a local .xlsx file instead of downloading configured sheets.',
+        )
+
     def handle(self, *args, **options):
         self.stdout.write("Starting leave records and staff info import...")
+
+        file_path = options.get('file_path')
+        if file_path:
+            if not os.path.exists(file_path):
+                self.stderr.write(self.style.ERROR(f"File not found: {file_path}"))
+                return
+
+            try:
+                self.parse_xlsx(file_path)
+                self.parse_personnel(file_path)
+            except Exception as e:
+                self.stderr.write(self.style.ERROR(f"Error parsing {file_path}: {e}"))
+                raise
+
+            self.stdout.write(self.style.SUCCESS("Leave records and staff info import complete!"))
+            return
 
         urls = {}
         settings_qs = SystemSetting.objects.filter(key__startswith='VACATION_SHEET_')
@@ -101,8 +124,17 @@ class Command(BaseCommand):
             
             header_row_idx = None
             rows = list(ws.iter_rows(values_only=True))
-            for r_idx, row in enumerate(rows):
-                if '星期' in row:
+            for r_idx, row in enumerate(rows[:-1]):
+                row_values = [str(v).strip() if v is not None else "" for v in row]
+                next_values = [str(v).strip() if v is not None else "" for v in rows[r_idx + 1]]
+
+                has_calendar_labels = (
+                    any(v in ('日期', '日', '星期') for v in row_values[:3])
+                    or ('星期' in row_values[:3] and '教會行政' in row_values[:3])
+                )
+                has_slot_labels = any(v in ('上', '下', 'AM', 'PM', '上午', '下午') for v in next_values[3:])
+
+                if has_calendar_labels and has_slot_labels:
                     header_row_idx = r_idx
                     break
                     
@@ -122,7 +154,8 @@ class Command(BaseCommand):
                     clean_name = str(name).strip()
                     am_col = c_idx
                     pm_col = None
-                    if c_idx + 1 < len(sub_row) and sub_row[c_idx + 1] == '下':
+                    next_slot = str(sub_row[c_idx + 1]).strip() if c_idx + 1 < len(sub_row) and sub_row[c_idx + 1] is not None else ""
+                    if next_slot in ('下', 'PM', '下午'):
                         pm_col = c_idx + 1
                     
                     staff_columns.append({
