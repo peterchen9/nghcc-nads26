@@ -556,7 +556,31 @@
     </div>
 
     <script>
+        const SIDEBAR_SCROLL_KEY = 'sidebar_nav_scroll_top';
+
+        function sidebarNavElement() {
+            return document.querySelector('.sidebar nav');
+        }
+
+        function saveSidebarScroll() {
+            const nav = sidebarNavElement();
+            if (!nav) return;
+            sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(nav.scrollTop || 0));
+        }
+
+        function restoreSidebarScroll() {
+            const nav = sidebarNavElement();
+            if (!nav) return;
+            const savedTop = parseInt(sessionStorage.getItem(SIDEBAR_SCROLL_KEY) || '0', 10);
+            if (!Number.isFinite(savedTop) || savedTop <= 0) return;
+            nav.scrollTop = savedTop;
+            requestAnimationFrame(() => {
+                nav.scrollTop = savedTop;
+            });
+        }
+
         function toggleMenu(event, id, route) {
+            saveSidebarScroll();
             const item = document.getElementById(id);
             const hasChildren = item.classList.contains('has-children');
             
@@ -575,6 +599,7 @@
         }
 
         function handleSubMenuClick(event, link) {
+            saveSidebarScroll();
             const rawRoute = (link.dataset.menuRoute || '').trim();
             const href = (link.getAttribute('href') || '').trim();
             const plannedUrl = link.dataset.plannedUrl || '/planned/';
@@ -752,6 +777,14 @@
                 link.addEventListener('click', (event) => handleSubMenuClick(event, link));
             });
 
+            const sidebarNav = sidebarNavElement();
+            if (sidebarNav) {
+                sidebarNav.addEventListener('scroll', saveSidebarScroll, { passive: true });
+                sidebarNav.addEventListener('click', (event) => {
+                    if (event.target.closest('a')) saveSidebarScroll();
+                }, true);
+            }
+
             // Restore from localStorage first
             let states = {};
             try {
@@ -780,7 +813,11 @@
                     localStorage.setItem('sidebar_menu_states', JSON.stringify(states));
                 }
             }
+
+            restoreSidebarScroll();
         });
+
+        window.addEventListener('pagehide', saveSidebarScroll);
 
         // User Dropdown Logic
         const btn = document.getElementById('userMenuBtn');
