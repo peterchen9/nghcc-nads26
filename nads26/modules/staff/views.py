@@ -21,6 +21,7 @@ from modules.facility.views import expense_claim_page, expense_claim_voucher_pdf
 
 STAFF_LEAVE_TABLE = 'staff_leave_entry'
 STAFF_LEAVE_IMPORT_SOURCE = 'google-sheet-2026'
+STAFF_LEAVE_YEAR = 2026
 STAFF_LEAVE_SHEET_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS5G7sL_shPun-R-HQ3Yn4NjnGEapP9RkvS7fTBhgGBrakjutdjqdPRPPpyAqetXA/pub'
 CHURCH_CALENDAR_TABLE = 'staff_church_calendar_entry'
 CHURCH_CALENDAR_IMPORT_SOURCE = 'google-sheet-2026-calendar'
@@ -268,10 +269,9 @@ def _staff_user_aliases(user):
 
 
 def _month_options(today):
-    current = _month_start(today)
     selected_range = []
-    for offset in range(-3, 10):
-        month = _add_months(current, offset)
+    for month_number in range(1, 13):
+        month = date(STAFF_LEAVE_YEAR, month_number, 1)
         is_locked = _is_leave_month_locked(month, today)
         selected_range.append({
             'value': month.strftime('%Y-%m'),
@@ -719,7 +719,11 @@ def leave_calendar_page(request):
                 messages.success(request, f'已匯入「2026行事曆」{imported_calendar_count} 筆。')
 
     selected_month = _parse_month(request.GET.get('month') or request.POST.get('month'))
+    if selected_month.year != STAFF_LEAVE_YEAR:
+        selected_month = date(STAFF_LEAVE_YEAR, selected_month.month, 1)
     selected_day = _parse_leave_date(request.GET.get('day') or request.POST.get('leave_date'), selected_month)
+    if selected_day.year != STAFF_LEAVE_YEAR:
+        selected_day = selected_month
 
     if request.method == 'POST':
         action = request.POST.get('action')

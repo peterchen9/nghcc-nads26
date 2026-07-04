@@ -471,7 +471,7 @@
         <div class="leave-toolbar-main">
             <div>
                 <h2>同工休假表</h2>
-                <div class="muted">{{ selected_month|date:'n月' }}，{{ current_staff_name }}</div>
+                <div class="muted">{{ selected_month|date:'Y年' }}，{{ current_staff_name }}</div>
             </div>
             {% if is_locked %}
                 <div class="locked-note">{{ lock_note }}</div>
