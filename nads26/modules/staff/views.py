@@ -272,9 +272,11 @@ def _month_options(today):
     selected_range = []
     for offset in range(-3, 10):
         month = _add_months(current, offset)
+        is_locked = _is_leave_month_locked(month, today)
         selected_range.append({
             'value': month.strftime('%Y-%m'),
-            'label': f'{month.year}年{month.month}月',
+            'label': f'{month.month}月已鎖定' if is_locked else f'{month.month}月',
+            'is_locked': is_locked,
         })
     return selected_range
 

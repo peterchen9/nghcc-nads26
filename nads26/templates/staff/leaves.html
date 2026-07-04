@@ -68,6 +68,15 @@
         color: var(--sidebar-bg);
         font-weight: 800;
     }
+    .month-tab.locked {
+        border-color: rgba(148, 163, 184, 0.45);
+        background: rgba(148, 163, 184, 0.16);
+        color: #cbd5e1;
+    }
+    .month-tab.locked.active {
+        background: #94a3b8;
+        color: #102033;
+    }
     .btn.danger {
         border-color: rgba(248,113,113,0.45);
         color: #fecaca;
@@ -462,7 +471,7 @@
         <div class="leave-toolbar-main">
             <div>
                 <h2>同工休假表</h2>
-                <div class="muted">{{ selected_month|date:'Y年n月' }}，{{ current_staff_name }}</div>
+                <div class="muted">{{ selected_month|date:'n月' }}，{{ current_staff_name }}</div>
             </div>
             {% if is_locked %}
                 <div class="locked-note">{{ lock_note }}</div>
@@ -470,7 +479,7 @@
         </div>
         <nav class="month-tabs" aria-label="月份">
             {% for month in month_options %}
-                <a class="month-tab {% if month.value == selected_month|date:'Y-m' %}active{% endif %}" href="?month={{ month.value }}">{{ month.label }}</a>
+                <a class="month-tab {% if month.value == selected_month|date:'Y-m' %}active{% endif %} {% if month.is_locked %}locked{% endif %}" href="?month={{ month.value }}">{{ month.label }}</a>
             {% endfor %}
         </nav>
     </section>
@@ -486,7 +495,7 @@
     <div class="leave-grid">
         <section class="leave-panel calendar-panel">
             <div class="panel-head">
-                <h3>{{ selected_month|date:'Y年n月' }}</h3>
+                <h3>{{ selected_month|date:'n月' }}</h3>
                 <span class="muted">點選日期的上午或下午</span>
             </div>
             <table class="calendar-table {% if is_locked %}locked-month{% endif %}">
