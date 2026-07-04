@@ -165,22 +165,25 @@
         border-bottom: none;
     }
 
-    .col-staff-id { width: 3.3%; text-align: center; }
-    .col-employee-no { width: 5.2%; }
-    .col-name { width: 6.2%; }
-    .col-identity { width: 4.3%; }
-    .col-active { width: 5.1%; text-align: center; }
-    .col-mobile { width: 7.4%; }
-    .col-seat { width: 3.7%; }
-    .col-locker { width: 3.7%; }
-    .col-bank { width: 7.2%; }
-    .col-account { width: 7.4%; }
-    .col-user { width: 6.4%; }
-    .col-leave { width: 5.0%; text-align: center; }
-    .col-date { width: 6.7%; }
-    .col-email { width: 11.1%; }
-    .col-cc-email { width: 11.1%; }
-    .col-actions { width: 5.2%; text-align: center; }
+    .col-active,
+    .col-locker,
+    .col-bank,
+    .col-account,
+    .col-user,
+    .col-date {
+        display: none;
+    }
+
+    .col-staff-id { width: 5%; text-align: center; }
+    .col-employee-no { width: 8%; }
+    .col-name { width: 10%; }
+    .col-identity { width: 7%; }
+    .col-mobile { width: 12%; }
+    .col-seat { width: 6%; }
+    .col-leave { width: 8%; text-align: center; }
+    .col-email { width: 18%; }
+    .col-cc-email { width: 18%; }
+    .col-actions { width: 8%; text-align: center; }
 
     .td-name {
         font-size: 0.84rem;
@@ -457,7 +460,7 @@
         }
 
         .staff-table {
-            min-width: 1180px;
+            min-width: 980px;
         }
     }
 
@@ -601,9 +604,13 @@
                                     {{ staff.cc_email|default:"-" }}
                                 </td>
                                 <td class="col-actions">
-                                    <button type="button" class="btn-action-edit" onclick="openEditModal({{ staff.staff_id }})">
-                                        ✏️ 編輯
-                                    </button>
+                                    {% if can_edit_staff %}
+                                        <button type="button" class="btn-action-edit" onclick="openEditModal({{ staff.staff_id }})">
+                                            ✏️ 編輯
+                                        </button>
+                                    {% else %}
+                                        <span style="color: var(--text-secondary); font-size: 0.74rem;">唯讀</span>
+                                    {% endif %}
                                 </td>
                             </tr>
                         {% endfor %}
