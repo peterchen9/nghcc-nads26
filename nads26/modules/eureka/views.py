@@ -910,7 +910,9 @@ from .models import StaffInfo
 @login_required
 def staff_list_view(request):
     """同工基本資料與特休額度列表視圖"""
-    if not request.user.is_superuser:
+    can_view_staff = request.user.is_superuser or request.user.has_perm('eureka.view_staffinfo')
+    can_edit_staff = request.user.is_superuser or request.user.has_perm('eureka.change_staffinfo')
+    if not can_view_staff:
         messages.error(request, "只有管理員可以存取同工資料。")
         return redirect('home')
 
@@ -937,13 +939,14 @@ def staff_list_view(request):
         'staff_list': staff_list,
         'query': query,
         'users': users,
+        'can_edit_staff': can_edit_staff,
     })
 
 
 @login_required
 def edit_staff_view(request, staff_id):
     """編輯同工資料"""
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or request.user.has_perm('eureka.change_staffinfo')):
         messages.error(request, "只有管理員可以修改同工資料。")
         return redirect('home')
 
@@ -1120,7 +1123,6 @@ def save_seat_map_view(request):
             return JsonResponse({"success": False, "error": str(e)}, status=500)
             
     return JsonResponse({"success": False, "error": "僅支援 POST 請求。"}, status=405)
-
 
 
 
