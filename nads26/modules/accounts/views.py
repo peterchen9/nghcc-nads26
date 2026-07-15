@@ -7,6 +7,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from modules.menu.models import MenuItem
+from modules.menu.permissions import expand_menu_ids, user_can_access_route
 
 def has_user_mgmt_permission(user):
     if not user.is_authenticated:
@@ -14,7 +15,7 @@ def has_user_mgmt_permission(user):
     if user.is_superuser:
         return True
     try:
-        return user.profile.allowed_menu_items.filter(route='/users/').exists()
+        return user_can_access_route(user, '/users/')
     except Exception:
         return False
 
@@ -37,11 +38,11 @@ def app_routes(request):
     if not has_user_mgmt_permission(request.user):
         return Response({'detail': 'Permission denied.'}, status=403)
         
-    roots = MenuItem.objects.filter(parent=None, is_active=True).prefetch_related('children')
+    roots = MenuItem.objects.filter(parent=None, is_active=True).prefetch_related('children').order_by('order', 'id')
     data = []
     for r in roots:
         children_data = []
-        for c in r.children.filter(is_active=True):
+        for c in r.children.filter(is_active=True).order_by('order', 'id'):
             children_data.append({
                 'id': c.id,
                 'title': c.title,
@@ -138,11 +139,14 @@ def user_set_permissions(request, pk):
     menu_ids = request.data.get('menu_ids', [])
     
     profile = user.profile
-    valid_menu_items = MenuItem.objects.filter(id__in=menu_ids)
+    valid_menu_items = MenuItem.objects.filter(id__in=expand_menu_ids(menu_ids), is_active=True)
     profile.allowed_menu_items.set(valid_menu_items)
     profile.save()
 
-    return Response({'status': 'success'})
+    return Response({
+        'status': 'success',
+        'menu_ids': list(valid_menu_items.values_list('id', flat=True)),
+    })
 
 @api_view(['DELETE', 'POST'])
 @permission_classes([IsAuthenticated])
@@ -199,7 +203,7 @@ def custom_login(request):
 
 def custom_logout(request):
     logout(request)
-    return redirect('/accounts/login/')
+    return render(request, 'accounts/logged_out.html')
 
 class CustomPasswordResetView(PasswordResetView):
     template_name = 'accounts/password_reset_form.html'

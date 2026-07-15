@@ -611,6 +611,50 @@ def _pastoral_get_report(report_no):
     return report
 
 
+def _pastoral_report_history(filters=None):
+    _pastoral_ensure_tables()
+    filters = filters or {}
+    where = []
+    params = []
+    start_date = (filters.get('start_date') or '').strip()
+    end_date = (filters.get('end_date') or '').strip()
+    keyword = (filters.get('keyword') or '').strip()
+
+    if start_date:
+        where.append('r.report_date >= %s')
+        params.append(start_date)
+    if end_date:
+        where.append('r.report_date <= %s')
+        params.append(end_date)
+    if keyword:
+        like = f'%{keyword}%'
+        where.append(
+            '(r.report_no LIKE %s OR r.client_name LIKE %s OR r.location LIKE %s '
+            'OR r.care_report LIKE %s OR r.follow_up LIKE %s OR r.author_name LIKE %s OR r.author_user LIKE %s)'
+        )
+        params.extend([like, like, like, like, like, like, like])
+
+    where_sql = f'WHERE {" AND ".join(where)}' if where else ''
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f'''
+            SELECT r.id, r.report_no, r.report_date, r.client_name, r.location,
+                   r.care_report, r.follow_up, r.author_user, r.author_name,
+                   r.author_email, r.created_at, COUNT(p.id) AS photo_count
+            FROM {PASTORAL_REPORT_TABLE} r
+            LEFT JOIN {PASTORAL_REPORT_PHOTO_TABLE} p ON p.report_id = r.id
+            {where_sql}
+            GROUP BY r.id, r.report_no, r.report_date, r.client_name, r.location,
+                     r.care_report, r.follow_up, r.author_user, r.author_name,
+                     r.author_email, r.created_at
+            ORDER BY r.report_date DESC, r.created_at DESC, r.id DESC
+            LIMIT 200
+            ''',
+            params,
+        )
+        return _dictfetchall(cursor)
+
+
 def _pastoral_draw_wrapped(page, text, x, y, width, font_name, font_size=10, line_height=15):
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
@@ -798,6 +842,24 @@ def pastoral_report_page(request):
         'report': report,
         'submitted_report': submitted_report,
         'pastoral_report_base_path': request.path.rstrip('/') or '/facility/pastoral-reports',
+    })
+
+
+@login_required
+def pastoral_report_admin_page(request):
+    if not _can_write_pastoral_report(request.user):
+        return HttpResponseForbidden('您沒有檢視牧養報告後台的權限。')
+
+    history_filters = {
+        'start_date': request.GET.get('start_date') or '',
+        'end_date': request.GET.get('end_date') or '',
+        'keyword': request.GET.get('keyword') or '',
+    }
+    return render(request, 'facility/pastoral_report_admin.html', {
+        'report_history': _pastoral_report_history(history_filters),
+        'history_filters': history_filters,
+        'pastoral_report_base_path': '/facility/pastoral-reports',
+        'pastoral_report_admin_path': request.path.rstrip('/') or '/facility/pastoral-reports/admin',
     })
 
 
