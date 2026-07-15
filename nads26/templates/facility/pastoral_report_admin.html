@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}牧養報告後台 - {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pastoral-admin-page {
+        display: grid;
+        gap: 18px;
+    }
+
+    .admin-toolbar,
+    .history-panel {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.04);
+    }
+
+    .admin-toolbar {
+        position: sticky;
+        top: 70px;
+        z-index: 70;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 18px 20px;
+        backdrop-filter: blur(10px);
+    }
+
+    .admin-toolbar h2,
+    .history-panel h3 {
+        margin: 0;
+        letter-spacing: 0;
+    }
+
+    .admin-toolbar h2 {
+        font-size: 1.35rem;
+    }
+
+    .admin-toolbar p,
+    .field label,
+    .history-meta,
+    .empty-state {
+        color: var(--text-secondary);
+    }
+
+    .admin-toolbar p {
+        margin: 4px 0 0;
+        font-size: 0.9rem;
+    }
+
+    .toolbar-actions,
+    .history-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .history-panel {
+        display: grid;
+        gap: 16px;
+        padding: 22px;
+    }
+
+    .history-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+    }
+
+    .history-meta {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        font-size: 0.88rem;
+    }
+
+    .history-filter {
+        display: grid;
+        gap: 18px;
+    }
+
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .field {
+        display: grid;
+        gap: 7px;
+        min-width: 0;
+    }
+
+    .field label {
+        font-size: 0.86rem;
+        font-weight: 700;
+    }
+
+    .field input {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 6px;
+        background: rgba(15, 23, 42, 0.28);
+        color: #ffffff;
+        padding: 11px 12px;
+        font: inherit;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.06);
+        color: #ffffff;
+        padding: 0 14px;
+        font: inherit;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .btn.primary {
+        border-color: var(--accent-color);
+        background: var(--accent-color);
+        color: var(--sidebar-bg);
+    }
+
+    .history-list {
+        display: grid;
+        gap: 10px;
+    }
+
+    .history-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 16px;
+        align-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 14px;
+        background: rgba(15, 23, 42, 0.18);
+    }
+
+    .history-title {
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+        flex-wrap: wrap;
+        margin-bottom: 6px;
+    }
+
+    .history-title strong {
+        color: #ffffff;
+        font-size: 1rem;
+    }
+
+    .history-title span {
+        color: var(--accent-color);
+        font-size: 0.86rem;
+        font-weight: 700;
+    }
+
+    .history-excerpt {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        line-height: 1.7;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .empty-state {
+        margin: 0;
+        padding: 18px;
+        text-align: center;
+    }
+
+    @media (max-width: 900px) {
+        .admin-toolbar,
+        .history-head,
+        .history-row {
+            grid-template-columns: 1fr;
+            flex-direction: column;
+            align-items: stretch;
+            position: static;
+        }
+
+        .filter-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pastoral-admin-page">
+    <section class="admin-toolbar">
+        <div>
+            <h2>牧養報告後台</h2>
+            <p>查看、搜尋已送出的牧養報告，或開啟報告 PDF。</p>
+        </div>
+        <div class="toolbar-actions">
+            <a class="btn primary" href="{{ pastoral_report_base_path }}/">新增一筆</a>
+        </div>
+    </section>
+
+    <section class="history-panel">
+        <div class="history-head">
+            <div>
+                <h3>報告列表</h3>
+                <div class="history-meta">
+                    <span>可依日期或關鍵字查詢。</span>
+                    <span>最多顯示最近 200 筆。</span>
+                </div>
+            </div>
+        </div>
+
+        <form class="history-filter" method="get" action="{{ pastoral_report_admin_path }}/">
+            <div class="filter-grid">
+                <div class="field">
+                    <label for="startDate">開始日期</label>
+                    <input id="startDate" type="date" name="start_date" value="{{ history_filters.start_date }}">
+                </div>
+                <div class="field">
+                    <label for="endDate">結束日期</label>
+                    <input id="endDate" type="date" name="end_date" value="{{ history_filters.end_date }}">
+                </div>
+                <div class="field">
+                    <label for="keyword">關鍵字</label>
+                    <input id="keyword" name="keyword" value="{{ history_filters.keyword }}" placeholder="姓名、地點、內容、跟進、單號">
+                </div>
+            </div>
+            <div class="history-actions">
+                <a class="btn" href="{{ pastoral_report_admin_path }}/">清除</a>
+                <button class="btn primary" type="submit">搜尋報告</button>
+            </div>
+        </form>
+
+        <div class="history-list">
+            {% for item in report_history %}
+                <article class="history-row">
+                    <div>
+                        <div class="history-title">
+                            <strong>{{ item.client_name }}</strong>
+                            <span>{{ item.report_no }}</span>
+                        </div>
+                        <div class="history-meta">
+                            <span>{{ item.report_date|date:"Y-m-d" }}</span>
+                            <span>{{ item.location }}</span>
+                            <span>{{ item.author_name|default:item.author_user }}</span>
+                            <span>照片 {{ item.photo_count|default:0 }}</span>
+                        </div>
+                        <p class="history-excerpt">{{ item.care_report|truncatechars:120 }}</p>
+                    </div>
+                    <div class="history-actions">
+                        <a class="btn" href="{{ pastoral_report_base_path }}/?report_no={{ item.report_no }}">查看</a>
+                        <a class="btn primary" href="{{ pastoral_report_base_path }}/{{ item.report_no }}/report.pdf" target="_blank" rel="noopener">PDF</a>
+                    </div>
+                </article>
+            {% empty %}
+                <p class="empty-state">目前沒有符合條件的牧養報告。</p>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

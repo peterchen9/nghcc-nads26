@@ -415,6 +415,183 @@
             letter-spacing: 0;
             text-align: center;
         }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        img,
+        svg,
+        video,
+        canvas {
+            max-width: 100%;
+        }
+
+        input,
+        select,
+        textarea,
+        button {
+            font: inherit;
+        }
+
+        .content-area {
+            min-width: 0;
+        }
+
+        .content-area table {
+            max-width: 100%;
+        }
+
+        .content-area input,
+        .content-area select,
+        .content-area textarea {
+            min-height: 40px;
+        }
+
+        .content-area button,
+        .content-area .btn,
+        .content-area a.btn,
+        .content-area .voucher-link {
+            min-height: 40px;
+        }
+
+        @media (max-width: 760px) {
+            :root {
+                --sidebar-width: min(86vw, 320px);
+            }
+
+            body {
+                font-size: 15px;
+            }
+
+            .sidebar {
+                width: var(--sidebar-width);
+                max-width: 100vw;
+            }
+
+            .sidebar-header {
+                padding: 18px 24px 14px !important;
+            }
+
+            .sidebar-logo {
+                width: 86px;
+                margin-bottom: 6px;
+            }
+
+            .sidebar-header h1 {
+                font-size: 1.55rem !important;
+                line-height: 1.2;
+            }
+
+            .sidebar-header p {
+                margin-bottom: 0;
+            }
+
+            .nav-menu {
+                padding: 4px 8px 28px 8px !important;
+            }
+
+            .nav-link,
+            .sub-link {
+                min-height: 42px;
+                padding: 9px 12px !important;
+                line-height: 1.35;
+            }
+
+            .sub-menu {
+                padding-left: 16px;
+            }
+
+            header.top-bar {
+                height: 58px;
+                padding: 0 12px;
+            }
+
+            .menu-toggle-btn {
+                width: 42px;
+                height: 42px;
+                border-radius: 8px;
+                flex: 0 0 auto;
+            }
+
+            .user-profile {
+                min-width: 0;
+            }
+
+            .user-profile span {
+                max-width: 42vw;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .content-area {
+                padding: 12px;
+            }
+
+            .card {
+                border-radius: 8px;
+                padding: 16px;
+            }
+
+            h2 {
+                font-size: 1.45rem;
+                line-height: 1.25;
+            }
+
+            .quick-links-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 12px;
+                margin-top: 18px;
+            }
+
+            .quick-card {
+                border-radius: 8px;
+                padding: 16px 12px;
+            }
+
+            .content-area input,
+            .content-area select,
+            .content-area textarea,
+            .content-area button {
+                font-size: 16px;
+            }
+
+            .content-area button,
+            .content-area .btn,
+            .content-area a.btn,
+            .content-area .voucher-link {
+                min-height: 44px;
+                border-radius: 7px;
+            }
+
+            .content-area table {
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .account-toolbar,
+            .expense-toolbar,
+            .leave-toolbar,
+            .rooms-toolbar,
+            .pastoral-toolbar,
+            .admin-toolbar,
+            .maintenance-toolbar,
+            .budget-head,
+            .lan-sticky,
+            .wlan-sticky {
+                top: 58px !important;
+            }
+
+            .content-area > .card > h2:first-child {
+                top: 58px;
+                margin: -16px -16px 16px;
+                padding: 16px 16px 10px;
+            }
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -444,13 +621,13 @@
                         </a>
                     </li>
                     {% for item in side_menu %}
-                    <li class="nav-item {% if item.children.all or item.title == '資訊網路' or item.title == '同工' or item.title == '同工項目' or item.title == '關懷' %}has-children{% endif %}" id="menu-{{ item.id }}">
+                    <li class="nav-item {% if item.children.all %}has-children{% endif %}" id="menu-{{ item.id }}">
                         <a href="{{ item.route|default:'#' }}" class="nav-link {% if request.path == item.route %}active{% endif %}" onclick="toggleMenu(event, 'menu-{{ item.id }}', '{{ item.route }}')">
-                            <span class="arrow">{% if item.children.all or item.title == '資訊網路' or item.title == '同工' or item.title == '同工項目' or item.title == '關懷' %}▶{% endif %}</span>
+                            <span class="arrow">{% if item.children.all %}▶{% endif %}</span>
                             {% if item.icon %}<span>{{ item.icon }}</span>{% endif %}
                             <span>{{ item.title }}</span>
                         </a>
-                        {% if item.children.all or item.title == '資訊網路' or item.title == '同工' or item.title == '同工項目' or item.title == '關懷' %}
+                        {% if item.children.all %}
                         <ul class="sub-menu">
                             {% for child in item.children.all %}
                             <li>
@@ -464,40 +641,6 @@
                                 </a>
                             </li>
                             {% endfor %}
-                            {% if item.title == '場地設施' %}
-                            <li>
-                                <a href="/facility/maintenance/"
-                                   class="sub-link {% if request.path == '/facility/maintenance/' %}active{% endif %}"
-                                   data-menu-route="/facility/maintenance/">
-                                    <span class="sub-icon">M</span>
-                                    <span>日常維護</span>
-                                </a>
-                            </li>
-                            {% endif %}
-                            {% if item.title == '資訊網路' %}
-                            <li>
-                                <a href="/facility/lan-hosts/" class="sub-link {% if request.path == '/facility/lan-hosts/' %}active{% endif %}">
-                                    <span class="sub-icon">H</span>
-                                    <span>區網Hosts</span>
-                                </a>
-                            </li>
-                            <li>
-                                <a href="/facility/wlan-aps/" class="sub-link {% if request.path == '/facility/wlan-aps/' %}active{% endif %}">
-                                    <span class="sub-icon">W</span>
-                                    <span>無線網路</span>
-                                </a>
-                            </li>
-                            {% endif %}
-                            {% if item.title == '關懷' %}
-                            <li>
-                                <a href="/facility/pastoral-reports/"
-                                   class="sub-link {% if request.path == '/facility/pastoral-reports/' %}active{% endif %}"
-                                   data-menu-route="/facility/pastoral-reports/">
-                                    <span class="sub-icon">C</span>
-                                    <span>牧養報告</span>
-                                </a>
-                            </li>
-                            {% endif %}
                         </ul>
                         {% endif %}
                     </li>
@@ -531,13 +674,13 @@
                             <a href="/staff/password/" style="display: block; padding: 10px; color: var(--text-primary); text-decoration: none; border-radius: 8px;">修改密碼</a>
                             <a href="/staff/profile/" style="display: block; padding: 10px; color: var(--text-primary); text-decoration: none; border-radius: 8px;">個人資料</a>
                             <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 8px 0;">
-                            <form action="/admin/logout/" method="post" id="logoutForm">
+                            <form action="{% url 'logout' %}" method="post" id="logoutForm">
                                 {% csrf_token %}
                                 <button type="submit" style="width: 100%; text-align: left; background: none; border: none; padding: 10px; color: #f87171; cursor: pointer; font-family: inherit;">登出</button>
                             </form>
                         </div>
                     {% else %}
-                        <a href="/admin/login/?next=/" style="color: var(--accent-color); text-decoration: none;">登入</a>
+                        <a href="{% url 'login' %}?next=/" style="color: var(--accent-color); text-decoration: none;">登入</a>
                     {% endif %}
                 </div>
             </header>
@@ -620,9 +763,7 @@
                 href === '' ||
                 href === '#' ||
                 href.startsWith('#') ||
-                href.toLowerCase().startsWith('javascript:') ||
-                normalizedHref === window.location.pathname ||
-                normalizedHref === `${window.location.pathname}${window.location.search}`;
+                href.toLowerCase().startsWith('javascript:');
 
             if (emptyRoute) {
                 event.preventDefault();
@@ -659,120 +800,8 @@
             }
         }
 
-        function ensureMaintenanceMenu() {
-            const navItems = document.querySelectorAll('.nav-item');
-            navItems.forEach((item) => {
-                const mainLabel = item.querySelector(':scope > .nav-link span:last-child');
-                if (!mainLabel || mainLabel.textContent.trim() !== '場地設施') return;
-
-                item.classList.add('has-children');
-                const arrow = item.querySelector(':scope > .nav-link .arrow');
-                if (arrow && !arrow.textContent.trim()) arrow.textContent = '▶';
-
-                let subMenu = item.querySelector(':scope > .sub-menu');
-                if (!subMenu) {
-                    subMenu = document.createElement('ul');
-                    subMenu.className = 'sub-menu';
-                    item.appendChild(subMenu);
-                }
-
-                if (subMenu.querySelector('a[href="/facility/maintenance/"]')) return;
-
-                const row = document.createElement('li');
-                row.innerHTML = `
-                    <a href="/facility/maintenance/"
-                       class="sub-link ${window.location.pathname === '/facility/maintenance/' ? 'active' : ''}"
-                       data-menu-route="/facility/maintenance/">
-                        <span class="sub-icon">M</span>
-                        <span>日常維護</span>
-                    </a>
-                `;
-                subMenu.appendChild(row);
-                const link = row.querySelector('a');
-                link.addEventListener('click', (event) => handleSubMenuClick(event, link));
-            });
-        }
-
-        function ensurePastoralReportMenu() {
-            const navItems = document.querySelectorAll('.nav-item');
-            navItems.forEach((item) => {
-                const mainLabel = item.querySelector(':scope > .nav-link span:last-child');
-                if (!mainLabel || mainLabel.textContent.trim() !== '關懷') return;
-
-                item.classList.add('has-children');
-                const arrow = item.querySelector(':scope > .nav-link .arrow');
-                if (arrow && !arrow.textContent.trim()) arrow.textContent = '▶';
-
-                let subMenu = item.querySelector(':scope > .sub-menu');
-                if (!subMenu) {
-                    subMenu = document.createElement('ul');
-                    subMenu.className = 'sub-menu';
-                    item.appendChild(subMenu);
-                }
-
-                if (subMenu.querySelector('a[href="/facility/pastoral-reports/"]')) return;
-
-                const row = document.createElement('li');
-                row.innerHTML = `
-                    <a href="/facility/pastoral-reports/"
-                       class="sub-link ${window.location.pathname === '/facility/pastoral-reports/' ? 'active' : ''}"
-                       data-menu-route="/facility/pastoral-reports/">
-                        <span class="sub-icon">C</span>
-                        <span>牧養報告</span>
-                    </a>
-                `;
-                subMenu.appendChild(row);
-                const link = row.querySelector('a');
-                link.addEventListener('click', (event) => handleSubMenuClick(event, link));
-            });
-        }
-
-        function ensureNetworkMenu() {
-            const navItems = document.querySelectorAll('.nav-item');
-            navItems.forEach((item) => {
-                const mainLabel = item.querySelector(':scope > .nav-link span:last-child');
-                if (!mainLabel || !mainLabel.textContent.replace(/\s+/g, '').includes('資訊網路')) return;
-
-                item.classList.add('has-children');
-                const arrow = item.querySelector(':scope > .nav-link .arrow');
-                if (arrow && !arrow.textContent.trim()) arrow.textContent = '▶';
-
-                let subMenu = item.querySelector(':scope > .sub-menu');
-                if (!subMenu) {
-                    subMenu = document.createElement('ul');
-                    subMenu.className = 'sub-menu';
-                    item.appendChild(subMenu);
-                }
-
-                const links = [
-                    {href: '/facility/lan-hosts/', icon: 'H', label: '區網Hosts'},
-                    {href: '/facility/wlan-aps/', icon: 'W', label: '無線網路'},
-                ];
-
-                links.forEach((entry) => {
-                    if (subMenu.querySelector(`a[href="${entry.href}"]`)) return;
-                    const row = document.createElement('li');
-                    row.innerHTML = `
-                        <a href="${entry.href}"
-                           class="sub-link ${window.location.pathname === entry.href ? 'active' : ''}"
-                           data-menu-route="${entry.href}">
-                            <span class="sub-icon">${entry.icon}</span>
-                            <span>${entry.label}</span>
-                        </a>
-                    `;
-                    subMenu.appendChild(row);
-                    const link = row.querySelector('a');
-                    link.addEventListener('click', (event) => handleSubMenuClick(event, link));
-                });
-            });
-        }
-
         // Keep active menu open on load
         document.addEventListener('DOMContentLoaded', () => {
-            ensureNetworkMenu();
-            ensureMaintenanceMenu();
-            ensurePastoralReportMenu();
-
             document.querySelectorAll('.sub-link').forEach((link) => {
                 link.addEventListener('click', (event) => handleSubMenuClick(event, link));
             });

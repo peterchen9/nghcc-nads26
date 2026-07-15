@@ -468,16 +468,112 @@
         .card-header,
         .staff-header {
             align-items: stretch;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .staff-title {
+            font-size: 1.45rem;
+            line-height: 1.25;
+        }
+
+        .staff-header p {
+            font-size: 0.88rem;
+            line-height: 1.5;
+        }
+
+        .staff-actions {
+            width: 100%;
+            gap: 10px;
         }
 
         .search-filter-form {
             width: 100%;
             box-sizing: border-box;
+            border-radius: 8px;
+            padding: 6px 10px;
         }
 
         .search-filter-form input[type="text"] {
             width: 100%;
             min-width: 0;
+            font-size: 16px;
+        }
+
+        .table-card {
+            border-radius: 8px;
+            margin-bottom: 18px;
+        }
+
+        .card-header {
+            padding: 14px;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            line-height: 1.35;
+        }
+
+        .staff-table-container {
+            overflow-x: auto;
+        }
+
+        .staff-table {
+            min-width: 860px;
+            font-size: 0.78rem;
+        }
+
+        .staff-table th,
+        .staff-table td {
+            padding: 9px 7px;
+        }
+
+        .btn-action-edit {
+            min-height: 36px;
+            padding: 6px 9px;
+            justify-content: center;
+        }
+
+        .modal-backdrop {
+            align-items: stretch;
+            padding: 8px;
+        }
+
+        .modal-dialog {
+            width: 100%;
+            max-width: 100%;
+            max-height: calc(100vh - 16px);
+            border-radius: 8px;
+            padding: 18px;
+        }
+
+        .modal-header {
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .modal-title {
+            font-size: 1.2rem;
+            line-height: 1.25;
+        }
+
+        .modal-close {
+            min-width: 42px;
+            min-height: 42px;
+        }
+
+        .form-actions {
+            flex-direction: column-reverse;
+            gap: 10px;
+        }
+
+        .btn-secondary,
+        .btn-save {
+            min-height: 44px;
+            justify-content: center;
+            width: 100%;
         }
     }
 </style>

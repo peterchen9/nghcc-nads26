@@ -663,6 +663,139 @@
     .modal-btn-action-primary:hover {
         background-color: #0369a1;
     }
+
+    @media (max-width: 700px) {
+        .eureka-workspace-wrapper {
+            padding: 12px;
+            border-radius: 8px;
+            min-height: auto;
+        }
+
+        .eureka-layout {
+            gap: 12px;
+        }
+
+        .search-panel-card {
+            padding: 14px;
+            border-radius: 8px;
+        }
+
+        .search-title,
+        .results-count-title {
+            font-size: 1rem;
+            margin-bottom: 12px;
+        }
+
+        .search-item-row {
+            gap: 6px;
+        }
+
+        .search-select-op {
+            width: 66px;
+            height: 40px;
+            font-size: 0.75rem;
+        }
+
+        .search-input {
+            height: 40px;
+            font-size: 16px !important;
+        }
+
+        .member-card {
+            display: grid;
+            grid-template-columns: 64px minmax(0, 1fr);
+            gap: 12px;
+            align-items: flex-start;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .member-photo {
+            width: 64px;
+            height: 82px;
+        }
+
+        .member-name-link {
+            font-size: 1rem;
+        }
+
+        .info-row {
+            gap: 8px;
+            font-size: 0.82rem;
+        }
+
+        .info-item {
+            width: 100%;
+        }
+
+        .empty-state {
+            padding: 28px 16px;
+        }
+
+        .eureka-modal-backdrop {
+            align-items: stretch;
+            padding: 8px;
+        }
+
+        .eureka-modal-container {
+            width: 100%;
+            max-width: 100%;
+            max-height: calc(100vh - 16px);
+            padding: 16px;
+            border-radius: 8px;
+        }
+
+        .eureka-modal-close {
+            top: 10px;
+            right: 10px;
+            width: 42px;
+            height: 42px;
+        }
+
+        .modal-header-flex {
+            gap: 12px;
+        }
+
+        .modal-member-photo-large {
+            width: 96px;
+            height: 120px;
+        }
+
+        .modal-profile-name-new {
+            font-size: 1.35rem;
+            line-height: 1.2;
+        }
+
+        .modal-data-row {
+            display: grid;
+            grid-template-columns: 82px minmax(0, 1fr);
+            gap: 8px;
+            font-size: 0.86rem;
+        }
+
+        .modal-data-label {
+            width: auto;
+        }
+
+        #modal-map {
+            height: 220px;
+        }
+
+        .modal-chart-container {
+            overflow-x: auto;
+            justify-content: flex-start;
+        }
+
+        .modal-action-buttons {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .modal-btn-action {
+            min-height: 44px;
+            justify-content: center;
+        }
+    }
 </style>
 {% endblock %}
 
