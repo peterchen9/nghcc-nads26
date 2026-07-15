@@ -1,0 +1,7 @@
+{% extends 'maintenance/manage_base.html' %}
+
+{% block maint_title %}廠商管理{% endblock %}
+{% block maint_content %}
+<section class="maint-panel"><h3>{% if editing %}修改廠商{% else %}新增廠商{% endif %}</h3><form method="post" class="maint-form">{% csrf_token %}<div class="maint-grid">{% for field in form %}<div class="{% if field.name == 'address' or field.name == 'notes' %}wide{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}</div><div class="maint-actions">{% if editing %}<a class="maint-btn" href="{% url 'maintenance:vendor-list' %}">取消修改</a>{% endif %}<button class="maint-btn primary" type="submit">儲存廠商</button></div></form></section>
+<section class="maint-panel"><h3>廠商清單（{{ vendors|length }}）</h3><div class="maint-table-wrap"><table class="maint-table"><thead><tr><th>名稱</th><th>類別</th><th>聯絡人</th><th>電話</th><th>統編</th><th>銀行</th><th>狀態</th><th>操作</th></tr></thead><tbody>{% for item in vendors %}<tr><td>{{ item.name }}</td><td>{{ item.category|default:'-' }}</td><td>{{ item.contact|default:'-' }}</td><td>{{ item.mobile_phone|default:item.company_phone|default:'-' }}</td><td>{{ item.tax_id|default:'-' }}</td><td>{{ item.bank_name|default:'-' }}</td><td>{% if item.is_active %}啟用{% else %}停用{% endif %}</td><td><a href="?edit={{ item.pk }}">修改</a></td></tr>{% empty %}<tr><td colspan="8" class="maint-empty">尚無廠商</td></tr>{% endfor %}</tbody></table></div></section>
+{% endblock %}

@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'modules.eureka',
     'modules.power',
     'modules.budget',
+    'modules.maintenance',
     'ckeditor',
     'ckeditor_uploader',
 ]

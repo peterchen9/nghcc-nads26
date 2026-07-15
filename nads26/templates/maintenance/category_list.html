@@ -1,0 +1,7 @@
+{% extends 'maintenance/manage_base.html' %}
+
+{% block maint_title %}維護分類{% endblock %}
+{% block maint_content %}
+<section class="maint-panel"><h3>{% if editing %}修改分類{% else %}新增分類{% endif %}</h3><form method="post" class="maint-form">{% csrf_token %}<div class="maint-grid">{% for field in form %}<div class="{% if field.name == 'notes' %}wide{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}</div><div class="maint-actions">{% if editing %}<a class="maint-btn" href="{% url 'maintenance:category-list' %}">取消修改</a>{% endif %}<button class="maint-btn primary" type="submit">儲存分類</button></div></form></section>
+<section class="maint-panel"><div class="maint-table-wrap"><table class="maint-table"><thead><tr><th>分類名稱</th><th>備註</th><th>紀錄數</th><th>狀態</th><th>操作</th></tr></thead><tbody>{% for item in categories %}<tr><td>{{ item.name }}</td><td>{{ item.notes|default:'-' }}</td><td>{{ item.record_count }}</td><td>{% if item.is_active %}啟用{% else %}停用{% endif %}</td><td><a href="?edit={{ item.pk }}">修改</a></td></tr>{% empty %}<tr><td colspan="5" class="maint-empty">尚無分類</td></tr>{% endfor %}</tbody></table></div></section>
+{% endblock %}

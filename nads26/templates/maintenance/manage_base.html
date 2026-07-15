@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}維護管理 - {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .maint-page { display: grid; gap: 16px; min-width: 0; }
+    .maint-head { position: sticky; top: 70px; z-index: 75; display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 15px 18px; margin: -40px -40px 0; background: rgba(47,65,86,.97); border-bottom: 1px solid rgba(255,255,255,.08); backdrop-filter: blur(10px); }
+    .maint-head h2 { margin: 0; font-size: 1.45rem; }
+    .maint-head p { margin: 4px 0 0; color: var(--text-secondary); font-size: .88rem; }
+    .maint-tabs { display: flex; gap: 7px; flex-wrap: wrap; }
+    .maint-tabs a, .maint-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 8px 13px; border: 1px solid rgba(255,255,255,.13); border-radius: 7px; background: rgba(255,255,255,.04); color: #fff; text-decoration: none; cursor: pointer; }
+    .maint-tabs a:hover, .maint-tabs a.active, .maint-btn.primary { background: #bcdcff; color: #26394e; border-color: #bcdcff; }
+    .maint-btn.danger { background: #9f3232; border-color: #bd4545; }
+    .maint-panel { background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.09); border-radius: 10px; padding: 18px; min-width: 0; }
+    .maint-panel h3 { margin: 0 0 14px; }
+    .maint-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px 16px; }
+    .maint-grid .wide { grid-column: 1 / -1; }
+    .maint-field { width: 100%; min-height: 44px; padding: 9px 11px; color: #fff; background: rgba(12,28,48,.34); border: 1px solid rgba(255,255,255,.13); border-radius: 6px; }
+    .maint-field option { color: #111827; background: #fff; }
+    textarea.maint-field { resize: vertical; }
+    .maint-form label { display: block; margin-bottom: 6px; color: #dbe8f6; font-size: .9rem; font-weight: 600; }
+    .maint-form .helptext { display: block; color: var(--text-secondary); font-size: .8rem; margin-top: 4px; }
+    .maint-form ul.errorlist { color: #fecaca; margin: 5px 0; padding-left: 18px; }
+    .maint-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 16px; flex-wrap: wrap; }
+    .maint-table-wrap { overflow-x: auto; }
+    .maint-table { width: 100%; border-collapse: collapse; min-width: 780px; }
+    .maint-table th, .maint-table td { padding: 11px 10px; border-bottom: 1px solid rgba(255,255,255,.08); text-align: left; vertical-align: top; }
+    .maint-table th { color: #cbd5e1; font-size: .82rem; white-space: nowrap; }
+    .maint-table td { font-size: .9rem; }
+    .maint-table a { color: #d8ebff; }
+    .maint-badge { display: inline-block; border-radius: 99px; padding: 4px 9px; font-size: .78rem; font-weight: 700; background: rgba(255,255,255,.09); }
+    .status-COMPLETED { background: rgba(16,185,129,.2); color: #a7f3d0; }
+    .status-PENDING, .status-WAITING_QUOTE, .status-WAITING_CONSTRUCTION { background: rgba(245,158,11,.2); color: #fde68a; }
+    .status-IN_PROGRESS { background: rgba(59,130,246,.2); color: #bfdbfe; }
+    .status-CANCELLED { background: rgba(148,163,184,.2); color: #e2e8f0; }
+    .maint-message { padding: 10px 13px; border: 1px solid rgba(188,220,255,.25); background: rgba(188,220,255,.09); border-radius: 7px; }
+    .maint-stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; }
+    .maint-stat { padding: 17px; border: 1px solid rgba(255,255,255,.09); border-radius: 9px; background: rgba(255,255,255,.035); }
+    .maint-stat span { display: block; color: var(--text-secondary); font-size: .85rem; }
+    .maint-stat strong { display: block; margin-top: 7px; font-size: 1.65rem; }
+    .maint-filter { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
+    .maint-filter-actions { display: flex; gap: 8px; align-items: end; }
+    .maint-empty { color: var(--text-secondary); padding: 22px 4px; text-align: center; }
+    .maint-detail { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+    .maint-detail dt { color: var(--text-secondary); font-size: .82rem; margin-bottom: 4px; }
+    .maint-detail dd { margin: 0; white-space: pre-wrap; }
+    .maint-detail .wide { grid-column: 1 / -1; }
+    .maint-attachments { display: grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap: 12px; }
+    .maint-attachment { padding: 12px; border: 1px solid rgba(255,255,255,.09); border-radius: 8px; }
+    .maint-pagination { display: flex; justify-content: center; gap: 8px; margin-top: 14px; align-items: center; }
+    @media(max-width: 1100px) { .maint-stats { grid-template-columns: repeat(2,minmax(0,1fr)); } .maint-filter { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+    @media(max-width: 760px) {
+        .maint-head { top: 58px; margin: -12px -12px 0; align-items: stretch; flex-direction: column; }
+        .maint-tabs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+        .maint-tabs a { flex: 0 0 auto; }
+        .maint-grid, .maint-detail, .maint-filter { grid-template-columns: 1fr; }
+        .maint-stats { grid-template-columns: 1fr 1fr; }
+        .maint-grid .wide, .maint-detail .wide { grid-column: auto; }
+        .maint-panel { padding: 14px; }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="maint-page">
+    <header class="maint-head">
+        <div>
+            <h2>{% block maint_title %}維護管理{% endblock %}</h2>
+            <p>{% block maint_subtitle %}教會內部維護紀錄與追蹤{% endblock %}</p>
+        </div>
+        <nav class="maint-tabs" aria-label="維護管理功能">
+            <a href="/facility/maintenance/">維護項目</a>
+            <a href="{% url 'maintenance:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">儀表板</a>
+            <a href="{% url 'maintenance:record-list' %}" class="{% if 'record' in request.resolver_match.url_name %}active{% endif %}">維護紀錄</a>
+            <a href="{% url 'maintenance:vendor-list' %}" class="{% if request.resolver_match.url_name == 'vendor-list' %}active{% endif %}">廠商</a>
+            <a href="{% url 'maintenance:category-list' %}" class="{% if request.resolver_match.url_name == 'category-list' %}active{% endif %}">分類</a>
+            <a href="{% url 'maintenance:location-list' %}" class="{% if request.resolver_match.url_name == 'location-list' %}active{% endif %}">地點</a>
+            <a href="{% url 'maintenance:statistics' %}" class="{% if request.resolver_match.url_name == 'statistics' %}active{% endif %}">費用統計</a>
+            <a href="{% url 'maintenance:unfinished' %}" class="{% if request.resolver_match.url_name == 'unfinished' %}active{% endif %}">未完成</a>
+        </nav>
+    </header>
+
+    {% if messages %}
+        {% for message in messages %}<div class="maint-message">{{ message }}</div>{% endfor %}
+    {% endif %}
+
+    {% block maint_content %}{% endblock %}
+</div>
+{% endblock %}

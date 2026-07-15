@@ -1,0 +1,34 @@
+{% extends 'maintenance/manage_base.html' %}
+{% load humanize %}
+
+{% block maint_title %}維護紀錄列表{% endblock %}
+{% block maint_content %}
+<section class="maint-panel">
+    <form method="get" class="maint-filter">
+        <input class="maint-field" type="date" name="start_date" value="{{ filters.start_date }}" aria-label="開始日期">
+        <input class="maint-field" type="date" name="end_date" value="{{ filters.end_date }}" aria-label="結束日期">
+        <select class="maint-field" name="category"><option value="">全部分類</option>{% for item in categories %}<option value="{{ item.pk }}" {% if filters.category == item.pk|stringformat:'s' %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select>
+        <select class="maint-field" name="type"><option value="">全部類型</option>{% for value,label in type_choices %}<option value="{{ value }}" {% if filters.type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+        <select class="maint-field" name="status"><option value="">全部狀態</option>{% for value,label in status_choices %}<option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+        <select class="maint-field" name="vendor"><option value="">全部廠商</option>{% for item in vendors %}<option value="{{ item.pk }}" {% if filters.vendor == item.pk|stringformat:'s' %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select>
+        <select class="maint-field" name="location"><option value="">全部地點</option>{% for item in locations %}<option value="{{ item.pk }}" {% if filters.location == item.pk|stringformat:'s' %}selected{% endif %}>{{ item }}</option>{% endfor %}</select>
+        <input class="maint-field" name="keyword" value="{{ filters.keyword }}" placeholder="搜尋問題、結果、備註、經手人">
+        <div class="maint-filter-actions"><button class="maint-btn primary" type="submit">篩選</button><a class="maint-btn" href="{% url 'maintenance:record-list' %}">清除</a></div>
+    </form>
+</section>
+<section class="maint-panel">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px;">
+        <strong>共 {{ page.paginator.count }} 筆</strong><a class="maint-btn primary" href="{% url 'maintenance:record-create' %}">新增</a>
+    </div>
+    <div class="maint-table-wrap"><table class="maint-table">
+        <thead><tr><th>日期</th><th>問題</th><th>分類</th><th>類型</th><th>地點</th><th>廠商</th><th>狀態</th><th>費用</th><th>操作</th></tr></thead>
+        <tbody>{% for record in page.object_list %}<tr>
+            <td>{{ record.maintenance_date|date:'Y/m/d' }}</td><td>{{ record.issue|truncatechars:55 }}</td><td>{{ record.category|default:'-' }}</td>
+            <td>{{ record.get_type_display }}</td><td>{{ record.location|default:'-' }}</td><td>{{ record.vendor|default:'-' }}</td>
+            <td><span class="maint-badge status-{{ record.status }}">{{ record.get_status_display }}</span></td><td>${{ record.cost|floatformat:0|intcomma }}</td>
+            <td style="white-space:nowrap;"><a href="{% url 'maintenance:record-detail' record.pk %}">查看</a> · <a href="{% url 'maintenance:record-update' record.pk %}">修改</a></td>
+        </tr>{% empty %}<tr><td colspan="9" class="maint-empty">沒有符合條件的紀錄</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% if page.paginator.num_pages > 1 %}<div class="maint-pagination">{% if page.has_previous %}<a class="maint-btn" href="?page={{ page.previous_page_number }}">上一頁</a>{% endif %}<span>{{ page.number }} / {{ page.paginator.num_pages }}</span>{% if page.has_next %}<a class="maint-btn" href="?page={{ page.next_page_number }}">下一頁</a>{% endif %}</div>{% endif %}
+</section>
+{% endblock %}

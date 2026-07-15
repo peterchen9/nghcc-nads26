@@ -1,0 +1,11 @@
+{% extends 'maintenance/manage_base.html' %}
+{% load humanize %}
+
+{% block maint_title %}費用統計{% endblock %}
+{% block maint_content %}
+<section class="maint-panel"><h3>每月統計</h3><div class="maint-table-wrap"><table class="maint-table"><thead><tr><th>月份</th><th>維護筆數</th><th>費用</th></tr></thead><tbody>{% for row in by_month %}<tr><td>{{ row.month|date:'Y/m' }}</td><td>{{ row.count }}</td><td>${{ row.cost|floatformat:0|intcomma }}</td></tr>{% empty %}<tr><td colspan="3" class="maint-empty">尚無資料</td></tr>{% endfor %}</tbody></table></div></section>
+<div class="maint-grid">
+<section class="maint-panel"><h3>依分類</h3><div class="maint-table-wrap"><table class="maint-table" style="min-width:420px"><thead><tr><th>分類</th><th>筆數</th><th>費用</th></tr></thead><tbody>{% for row in by_category %}<tr><td>{{ row.category__name|default:'未分類' }}</td><td>{{ row.count }}</td><td>${{ row.cost|floatformat:0|intcomma }}</td></tr>{% endfor %}</tbody></table></div></section>
+<section class="maint-panel"><h3>依廠商</h3><div class="maint-table-wrap"><table class="maint-table" style="min-width:420px"><thead><tr><th>廠商</th><th>筆數</th><th>費用</th></tr></thead><tbody>{% for row in by_vendor %}<tr><td>{{ row.vendor__name|default:'未指定' }}</td><td>{{ row.count }}</td><td>${{ row.cost|floatformat:0|intcomma }}</td></tr>{% endfor %}</tbody></table></div></section>
+</div>
+{% endblock %}

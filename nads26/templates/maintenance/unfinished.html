@@ -1,0 +1,6 @@
+{% extends 'maintenance/manage_base.html' %}
+
+{% block maint_title %}未完成追蹤{% endblock %}
+{% block maint_content %}
+<section class="maint-panel"><div class="maint-table-wrap"><table class="maint-table"><thead><tr><th>日期</th><th>問題</th><th>分類</th><th>地點</th><th>廠商</th><th>狀態</th><th>經手人</th><th>操作</th></tr></thead><tbody>{% for record in records %}<tr><td>{{ record.maintenance_date|date:'Y/m/d' }}</td><td>{{ record.issue|truncatechars:65 }}</td><td>{{ record.category|default:'-' }}</td><td>{{ record.location|default:'-' }}</td><td>{{ record.vendor|default:'-' }}</td><td><span class="maint-badge status-{{ record.status }}">{{ record.get_status_display }}</span></td><td>{{ record.handler }}</td><td><a href="{% url 'maintenance:record-detail' record.pk %}">處理</a></td></tr>{% empty %}<tr><td colspan="8" class="maint-empty">目前沒有未完成紀錄</td></tr>{% endfor %}</tbody></table></div></section>
+{% endblock %}

@@ -43,6 +43,8 @@ urlpatterns = [
     path('hymns/', hymns_views.hymns_page_view, name='hymns-page-direct'),
     path('webav/', humnos_views.humnos_page_view, name='webav'),
     path('facility/power/', power_views.power_page_view, name='power-page'),
+    path('facility/maintenance/manage/', include('modules.maintenance.urls')),
+    path('maintenance/', include('modules.maintenance.public_urls')),
     path('facility/', include('modules.facility.urls')),
     path('staff/', include('modules.staff.urls')),
     path('finance/budget/', include('modules.budget.urls')),
