@@ -1,0 +1,26 @@
+{% extends 'maintenance/manage_base.html' %}
+{% load humanize %}
+
+{% block maint_title %}維護紀錄詳細資料{% endblock %}
+{% block maint_content %}
+<section class="maint-panel">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:18px;">
+        <div><h3 style="margin:0 0 7px;">{{ record.issue|truncatechars:80 }}</h3><span class="maint-badge status-{{ record.status }}">{{ record.get_status_display }}</span></div>
+        <div style="display:flex;gap:8px;"><a class="maint-btn" href="{% url 'maintenance:record-list' %}">返回</a><a class="maint-btn primary" href="{% url 'maintenance:record-update' record.pk %}">修改</a></div>
+    </div>
+    <dl class="maint-detail">
+        <div><dt>維護日期</dt><dd>{{ record.maintenance_date|date:'Y/m/d' }}</dd></div><div><dt>維護類型</dt><dd>{{ record.get_type_display }}</dd></div>
+        <div><dt>分類</dt><dd>{{ record.category|default:'-' }}</dd></div><div><dt>地點</dt><dd>{{ record.location|default:'-' }}</dd></div>
+        <div><dt>經手人</dt><dd>{{ record.handler }}</dd></div><div><dt>廠商</dt><dd>{{ record.vendor|default:'-' }}</dd></div>
+        <div><dt>廠商代表</dt><dd>{{ record.vendor_representative|default:'-' }}</dd></div><div><dt>費用</dt><dd>${{ record.cost|floatformat:0|intcomma }}</dd></div>
+        <div class="wide"><dt>需維護問題</dt><dd>{{ record.issue }}</dd></div><div class="wide"><dt>維護結果</dt><dd>{{ record.result|default:'-' }}</dd></div>
+        <div class="wide"><dt>備註</dt><dd>{{ record.notes|default:'-' }}</dd></div><div><dt>建立者</dt><dd>{{ record.created_by|default:'-' }}</dd></div>
+        <div><dt>建立／更新時間</dt><dd>{{ record.created_at|date:'Y/m/d H:i' }} / {{ record.updated_at|date:'Y/m/d H:i' }}</dd></div>
+    </dl>
+</section>
+<section class="maint-panel"><h3>附件</h3><div class="maint-attachments">
+    {% for attachment in record.attachments.all %}<div class="maint-attachment"><strong>{{ attachment.get_type_display }}</strong><p><a href="{{ attachment.file.url }}" target="_blank" rel="noopener">{{ attachment.original_name }}</a></p><form method="post" action="{% url 'maintenance:attachment-delete' attachment.pk %}" onsubmit="return confirm('確定刪除此附件？');">{% csrf_token %}<button class="maint-btn danger" type="submit">刪除附件</button></form></div>
+    {% empty %}<p class="maint-empty">尚無附件</p>{% endfor %}
+</div></section>
+<section class="maint-panel"><form method="post" action="{% url 'maintenance:record-delete' record.pk %}" onsubmit="return confirm('確定刪除此筆維護紀錄？此操作也會刪除其附件。');">{% csrf_token %}<button class="maint-btn danger" type="submit">刪除這筆紀錄</button></form></section>
+{% endblock %}

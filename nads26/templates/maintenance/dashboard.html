@@ -1,0 +1,34 @@
+{% extends 'maintenance/manage_base.html' %}
+{% load humanize %}
+
+{% block maint_title %}維護儀表板{% endblock %}
+{% block maint_content %}
+<section class="maint-stats">
+    <div class="maint-stat"><span>總維護筆數</span><strong>{{ stats.total }}</strong></div>
+    <div class="maint-stat"><span>本月維護筆數</span><strong>{{ stats.month }}</strong></div>
+    <div class="maint-stat"><span>未完成筆數</span><strong>{{ stats.incomplete }}</strong></div>
+    <div class="maint-stat"><span>本年度總費用</span><strong>${{ stats.year_cost|floatformat:0|intcomma }}</strong></div>
+</section>
+<section class="maint-panel">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px;">
+        <h3 style="margin:0;">最近維護紀錄</h3>
+        <a class="maint-btn primary" href="{% url 'maintenance:record-create' %}">新增維護紀錄</a>
+    </div>
+    <div class="maint-table-wrap">
+        <table class="maint-table">
+            <thead><tr><th>日期</th><th>問題</th><th>分類</th><th>地點</th><th>廠商</th><th>狀態</th><th>費用</th></tr></thead>
+            <tbody>
+            {% for record in recent_records %}
+                <tr>
+                    <td>{{ record.maintenance_date|date:'Y/m/d' }}</td>
+                    <td><a href="{% url 'maintenance:record-detail' record.pk %}">{{ record.issue|truncatechars:55 }}</a></td>
+                    <td>{{ record.category|default:'-' }}</td><td>{{ record.location|default:'-' }}</td><td>{{ record.vendor|default:'-' }}</td>
+                    <td><span class="maint-badge status-{{ record.status }}">{{ record.get_status_display }}</span></td>
+                    <td>${{ record.cost|floatformat:0|intcomma }}</td>
+                </tr>
+            {% empty %}<tr><td colspan="7" class="maint-empty">尚無維護紀錄</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

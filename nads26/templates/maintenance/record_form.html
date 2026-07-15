@@ -1,0 +1,22 @@
+{% extends 'maintenance/manage_base.html' %}
+
+{% block maint_title %}{% if record %}修改維護紀錄{% else %}新增維護紀錄{% endif %}{% endblock %}
+{% block maint_content %}
+<section class="maint-panel">
+    <form method="post" enctype="multipart/form-data" class="maint-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}{{ form.non_field_errors }}{% endif %}
+        <div class="maint-grid">
+            {% for field in form %}
+            <div class="{% if field.name == 'issue' or field.name == 'result' or field.name == 'notes' %}wide{% endif %}">
+                <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+                {{ field }}{{ field.errors }}
+                {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% if record and record.attachments.exists %}<p style="color:var(--text-secondary);">新增附件會保留既有附件；既有附件可在紀錄詳細頁個別刪除。</p>{% endif %}
+        <div class="maint-actions"><a class="maint-btn" href="{% if record %}{% url 'maintenance:record-detail' record.pk %}{% else %}{% url 'maintenance:record-list' %}{% endif %}">取消</a><button class="maint-btn primary" type="submit">儲存</button></div>
+    </form>
+</section>
+{% endblock %}
