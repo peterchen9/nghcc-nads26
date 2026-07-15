@@ -8,7 +8,7 @@ class DisableCSRFMiddleware:
         return response
 
 from django.core.exceptions import PermissionDenied
-from modules.menu.models import MenuItem
+from modules.menu.permissions import find_menu_item_for_path, user_can_access_menu_item
 
 class MenuPermissionMiddleware:
     def __init__(self, get_response):
@@ -38,26 +38,9 @@ class MenuPermissionMiddleware:
             if request.user.is_superuser:
                 return self.get_response(request)
 
-            # Get all active MenuItems with routes
-            menu_items = MenuItem.objects.filter(is_active=True).exclude(route='')
-            
-            # Match path against app routes
-            # Sort routes descending by length so we match the most specific (longest) route first
-            matched_item = None
-            for item in sorted(menu_items, key=lambda x: len(x.route), reverse=True):
-                route = item.route
-                if not route.endswith('/'):
-                    route += '/'
-                test_path = path if path.endswith('/') else (path + '/')
+            matched_item = find_menu_item_for_path(path)
 
-                if test_path.startswith(route) or path == item.route:
-                    matched_item = item
-                    break
-
-            if matched_item:
-                allowed_ids = request.user.profile.allowed_menu_items.values_list('id', flat=True)
-                if matched_item.id not in allowed_ids:
-                    raise PermissionDenied("您無權存取此頁面。")
+            if matched_item and not user_can_access_menu_item(request.user, matched_item):
+                raise PermissionDenied("您無權存取此頁面。")
 
         return self.get_response(request)
-

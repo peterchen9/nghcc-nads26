@@ -354,6 +354,90 @@
         color: #7dd3fc;
         text-decoration: underline;
     }
+
+    @media (max-width: 700px) {
+        .eureka-workspace-wrapper {
+            padding: 12px;
+            border-radius: 8px;
+            min-height: auto;
+        }
+
+        .pastoral-header-bar,
+        .pastoral-title-section {
+            align-items: stretch;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .pastoral-title-text {
+            font-size: 1.2rem;
+            line-height: 1.3;
+        }
+
+        .stat-badge-group,
+        .action-btn-group {
+            gap: 8px;
+        }
+
+        .stat-badge-pill,
+        .btn-action-primary,
+        .btn-action-secondary {
+            min-height: 40px;
+            border-radius: 7px;
+            justify-content: center;
+        }
+
+        .action-btn-group > * {
+            flex: 1 1 150px;
+        }
+
+        .tree-table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+        }
+
+        .tree-table {
+            min-width: 680px;
+            font-size: 0.82rem;
+        }
+
+        .tree-table th,
+        .tree-table td {
+            padding: 10px 12px;
+        }
+
+        .member-grid-container {
+            grid-template-columns: minmax(260px, 1fr);
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .member-card {
+            display: grid;
+            grid-template-columns: 58px minmax(0, 1fr);
+            gap: 10px;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .member-photo {
+            width: 58px;
+            height: 74px;
+        }
+
+        .member-name-link {
+            font-size: 0.98rem;
+        }
+
+        .info-row {
+            gap: 7px;
+            font-size: 0.78rem;
+        }
+
+        .info-item {
+            width: 100%;
+        }
+    }
 </style>
 {% endblock %}
 

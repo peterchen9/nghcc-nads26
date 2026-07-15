@@ -1,5 +1,6 @@
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q
 from .models import MenuItem
+from .permissions import allowed_menu_ids_for_user
 
 def menu_processor(request):
     if not request.user.is_authenticated:
@@ -13,14 +14,12 @@ def menu_processor(request):
         )
         return {'side_menu': menu_items}
 
-    try:
-        profile = request.user.profile
-        allowed_ids = set(profile.allowed_menu_items.filter(is_active=True).values_list('id', flat=True))
-    except Exception:
-        allowed_ids = set()
+    allowed_ids = allowed_menu_ids_for_user(request.user)
 
-    # Prefetch only allowed children
-    allowed_children_qs = MenuItem.objects.filter(id__in=allowed_ids, is_active=True)
+    allowed_children_qs = MenuItem.objects.filter(
+        Q(id__in=allowed_ids) | Q(parent_id__in=allowed_ids),
+        is_active=True,
+    )
     roots = MenuItem.objects.filter(parent=None, is_active=True).prefetch_related(
         Prefetch('children', queryset=allowed_children_qs)
     )
@@ -33,4 +32,3 @@ def menu_processor(request):
             filtered_menu.append(item)
 
     return {'side_menu': filtered_menu}
-

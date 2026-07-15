@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+
+{% block title %}牧養報告 - {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pastoral-page {
+        display: grid;
+        gap: 18px;
+    }
+
+    .pastoral-toolbar,
+    .pastoral-shell,
+    .submitted-panel,
+    .history-panel {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.04);
+    }
+
+    .pastoral-toolbar {
+        position: sticky;
+        top: 70px;
+        z-index: 70;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 18px 20px;
+        backdrop-filter: blur(10px);
+    }
+
+    .pastoral-toolbar h2,
+    .submitted-panel h3,
+    .history-panel h3 {
+        margin: 0;
+        letter-spacing: 0;
+    }
+
+    .pastoral-toolbar h2 {
+        font-size: 1.35rem;
+    }
+
+    .pastoral-toolbar p,
+    .field label,
+    .submitted-meta,
+    .photo-note,
+    .history-meta,
+    .empty-state {
+        color: var(--text-secondary);
+    }
+
+    .pastoral-toolbar p {
+        margin: 4px 0 0;
+        font-size: 0.9rem;
+    }
+
+    .toolbar-actions,
+    .form-actions,
+    .submitted-actions,
+    .history-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .pastoral-shell,
+    .submitted-panel,
+    .history-panel {
+        padding: 22px;
+    }
+
+    .message-list {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .message {
+        padding: 10px 12px;
+        border-radius: 6px;
+        background: rgba(188, 220, 255, 0.12);
+        color: #ffffff;
+    }
+
+    .message.error {
+        background: rgba(248, 113, 113, 0.12);
+        color: #fecaca;
+    }
+
+    .pastoral-form,
+    .history-filter {
+        display: grid;
+        gap: 18px;
+    }
+
+    .form-grid,
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .field {
+        display: grid;
+        gap: 7px;
+        min-width: 0;
+    }
+
+    .field.wide {
+        grid-column: 1 / -1;
+    }
+
+    .field label {
+        font-size: 0.86rem;
+        font-weight: 700;
+    }
+
+    .field input,
+    .field textarea {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 6px;
+        background: rgba(15, 23, 42, 0.28);
+        color: #ffffff;
+        padding: 11px 12px;
+        font: inherit;
+    }
+
+    .field textarea {
+        min-height: 150px;
+        resize: vertical;
+        line-height: 1.6;
+    }
+
+    .field input[type="file"] {
+        padding: 9px 10px;
+    }
+
+    .photo-note {
+        margin: 0;
+        font-size: 0.84rem;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.06);
+        color: #ffffff;
+        padding: 0 14px;
+        font: inherit;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .btn.primary {
+        border-color: var(--accent-color);
+        background: var(--accent-color);
+        color: var(--sidebar-bg);
+    }
+
+    .submitted-panel,
+    .history-panel {
+        display: grid;
+        gap: 14px;
+    }
+
+    .submitted-head,
+    .history-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+    }
+
+    .submitted-meta,
+    .history-meta {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        font-size: 0.88rem;
+    }
+
+    .submitted-body {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .submitted-section {
+        min-width: 0;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 14px;
+        background: rgba(15, 23, 42, 0.18);
+    }
+
+    .submitted-section.wide {
+        grid-column: 1 / -1;
+    }
+
+    .submitted-section h4 {
+        margin: 0 0 8px;
+        color: var(--accent-color);
+        font-size: 0.9rem;
+    }
+
+    .submitted-section p,
+    .history-excerpt {
+        margin: 0;
+        line-height: 1.7;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .photo-list {
+        margin: 0;
+        padding-left: 20px;
+        color: var(--text-secondary);
+        line-height: 1.8;
+    }
+
+    .empty-state {
+        margin: 0;
+        padding: 18px;
+        text-align: center;
+    }
+
+    @media (max-width: 900px) {
+        .pastoral-toolbar,
+        .submitted-head,
+        .history-head {
+            position: static;
+            grid-template-columns: 1fr;
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .form-grid,
+        .filter-grid,
+        .submitted-body {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pastoral-page">
+    <section class="pastoral-toolbar">
+        <div>
+            <h2>牧養報告</h2>
+            <p>記錄關懷探訪內容、後續跟進事項，送出後可產生 PDF 留存。</p>
+        </div>
+        <div class="toolbar-actions">
+            <a class="btn" href="{{ pastoral_report_base_path }}/admin/">報告後台</a>
+            {% if submitted_report %}
+                <a class="btn" href="{{ pastoral_report_base_path }}/">新增一份</a>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="pastoral-shell">
+        {% if messages %}
+            <div class="message-list">
+                {% for message in messages %}
+                    <div class="message {{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form class="pastoral-form" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-grid">
+                <div class="field">
+                    <label for="reportDate">日期</label>
+                    <input id="reportDate" type="date" name="report_date" value="{{ report.report_date }}" required>
+                </div>
+                <div class="field">
+                    <label for="clientName">關懷對象</label>
+                    <input id="clientName" name="client_name" value="{{ report.client_name }}" autocomplete="off" required>
+                </div>
+                <div class="field">
+                    <label for="location">地點</label>
+                    <input id="location" name="location" value="{{ report.location }}" autocomplete="off" required>
+                </div>
+                <div class="field wide">
+                    <label for="careReport">關懷內容</label>
+                    <textarea id="careReport" name="care_report" required>{{ report.care_report }}</textarea>
+                </div>
+                <div class="field wide">
+                    <label for="followUp">後續跟進</label>
+                    <textarea id="followUp" name="follow_up" required>{{ report.follow_up }}</textarea>
+                </div>
+                <div class="field">
+                    <label for="authorName">填寫人</label>
+                    <input id="authorName" value="{{ report.author_name }}" readonly>
+                </div>
+                <div class="field">
+                    <label for="authorEmail">寄送信箱</label>
+                    <input id="authorEmail" value="{{ report.author_email }}" readonly>
+                </div>
+                <div class="field">
+                    <label for="photos">照片附件</label>
+                    <input id="photos" type="file" name="photos" accept="image/*" multiple>
+                    <p class="photo-note">可多選照片；PDF 會一併附上可辨識的圖片。</p>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn primary" type="submit">送出牧養報告</button>
+            </div>
+        </form>
+    </section>
+
+    {% if submitted_report %}
+        <section class="submitted-panel">
+            <div class="submitted-head">
+                <div>
+                    <h3>已建立報告 {{ submitted_report.report_no }}</h3>
+                    <div class="submitted-meta">
+                        <span>{{ submitted_report.report_date|date:"Y-m-d" }}</span>
+                        <span>{{ submitted_report.client_name }}</span>
+                        <span>{{ submitted_report.location }}</span>
+                        <span>{{ submitted_report.author_name|default:submitted_report.author_user }}</span>
+                    </div>
+                </div>
+                <div class="submitted-actions">
+                    <a class="btn primary" href="{{ pastoral_report_base_path }}/{{ submitted_report.report_no }}/report.pdf" target="_blank" rel="noopener">開啟 PDF</a>
+                </div>
+            </div>
+            <div class="submitted-body">
+                <div class="submitted-section">
+                    <h4>關懷內容</h4>
+                    <p>{{ submitted_report.care_report }}</p>
+                </div>
+                <div class="submitted-section">
+                    <h4>後續跟進</h4>
+                    <p>{{ submitted_report.follow_up }}</p>
+                </div>
+                <div class="submitted-section wide">
+                    <h4>照片附件</h4>
+                    {% if submitted_report.photos %}
+                        <ul class="photo-list">
+                            {% for photo in submitted_report.photos %}
+                                <li>{{ photo.original_name|default:photo.file_path }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>未上傳照片。</p>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+    {% endif %}
+
+</div>
+{% endblock %}

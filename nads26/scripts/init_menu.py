@@ -22,7 +22,6 @@ items = [
             {'title': '詩歌資料庫', 'route': '/hymns/', 'order': 1},
         ]
     },
-    {'title': '聚會活動', 'icon': '🎵', 'order': 20},
     {
         'title': '關懷',
         'icon': '⚪',
@@ -32,6 +31,7 @@ items = [
             {'title': '牧區小組', 'route': '/eureka/pastoral/', 'order': 2},
             {'title': '新朋友登記', 'route': '/eureka/add/', 'order': 3},
             {'title': '搜名單', 'route': '/eureka/modify/', 'order': 4},
+            {'title': '牧養報告', 'route': '/facility/pastoral-reports/', 'order': 5},
         ]
     },
     {
@@ -39,13 +39,24 @@ items = [
         'icon': '💼',
         'order': 40,
         'children': [
-            {'title': '出勤狀態', 'route': '/eureka/attendance/', 'order': 1},
-            {'title': '辦公室座位', 'route': '/eureka/seats/', 'order': 2},
+            {'title': '休假表', 'route': '/staff/leaves/', 'order': 1},
+            {'title': '出勤狀態', 'route': '/eureka/attendance/', 'order': 2},
+            {'title': '辦公室座位', 'route': '/eureka/seats/', 'order': 3},
+            {'title': '請款單', 'route': '/staff/expense-claims/', 'order': 4},
+            {'title': '行事曆', 'route': '/staff/calendar/', 'order': 5},
         ]
     },
-    {'title': '交通', 'icon': '🚗', 'order': 50},
-    {'title': '教育', 'icon': '🎓', 'order': 60},
-    {'title': '場地設施', 'icon': '🏢', 'order': 70},
+    {
+        'title': '場地設施',
+        'icon': '🏢',
+        'order': 70,
+        'children': [
+            {'title': '用電監測', 'route': '/facility/power/', 'order': 1},
+            {'title': '場地登記', 'route': '/facility/booking/', 'order': 2},
+            {'title': '場地資料維護', 'route': '/facility/rooms/', 'order': 3},
+            {'title': '日常維護', 'route': '/facility/maintenance/', 'order': 4},
+        ],
+    },
     {
         'title': '工具',
         'icon': '🔧',
@@ -54,8 +65,15 @@ items = [
             {'title': '網路影音下載', 'route': '/webav/', 'order': 1},
         ]
     },
-    {'title': '資訊網路', 'icon': '⚪', 'order': 90},
-    {'title': '報到系統', 'icon': '📅', 'order': 100},
+    {
+        'title': '資訊網路',
+        'icon': '⚪',
+        'order': 90,
+        'children': [
+            {'title': '區網Hosts', 'route': '/facility/lan-hosts/', 'order': 1},
+            {'title': '無線網路', 'route': '/facility/wlan-aps/', 'order': 2},
+        ],
+    },
     {
         'title': '管理員',
         'icon': '🛡️',
@@ -66,8 +84,6 @@ items = [
         ]
     },
     {'title': '財會', 'icon': '⚪', 'order': 120},
-    {'title': '參考資料', 'icon': '📱', 'order': 130},
-    {'title': '奉獻', 'icon': '⚪', 'order': 140},
 ]
 
 for item_data in items:

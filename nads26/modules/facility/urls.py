@@ -10,6 +10,7 @@ urlpatterns = [
     path('expense-claims/', views.expense_claim_page, name='facility-expense-claims'),
     path('expense-claims/<str:claim_no>/voucher.pdf', views.expense_claim_voucher_pdf, name='facility-expense-claim-voucher'),
     path('pastoral-reports/', views.pastoral_report_page, name='facility-pastoral-reports'),
+    path('pastoral-reports/admin/', views.pastoral_report_admin_page, name='facility-pastoral-report-admin'),
     path('pastoral-reports/<str:report_no>/report.pdf', views.pastoral_report_pdf, name='facility-pastoral-report-pdf'),
     path('lan-hosts/', views.network_lan_hosts_page, name='facility-network-lan-hosts'),
     path('lan-hosts/scan/', views.network_lan_hosts_scan, name='facility-network-lan-hosts-scan'),

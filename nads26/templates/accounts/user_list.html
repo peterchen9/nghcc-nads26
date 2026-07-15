@@ -361,6 +361,40 @@
         cursor: pointer;
     }
 
+    @media (max-width: 768px) {
+        .user-card {
+            padding: 16px;
+            border-radius: 12px;
+        }
+
+        .form-row,
+        .perm-children {
+            grid-template-columns: 1fr;
+        }
+
+        .modal {
+            align-items: flex-start;
+            padding: 12px;
+            box-sizing: border-box;
+        }
+
+        .modal-content {
+            width: 100%;
+            max-width: none !important;
+            padding: 20px !important;
+            max-height: calc(100vh - 24px);
+            border-radius: 12px;
+        }
+
+        .perm-tree {
+            max-height: 56vh;
+        }
+
+        .action-btn {
+            min-height: 36px;
+        }
+    }
+
     /* Toast Notification styles */
     #toastContainer {
         position: fixed;
@@ -935,13 +969,9 @@
                 cb.type = 'checkbox';
                 cb.id = `perm-item-${child.id}`;
                 cb.value = child.id;
-                cb.checked = allowedIds.includes(child.id);
+                cb.checked = allowedIds.includes(child.id) || allowedIds.includes(item.id);
                 
-                cb.addEventListener('change', () => {
-                    if (cb.checked) {
-                        groupCheck.checked = true;
-                    }
-                });
+                cb.addEventListener('change', () => updateGroupCheckState(groupCheck, childrenDiv));
                 
                 const nameSpan = document.createElement('span');
                 nameSpan.textContent = child.title;
@@ -957,10 +987,7 @@
                 childChecks.forEach(cb => cb.checked = e.target.checked);
             });
             
-            const anyChildChecked = item.children.some(c => allowedIds.includes(c.id));
-            if (anyChildChecked) {
-                groupCheck.checked = true;
-            }
+            updateGroupCheckState(groupCheck, childrenDiv);
             
             groupDiv.appendChild(childrenDiv);
             container.appendChild(groupDiv);
@@ -1000,11 +1027,7 @@
                 cb.value = item.id;
                 cb.checked = allowedIds.includes(item.id);
                 
-                cb.addEventListener('change', () => {
-                    if (cb.checked) {
-                        groupCheck.checked = true;
-                    }
-                });
+                cb.addEventListener('change', () => updateGroupCheckState(groupCheck, childrenDiv));
                 
                 const nameSpan = document.createElement('span');
                 nameSpan.textContent = item.title;
@@ -1020,23 +1043,29 @@
                 childChecks.forEach(cb => cb.checked = e.target.checked);
             });
             
-            const anyChildChecked = standalones.some(c => allowedIds.includes(c.id));
-            if (anyChildChecked) {
-                groupCheck.checked = true;
-            }
+            updateGroupCheckState(groupCheck, childrenDiv);
             
             groupDiv.appendChild(childrenDiv);
             container.appendChild(groupDiv);
         }
     }
 
+    function updateGroupCheckState(groupCheck, childrenContainer) {
+        const childChecks = Array.from(childrenContainer.querySelectorAll('input[type="checkbox"]'));
+        const checkedCount = childChecks.filter(cb => cb.checked).length;
+        groupCheck.checked = childChecks.length > 0 && checkedCount === childChecks.length;
+        groupCheck.indeterminate = checkedCount > 0 && checkedCount < childChecks.length;
+    }
+
     function submitPermissions() {
         if (!permUserId) return;
         
-        // Find all checked checkbox values
+        // Find all checked checkbox values. Group-only checkboxes do not always carry a menu id.
         const container = document.getElementById('permTreeContainer');
         const checkboxes = container.querySelectorAll('input[type="checkbox"]:checked');
-        const menuIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+        const menuIds = Array.from(checkboxes)
+            .map(cb => Number.parseInt(cb.value, 10))
+            .filter(Number.isInteger);
         
         fetch(`/users/${permUserId}/permissions/`, {
             method: 'POST',

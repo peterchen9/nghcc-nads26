@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>已登出 | 北門行政平台</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #2F4156;
+            --sidebar-bg: #2B3E55;
+            --accent-color: #BCDCFF;
+            --text-primary: #FFFFFF;
+            --text-secondary: #CBD5E1;
+            --glass-bg: rgba(43, 62, 85, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            background: radial-gradient(circle at 20% 30%, #3a536e 0%, var(--bg-color) 70%);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .decor-circle {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: 1;
+            opacity: 0.45;
+            pointer-events: none;
+        }
+
+        .circle-1 {
+            width: 300px;
+            height: 300px;
+            background: var(--accent-color);
+            top: 15%;
+            left: 25%;
+        }
+
+        .circle-2 {
+            width: 400px;
+            height: 400px;
+            background: #4F709C;
+            bottom: 10%;
+            right: 20%;
+        }
+
+        .logout-container {
+            width: min(100%, 440px);
+            padding: 20px;
+            z-index: 10;
+            text-align: center;
+        }
+
+        .logout-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 44px 35px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        h1 {
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1.25;
+            background: linear-gradient(135deg, #FFF 0%, var(--accent-color) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            margin: 12px 0 28px;
+            color: var(--text-secondary);
+            font-size: 0.98rem;
+        }
+
+        .btn-login {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            background: var(--accent-color);
+            color: var(--sidebar-bg);
+            text-decoration: none;
+            font-size: 1.05rem;
+            font-weight: 700;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-login:hover {
+            background: #FFF;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(188, 220, 255, 0.35);
+        }
+
+        @media (max-width: 480px) {
+            body {
+                overflow: auto;
+            }
+
+            .logout-card {
+                padding: 38px 24px;
+            }
+
+            h1 {
+                font-size: 1.72rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="decor-circle circle-1"></div>
+    <div class="decor-circle circle-2"></div>
+
+    <main class="logout-container">
+        <section class="logout-card" aria-labelledby="logout-title">
+            <h1 id="logout-title">您已登出北門行政平台</h1>
+            <p>如需繼續使用，請重新登入。</p>
+            <a href="{% url 'login' %}" class="btn-login">重新登入</a>
+        </section>
+    </main>
+</body>
+</html>

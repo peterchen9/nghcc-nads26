@@ -15,6 +15,8 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from django.contrib.auth import logout
+from django.shortcuts import redirect
 from django.urls import path, include
 from modules.humnos import views as humnos_views
 from modules.hymns import views as hymns_views
@@ -23,7 +25,12 @@ from modules.power import views as power_views
 from django.conf import settings
 from django.conf.urls.static import static
 
+def admin_logout_redirect(request):
+    logout(request)
+    return redirect('/admin/login/?next=/')
+
 urlpatterns = [
+    path('admin/logout/', admin_logout_redirect, name='admin-logout-redirect'),
     path('admin/', admin.site.urls),
     path('users/', include('modules.accounts.urls')),
     path('accounts/', include('modules.accounts.auth_urls')),
@@ -45,4 +52,3 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
