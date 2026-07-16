@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}輸入各基金餘額 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .manage-shell { display: flex; flex-direction: column; gap: 20px; }
+    .manage-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 12px; margin: -18px -12px 0; background: #2f4156; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .manage-title h2 { margin: 0 0 6px; font-size: 1.7rem; }
+    .manage-title p { margin: 0; color: var(--text-secondary); font-size: 0.92rem; }
+    .manage-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+    .manage-btn { border: 0; border-radius: 7px; padding: 10px 16px; font-weight: 700; cursor: pointer; text-decoration: none; color: #17324d; background: var(--accent-color); font-family: inherit; font-size: 0.9rem; line-height: 1.1; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 6px; }
+    .manage-btn:hover { transform: translateY(-1px); }
+    .manage-btn.secondary { background: rgba(255,255,255,0.12); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.12); }
+    .manage-btn.secondary:hover { background: rgba(255,255,255,0.18); }
+    .manage-btn.danger { background: rgba(248,113,113,0.18); color: #fecaca; border: 1px solid rgba(248,113,113,0.35); }
+    .manage-btn.danger:hover { background: rgba(248,113,113,0.25); }
+
+    .manage-input { width: 100%; box-sizing: border-box; border-radius: 7px; border: 1px solid rgba(255,255,255,0.15); background: rgba(15,23,42,0.35); color: #fff; padding: 10px 12px; font-family: inherit; font-size: 0.95rem; }
+    .manage-input::placeholder { color: rgba(255,255,255,0.3); }
+    
+    .editor-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 24px; }
+    
+    /* Table format styling */
+    .table-wrap { overflow-x: auto; margin-top: 18px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); }
+    .finance-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
+    .finance-table th, .finance-table td { padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: middle; }
+    .finance-table th { background: rgba(15,23,42,0.35); font-weight: 600; color: var(--accent-color); }
+    .finance-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .note-text { font-size: 0.85rem; color: var(--text-secondary); }
+    
+    /* Dialog styling */
+    .manage-dialog { width: min(480px, calc(100vw - 32px)); border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; background: #31465f; color: var(--text-primary); padding: 0; box-shadow: 0 24px 80px rgba(0,0,0,0.55); }
+    .manage-dialog::backdrop { background: rgba(5, 12, 22, 0.65); backdrop-filter: blur(3px); }
+    .dialog-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: #26394f; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .dialog-head h3 { margin: 0; font-size: 1.15rem; }
+    .dialog-body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 16px; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.08); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="manage-shell">
+    <div class="manage-head">
+        <div class="manage-title">
+            <h2>輸入各基金餘額 (條列式)</h2>
+            <p>編輯月份：{{ selected_month }}</p>
+        </div>
+        <div class="manage-actions">
+            <span style="color: var(--text-secondary); font-size: 0.9rem;">切換月份：</span>
+            <input type="month" value="{{ selected_month }}" class="manage-input" style="width: auto; padding: 6px 12px; display: inline-block;" onchange="location.href='?month=' + this.value">
+            
+            <button class="manage-btn" onclick="document.getElementById('addFundDialog').showModal()">➕ 新增基金項目</button>
+            <a class="manage-btn secondary" href="{% url 'fund-fellowship-dashboard' %}?month={{ selected_month }}">返回 Dashboard</a>
+        </div>
+    </div>
+
+    <div class="editor-card">
+        <form method="post" id="balancesForm">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_balances">
+            <input type="hidden" name="month" value="{{ selected_month }}">
+            
+            <h3 style="margin: 0 0 10px; color: #fff;">請輸入各基金於 {{ selected_month }} 之結餘金額</h3>
+            <p style="margin: 0 0 20px; font-size: 0.85rem; color: var(--text-secondary);">
+                * 若無輸入，將預設使用上月份結餘（預設值顯示在輸入框背景中）。
+            </p>
+
+            <div class="table-wrap">
+                <table class="finance-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%;">基金名稱</th>
+                            <th style="width: 35%;">說明 / 備註</th>
+                            <th style="width: 20%; text-align: right;">餘額金額 (NTD)</th>
+                            <th style="width: 20%; text-align: center;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in form_data %}
+                        <tr>
+                            <td style="font-weight: 600; color: #fff;">{{ item.fund.name }}</td>
+                            <td class="note-text">{{ item.fund.note|default:"-" }}</td>
+                            <td>
+                                <input class="manage-input" 
+                                       style="text-align: right; padding: 6px 10px;"
+                                       id="balance_{{ item.fund.id }}" 
+                                       name="balance_{{ item.fund.id }}" 
+                                       type="number" 
+                                       step="0.01" 
+                                       value="{{ item.value }}" 
+                                       placeholder="{{ item.placeholder|floatformat:2 }}">
+                            </td>
+                            <td style="text-align: center; white-space: nowrap;">
+                                <button type="button" class="manage-btn secondary" style="padding: 4px 8px; font-size: 0.8rem;" 
+                                        onclick="openEditDialog('{{ item.fund.id }}', '{{ item.fund.name|escapejs }}', '{{ item.fund.note|escapejs }}')">
+                                    編輯
+                                </button>
+                                <button type="button" class="manage-btn danger" style="padding: 4px 8px; font-size: 0.8rem;" 
+                                        onclick="confirmDelete('{{ item.fund.id }}', '{{ item.fund.name|escapejs }}')">
+                                    刪除
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 20px;">尚無基金項目</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+                <a class="manage-btn secondary" href="{% url 'fund-fellowship-dashboard' %}?month={{ selected_month }}">取消</a>
+                <button class="manage-btn" type="submit">儲存此月餘額</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Fund Dialog -->
+<dialog class="manage-dialog" id="addFundDialog">
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_fund">
+        <input type="hidden" name="month" value="{{ selected_month }}">
+        
+        <div class="dialog-head">
+            <h3>新增基金項目</h3>
+            <button class="manage-btn secondary" type="button" style="padding: 4px 8px; font-size: 0.8rem;" onclick="this.closest('dialog').close()">X</button>
+        </div>
+        <div class="dialog-body">
+            <div style="display:flex; flex-direction:column; gap:4px;">
+                <label style="font-size:0.8rem; color:#d8e8fb; font-weight:700;">基金名稱 *</label>
+                <input class="manage-input" type="text" name="name" placeholder="例如：青年宣教基金" required>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:4px;">
+                <label style="font-size:0.8rem; color:#d8e8fb; font-weight:700;">說明 / 備註</label>
+                <input class="manage-input" type="text" name="note" placeholder="例如：專款專用說明">
+            </div>
+        </div>
+        <div class="dialog-actions">
+            <button class="manage-btn secondary" type="button" onclick="this.closest('dialog').close()">取消</button>
+            <button class="manage-btn" type="submit">確認新增</button>
+        </div>
+    </form>
+</dialog>
+
+<!-- Edit Fund Dialog -->
+<dialog class="manage-dialog" id="editFundDialog">
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update_fund">
+        <input type="hidden" name="fund_id" id="edit_fund_id">
+        <input type="hidden" name="month" value="{{ selected_month }}">
+        
+        <div class="dialog-head">
+            <h3>編輯基金項目</h3>
+            <button class="manage-btn secondary" type="button" style="padding: 4px 8px; font-size: 0.8rem;" onclick="this.closest('dialog').close()">X</button>
+        </div>
+        <div class="dialog-body">
+            <div style="display:flex; flex-direction:column; gap:4px;">
+                <label style="font-size:0.8rem; color:#d8e8fb; font-weight:700;">基金名稱 *</label>
+                <input class="manage-input" type="text" name="name" id="edit_fund_name" required>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:4px;">
+                <label style="font-size:0.8rem; color:#d8e8fb; font-weight:700;">說明 / 備註</label>
+                <input class="manage-input" type="text" name="note" id="edit_fund_note">
+            </div>
+        </div>
+        <div class="dialog-actions">
+            <button class="manage-btn secondary" type="button" onclick="this.closest('dialog').close()">取消</button>
+            <button class="manage-btn" type="submit">儲存修改</button>
+        </div>
+    </form>
+</dialog>
+
+<!-- Delete Fund Form (Hidden) -->
+<form method="post" id="deleteForm" style="display:none;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="delete_fund">
+    <input type="hidden" name="fund_id" id="delete_fund_id">
+    <input type="hidden" name="month" value="{{ selected_month }}">
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function openEditDialog(id, name, note) {
+        document.getElementById('edit_fund_id').value = id;
+        document.getElementById('edit_fund_name').value = name;
+        document.getElementById('edit_fund_note').value = note;
+        document.getElementById('editFundDialog').showModal();
+    }
+    
+    function confirmDelete(id, name) {
+        if (confirm('您確定要刪除「' + name + '」這個基金項目嗎？這將會連同刪除該項目在所有月份的餘額紀錄！')) {
+            document.getElementById('delete_fund_id').value = id;
+            document.getElementById('deleteForm').submit();
+        }
+    }
+</script>
+{% endblock %}

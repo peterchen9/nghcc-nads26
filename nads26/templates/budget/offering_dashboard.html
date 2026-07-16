@@ -1,0 +1,513 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}奉獻金額與人數統計 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .finance-shell { display: flex; flex-direction: column; gap: 20px; }
+    .finance-head { position: sticky; top: 70px; z-index: 30; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 12px; margin: -18px -12px 0; background: #2f4156; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .finance-title h2 { margin: 0 0 6px; font-size: 1.7rem; }
+    .finance-title p { margin: 0; color: var(--text-secondary); font-size: 0.92rem; }
+    .finance-actions { display: flex; align-items: center; gap: 8px; }
+    
+    .finance-btn { border: 0; border-radius: 7px; padding: 10px 16px; font-weight: 700; cursor: pointer; text-decoration: none; color: #17324d; background: var(--accent-color); font-family: inherit; font-size: 0.9rem; line-height: 1.1; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease; }
+    .finance-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(188, 220, 255, 0.2); }
+    .finance-btn.secondary { background: rgba(255,255,255,0.12); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.12); }
+    .finance-btn.secondary:hover { background: rgba(255,255,255,0.18); }
+
+    /* Chart Layout */
+    .chart-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 16px; min-height: 420px; margin-bottom: 20px; }
+    .chart-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 12px; }
+    .chart-title h3 { margin: 0; font-size: 1.15rem; font-weight: 600; color: #e2e8f0; }
+    .chart-body { position: relative; flex-grow: 1; width: 100%; height: 100%; min-height: 340px; }
+
+    /* Table styling for details */
+    .detail-table-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 24px; }
+    .table-wrap { overflow-x: auto; margin-top: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); max-height: 500px; overflow-y: auto; }
+    .finance-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
+    .finance-table th, .finance-table td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .finance-table th { background: rgba(15,23,42,0.55); font-weight: 600; color: var(--accent-color); position: sticky; top: 0; z-index: 10; }
+    .finance-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .finance-table td.money { text-align: right; font-family: monospace; font-weight: 600; }
+
+    /* Modal Overlay & Container */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.75); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(5px); }
+    .modal-container { background: #1e293b; border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; width: 680px; max-width: 95%; padding: 28px; display: flex; flex-direction: column; gap: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); color: #fff; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 14px; }
+    .modal-header h3 { margin: 0; font-size: 1.3rem; font-weight: 600; color: var(--accent-color); }
+    .modal-close { background: none; border: 0; color: rgba(255,255,255,0.6); font-size: 1.5rem; cursor: pointer; transition: color 0.2s; }
+    .modal-close:hover { color: #fff; }
+
+    /* Form Styles */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full-width { grid-column: span 2; }
+    .form-group label { font-size: 0.85rem; color: #94a3b8; font-weight: 600; }
+    .form-group input { border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(15,23,42,0.4); color: #fff; padding: 10px 12px; font-family: inherit; font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
+    .form-group input:focus { border-color: var(--accent-color); }
+    .form-group input[readonly] { background: rgba(15,23,42,0.2); color: #64748b; border-color: rgba(255,255,255,0.06); }
+    .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 18px; }
+
+    /* Alert Banner */
+    .alert-banner { padding: 12px 18px; border-radius: 8px; font-size: 0.95rem; margin-bottom: 15px; font-weight: 600; display: none; }
+    .alert-banner.success { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; }
+    .alert-banner.error { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; }
+
+    @media (max-width: 1024px) {
+        .finance-head { top: 0; }
+    }
+    @media (max-width: 600px) {
+        .form-grid { grid-template-columns: 1fr; }
+        .form-group.full-width { grid-column: span 1; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="finance-shell">
+    <div class="finance-head">
+        <div class="finance-title">
+            <h2>財會...奉獻統計</h2>
+            <p>掌握年度與月份奉獻收入趨勢及月定人數變化</p>
+        </div>
+        <div class="finance-actions">
+            <button class="finance-btn" onclick="openOfferingModal()">
+                <span>📊 月奉獻輸入</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Message Banners -->
+    <div id="alertSuccess" class="alert-banner success">✅ 資料儲存成功！</div>
+    <div id="alertError" class="alert-banner error">❌ 資料處理出錯，請檢查輸入。</div>
+
+    <!-- Chart 1: 按月奉獻趨勢 -->
+    <div class="chart-card">
+        <div class="chart-header">
+            <div class="chart-title">
+                <h3>按月奉獻趨勢 (近 36 個月)</h3>
+            </div>
+        </div>
+        <div class="chart-body">
+            <canvas id="chartMonthlyTrend"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 2: 按年奉獻趨勢 -->
+    <div class="chart-card">
+        <div class="chart-header">
+            <div class="chart-title">
+                <h3>按年奉獻趨勢 (歷史累計)</h3>
+            </div>
+        </div>
+        <div class="chart-body">
+            <canvas id="chartAnnualTrend"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart 3: 按年"月定人數"趨勢 -->
+    <div class="chart-card">
+        <div class="chart-header">
+            <div class="chart-title">
+                <h3>按年「月定人數」趨勢</h3>
+            </div>
+        </div>
+        <div class="chart-body">
+            <canvas id="chartAnnualPeopleTrend"></canvas>
+        </div>
+    </div>
+
+    <!-- Table: 每月各項奉獻列表 -->
+    <div class="detail-table-card">
+        <h3 style="margin: 0 0 10px 0; font-size: 1.2rem; color: #fff;">每月各項奉獻列表</h3>
+        <div class="table-wrap">
+            <table class="finance-table">
+                <thead>
+                    <tr>
+                        <th>月份</th>
+                        <th style="text-align: right;">月定人數</th>
+                        <th style="text-align: right;">主日奉獻</th>
+                        <th style="text-align: right;">月定奉獻</th>
+                        <th style="text-align: right;">感恩奉獻</th>
+                        <th style="text-align: right;">建築奉獻</th>
+                        <th style="text-align: right;">植堂奉獻</th>
+                        <th style="text-align: right;">指定奉獻</th>
+                        <th style="text-align: right;">宣教&大陸</th>
+                        <th style="text-align: right;">加利利</th>
+                        <th style="text-align: right;">提摩太</th>
+                        <th style="text-align: right;">國度基金</th>
+                        <th style="text-align: right;">場地費收入</th>
+                        <th style="text-align: right; color: var(--accent-color);">合計 (NTD)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in monthly_offerings %}
+                    <tr>
+                        <td style="font-weight: 600; color: #fff;">{{ m.month|date:"Y-m" }}</td>
+                        <td style="text-align: right; font-family: monospace;">{{ m.pledge_people_count|default:"-" }}</td>
+                        <td class="money">${{ m.sunday|floatformat:0|intcomma }}</td>
+                        <td class="money">${{ m.pledge|floatformat:0|intcomma }}</td>
+                        <td class="money">${{ m.thanksgiving|floatformat:0|intcomma }}</td>
+                        <td class="money">${{ m.building|floatformat:0|intcomma }}</td>
+                        <td class="money">${{ m.planting|floatformat:0|intcomma }}</td>
+                        <td class="money">${{ m.designated|floatformat:0|intcomma }}</td>
+                        <td class="money">${{ m.mission|floatformat:0|intcomma }}</td>
+                        <td class="money">${{ m.galilee|floatformat:0|intcomma }}</td>
+                        <td class="money">${{ m.timothy|floatformat:0|intcomma }}</td>
+                        <td class="money">${{ m.kingdom|floatformat:0|intcomma }}</td>
+                        <td class="money">${{ m.venue|floatformat:0|intcomma }}</td>
+                        <td class="money" style="color: var(--accent-color); font-size: 0.95rem;">${{ m.total|floatformat:0|intcomma }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="14" style="text-align: center; color: var(--text-secondary); padding: 30px;">尚無奉獻統計資料</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Input Monthly Offering -->
+<div id="offeringModal" class="modal-overlay">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3>📝 登錄/修改 月奉獻資料</h3>
+            <button class="modal-close" onclick="closeOfferingModal()">&times;</button>
+        </div>
+        <form action="{% url 'save-monthly-offering' %}" method="POST" id="offeringForm">
+            {% csrf_token %}
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="inputMonth">月份 (必填)</label>
+                    <input type="month" id="inputMonth" name="month" required onchange="fetchMonthlyOfferingData(this.value)">
+                </div>
+                <div class="form-group">
+                    <label for="inputPeople">當月月定人數</label>
+                    <input type="number" id="inputPeople" name="pledge_people_count" min="0" placeholder="請輸入人數">
+                </div>
+                <div class="form-group">
+                    <label for="inputSunday">主日奉獻</label>
+                    <input type="number" id="inputSunday" name="sunday" min="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label for="inputPledge">月定奉獻</label>
+                    <input type="number" id="inputPledge" name="pledge" min="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label for="inputThanks">感恩奉獻</label>
+                    <input type="number" id="inputThanks" name="thanksgiving" min="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label for="inputBuilding">建築奉獻</label>
+                    <input type="number" id="inputBuilding" name="building" min="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label for="inputPlanting">植堂奉獻</label>
+                    <input type="number" id="inputPlanting" name="planting" min="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label for="inputDesignated">指定奉獻</label>
+                    <input type="number" id="inputDesignated" name="designated" min="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label for="inputMission">宣教&大陸奉獻</label>
+                    <input type="number" id="inputMission" name="mission" min="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label for="inputGalilee">加利利基金</label>
+                    <input type="number" id="inputGalilee" name="galilee" min="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label for="inputTimothy">提摩太基金</label>
+                    <input type="number" id="inputTimothy" name="timothy" min="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label for="inputKingdom">國度基金</label>
+                    <input type="number" id="inputKingdom" name="kingdom" min="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label for="inputVenue">場地費收入</label>
+                    <input type="number" id="inputVenue" name="venue" min="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label>預估總計金額 (自動加總)</label>
+                    <input type="text" id="inputTotal" readonly placeholder="0">
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="finance-btn secondary" onclick="closeOfferingModal()">取消</button>
+                <button type="submit" class="finance-btn">💾 儲存</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Styling constants for charts
+    Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
+    Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)';
+    Chart.defaults.font.family = "'Inter', sans-serif";
+
+    // ----------------------------------------------------
+    // Chart 1: 按月奉獻趨勢 (Stacked Bar Chart)
+    // ----------------------------------------------------
+    const monthlyLabels = {{ monthly_labels|safe }};
+    const monthlyCatData = {{ monthly_categories_data|safe }};
+    
+    // Stacked categories config
+    const categoriesConfig = [
+        { key: 'sunday', label: '主日奉獻', color: '#3b82f6' },
+        { key: 'pledge', label: '月定奉獻', color: '#10b981' },
+        { key: 'thanksgiving', label: '感恩奉獻', color: '#8b5cf6' },
+        { key: 'building', label: '建築奉獻', color: '#ec4899' },
+        { key: 'planting', label: '植堂奉獻', color: '#f59e0b' },
+        { key: 'designated', label: '指定奉獻', color: '#14b8a6' },
+        { key: 'mission', label: '宣教&大陸', color: '#ef4444' },
+        { key: 'galilee', label: '加利利基金', color: '#6366f1' },
+        { key: 'timothy', label: '提摩太基金', color: '#a855f7' },
+        { key: 'kingdom', label: '國度基金', color: '#f43f5e' },
+        { key: 'venue', label: '場地費收入', color: '#84cc16' }
+    ];
+
+    const datasets = categoriesConfig.map(cat => ({
+        label: cat.label,
+        data: monthlyCatData[cat.key],
+        backgroundColor: cat.color,
+        stack: 'Stack0'
+    }));
+
+    const ctxMonthly = document.getElementById('chartMonthlyTrend').getContext('2d');
+    new Chart(ctxMonthly, {
+        type: 'bar',
+        data: {
+            labels: monthlyLabels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15 } },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) label += ': ';
+                            if (context.parsed.y !== null) {
+                                label += new Intl.NumberFormat().format(context.parsed.y);
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { stacked: true },
+                y: {
+                    stacked: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + new Intl.NumberFormat().format(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // ----------------------------------------------------
+    // Chart 2: 按年奉獻趨勢 (Historical Line Chart with Fill)
+    // ----------------------------------------------------
+    const annualLabels = {{ annual_labels|safe }};
+    const annualTotals = {{ annual_totals|safe }};
+
+    const ctxAnnual = document.getElementById('chartAnnualTrend').getContext('2d');
+    new Chart(ctxAnnual, {
+        type: 'line',
+        data: {
+            labels: annualLabels,
+            datasets: [{
+                label: '年度奉獻總額',
+                data: annualTotals,
+                borderColor: '#60a5fa',
+                backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.35,
+                pointRadius: 3,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return '年度總額: $' + new Intl.NumberFormat().format(context.parsed.y);
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + new Intl.NumberFormat().format(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // ----------------------------------------------------
+    // Chart 3: 按年"月定人數"趨勢
+    // ----------------------------------------------------
+    const annualPeopleLabels = {{ annual_people_labels|safe }};
+    const annualPeopleData = {{ annual_people_data|safe }};
+
+    const ctxPeople = document.getElementById('chartAnnualPeopleTrend').getContext('2d');
+    new Chart(ctxPeople, {
+        type: 'line',
+        data: {
+            labels: annualPeopleLabels,
+            datasets: [{
+                label: '年度月定人數',
+                data: annualPeopleData,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.35,
+                pointBackgroundColor: '#10b981',
+                pointRadius: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return '月定人數: ' + context.parsed.y + ' 人';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: {
+                        callback: function(value) {
+                            return value + ' 人';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // ----------------------------------------------------
+    // Modal Form & AJAX Functions
+    // ----------------------------------------------------
+    function openOfferingModal() {
+        // Reset form
+        document.getElementById('offeringForm').reset();
+        // Clear Month and Total field
+        document.getElementById('inputMonth').value = '';
+        document.getElementById('inputTotal').value = '0';
+        document.getElementById('offeringModal').style.display = 'flex';
+    }
+
+    function closeOfferingModal() {
+        document.getElementById('offeringModal').style.display = 'none';
+    }
+
+    // Close when clicking outside modal
+    window.onclick = function(event) {
+        const modal = document.getElementById('offeringModal');
+        if (event.target == modal) {
+            closeOfferingModal();
+        }
+    }
+
+    // Fetch existing data for selected month
+    function fetchMonthlyOfferingData(monthVal) {
+        if (!monthVal) return;
+        
+        fetch(`api/get-monthly/?month=${monthVal}`)
+            .then(res => res.json())
+            .then(resData => {
+                if (resData.status === 'success' && resData.data) {
+                    const data = resData.data;
+                    document.getElementById('inputPeople').value = data.pledge_people_count || '';
+                    document.getElementById('inputSunday').value = data.sunday || '';
+                    document.getElementById('inputPledge').value = data.pledge || '';
+                    document.getElementById('inputThanks').value = data.thanksgiving || '';
+                    document.getElementById('inputBuilding').value = data.building || '';
+                    document.getElementById('inputPlanting').value = data.planting || '';
+                    document.getElementById('inputDesignated').value = data.designated || '';
+                    document.getElementById('inputMission').value = data.mission || '';
+                    document.getElementById('inputGalilee').value = data.galilee || '';
+                    document.getElementById('inputTimothy').value = data.timothy || '';
+                    document.getElementById('inputKingdom').value = data.kingdom || '';
+                    document.getElementById('inputVenue').value = data.venue || '';
+                } else {
+                    // Not found or error -> clear offering inputs
+                    const inputs = ['inputPeople', 'inputSunday', 'inputPledge', 'inputThanks', 'inputBuilding', 'inputPlanting', 'inputDesignated', 'inputMission', 'inputGalilee', 'inputTimothy', 'inputKingdom', 'inputVenue'];
+                    inputs.forEach(id => document.getElementById(id).value = '');
+                }
+                calculateSum();
+            })
+            .catch(err => {
+                console.error("Error fetching monthly data:", err);
+            });
+    }
+
+    // Auto calculate form sum in real-time
+    const formInputIds = [
+        'inputSunday', 'inputPledge', 'inputThanks', 'inputBuilding',
+        'inputPlanting', 'inputDesignated', 'inputMission', 'inputGalilee',
+        'inputTimothy', 'inputKingdom', 'inputVenue'
+    ];
+
+    formInputIds.forEach(id => {
+        document.getElementById(id).addEventListener('input', calculateSum);
+    });
+
+    function calculateSum() {
+        let sum = 0;
+        formInputIds.forEach(id => {
+            const val = parseFloat(document.getElementById(id).value) || 0;
+            sum += val;
+        });
+        document.getElementById('inputTotal').value = new Intl.NumberFormat().format(sum);
+    }
+
+    // Show success/error banners based on URL parameters
+    window.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('success')) {
+            const banner = document.getElementById('alertSuccess');
+            banner.style.display = 'block';
+            setTimeout(() => { banner.style.display = 'none'; }, 4000);
+        }
+        if (urlParams.get('error')) {
+            const banner = document.getElementById('alertError');
+            banner.style.display = 'block';
+            setTimeout(() => { banner.style.display = 'none'; }, 5000);
+        }
+    });
+</script>
+{% endblock %}

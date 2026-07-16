@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}定期存單管理 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .deposit-shell { display: flex; flex-direction: column; gap: 20px; }
+    .deposit-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 12px; margin: -18px -12px 0; background: #2f4156; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .deposit-title h2 { margin: 0 0 6px; font-size: 1.7rem; }
+    .deposit-title p { margin: 0; color: var(--text-secondary); font-size: 0.92rem; }
+    .deposit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+    .deposit-btn { border: 0; border-radius: 7px; padding: 10px 16px; font-weight: 700; cursor: pointer; text-decoration: none; color: #17324d; background: var(--accent-color); font-family: inherit; font-size: 0.9rem; line-height: 1.1; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 6px; }
+    .deposit-btn:hover { transform: translateY(-1px); }
+    .deposit-btn.secondary { background: rgba(255,255,255,0.12); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.12); }
+    .deposit-btn.secondary:hover { background: rgba(255,255,255,0.18); }
+    .deposit-btn.danger { background: rgba(248,113,113,0.18); color: #fecaca; border: 1px solid rgba(248,113,113,0.35); }
+    .deposit-btn.danger:hover { background: rgba(248,113,113,0.25); }
+
+    .deposit-input, .deposit-select { width: 100%; box-sizing: border-box; border-radius: 7px; border: 1px solid rgba(255,255,255,0.15); background: rgba(15,23,42,0.35); color: #fff; padding: 10px 12px; font-family: inherit; font-size: 0.95rem; }
+    
+    .list-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 24px; }
+    .table-wrap { overflow-x: auto; margin-top: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); }
+    .deposit-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; min-width: 1000px; }
+    .deposit-table th, .deposit-table td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .deposit-table th { background: rgba(15,23,42,0.35); font-weight: 600; color: var(--accent-color); }
+    .deposit-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .deposit-table td.money { font-family: monospace; font-weight: 600; text-align: right; }
+    
+    .edit-link { color: var(--accent-color); font-weight: 700; text-decoration: underline; background: none; border: 0; padding: 0; cursor: pointer; }
+    
+    /* Dialog styling */
+    .deposit-dialog { width: min(540px, calc(100vw - 32px)); border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; background: #31465f; color: var(--text-primary); padding: 0; box-shadow: 0 24px 80px rgba(0,0,0,0.55); }
+    .deposit-dialog::backdrop { background: rgba(5, 12, 22, 0.65); backdrop-filter: blur(3px); }
+    .dialog-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: #26394f; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .dialog-head h3 { margin: 0; font-size: 1.15rem; }
+    .dialog-body { padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .dialog-body .full-width { grid-column: span 2; }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 16px; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.08); }
+    .field-wrap { display: flex; flex-direction: column; gap: 4px; }
+    .field-wrap label { font-size: 0.8rem; color: #d8e8fb; font-weight: 700; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="deposit-shell">
+    <div class="deposit-head">
+        <div class="deposit-title">
+            <h2>定期存單管理</h2>
+            <p>目前共有 {{ deposits|length }} 筆定期存單</p>
+        </div>
+        <div class="deposit-actions">
+            <button class="deposit-btn" onclick="document.getElementById('addDepositDialog').showModal()">➕ 新增定期存單</button>
+            <a class="deposit-btn secondary" href="{% url 'bank-balances-dashboard' %}">返回 Dashboard</a>
+        </div>
+    </div>
+
+    <div class="list-card">
+        <div class="table-wrap">
+            <table class="deposit-table">
+                <thead>
+                    <tr>
+                        <th>帳戶類別</th>
+                        <th>存單編號</th>
+                        <th>期間</th>
+                        <th>期別</th>
+                        <th>類別</th>
+                        <th>利率</th>
+                        <th>計息型態</th>
+                        <th style="text-align: right;">金額 (NTD)</th>
+                        <th style="text-align: center; width: 140px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in deposits %}
+                    <tr>
+                        <td style="font-weight: 600; color: #fff;">{{ d.category }}</td>
+                        <td>{{ d.deposit_no|default:"-" }}</td>
+                        <td>{{ d.duration|default:"-" }}</td>
+                        <td>{{ d.period|default:"-" }}</td>
+                        <td>{{ d.deposit_type|default:"-" }}</td>
+                        <td>{% if d.interest_rate is not None %}{{ d.interest_rate }}%{% else %}-{% endif %}</td>
+                        <td>{{ d.rate_type|default:"-" }}</td>
+                        <td class="money">${{ d.amount|floatformat:0|intcomma }}</td>
+                        <td style="text-align: center;">
+                            <button class="deposit-btn secondary" style="padding: 4px 8px; font-size: 0.8rem;" 
+                                    onclick="openEditDialog('{{ d.id }}', '{{ d.category }}', '{{ d.duration }}', '{{ d.period }}', '{{ d.deposit_type }}', '{{ d.deposit_no }}', '{{ d.interest_rate|default:'' }}', '{{ d.rate_type }}', '{{ d.amount }}')">
+                                編輯
+                            </button>
+                            <form method="post" style="display:inline;" onsubmit="return confirm('確定要刪除這筆存單嗎？');">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="deposit_id" value="{{ d.id }}">
+                                <button type="submit" class="deposit-btn danger" style="padding: 4px 8px; font-size: 0.8rem;">
+                                    刪除
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" style="text-align: center; color: var(--text-secondary); padding: 20px;">目前尚無定期存單資料</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Deposit Dialog -->
+<dialog class="deposit-dialog" id="addDepositDialog">
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create">
+        
+        <div class="dialog-head">
+            <h3>新增定期存單</h3>
+            <button class="deposit-btn secondary" type="button" style="padding: 4px 8px; font-size: 0.8rem;" onclick="this.closest('dialog').close()">X</button>
+        </div>
+        <div class="dialog-body">
+            <div class="field-wrap full-width">
+                <label>帳戶類別 *</label>
+                <select class="deposit-select" name="category" required>
+                    <option value="" disabled selected>請選擇類別...</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}">{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field-wrap">
+                <label>存單編號</label>
+                <input class="deposit-input" type="text" name="deposit_no" placeholder="例如：#05868154">
+            </div>
+            <div class="field-wrap">
+                <label>存單期間</label>
+                <input class="deposit-input" type="text" name="duration" placeholder="例如：1140828-1150828">
+            </div>
+            <div class="field-wrap">
+                <label>期別</label>
+                <input class="deposit-input" type="text" name="period" placeholder="例如：12個月, 24個月">
+            </div>
+            <div class="field-wrap">
+                <label>存單類別</label>
+                <input class="deposit-input" type="text" name="deposit_type" placeholder="例如：存本">
+            </div>
+            <div class="field-wrap">
+                <label>利率 (%)</label>
+                <input class="deposit-input" type="number" step="0.00001" name="interest_rate" placeholder="例如：1.705">
+            </div>
+            <div class="field-wrap">
+                <label>固定/機動</label>
+                <select class="deposit-select" name="rate_type">
+                    <option value="">請選擇...</option>
+                    <option value="固">固 (固定利率)</option>
+                    <option value="機">機 (機動利率)</option>
+                </select>
+            </div>
+            <div class="field-wrap full-width">
+                <label>金額 (NTD) *</label>
+                <input class="deposit-input" type="number" name="amount" placeholder="金額..." required>
+            </div>
+        </div>
+        <div class="dialog-actions">
+            <button class="deposit-btn secondary" type="button" onclick="this.closest('dialog').close()">取消</button>
+            <button class="deposit-btn" type="submit">確認新增</button>
+        </div>
+    </form>
+</dialog>
+
+<!-- Edit Deposit Dialog -->
+<dialog class="deposit-dialog" id="editDepositDialog">
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update">
+        <input type="hidden" name="deposit_id" id="edit_deposit_id">
+        
+        <div class="dialog-head">
+            <h3>編輯定期存單</h3>
+            <button class="deposit-btn secondary" type="button" style="padding: 4px 8px; font-size: 0.8rem;" onclick="this.closest('dialog').close()">X</button>
+        </div>
+        <div class="dialog-body">
+            <div class="field-wrap full-width">
+                <label>帳戶類別 *</label>
+                <select class="deposit-select" name="category" id="edit_category" required>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}">{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field-wrap">
+                <label>存單編號</label>
+                <input class="deposit-input" type="text" name="deposit_no" id="edit_deposit_no">
+            </div>
+            <div class="field-wrap">
+                <label>存單期間</label>
+                <input class="deposit-input" type="text" name="duration" id="edit_duration">
+            </div>
+            <div class="field-wrap">
+                <label>期別</label>
+                <input class="deposit-input" type="text" name="period" id="edit_period">
+            </div>
+            <div class="field-wrap">
+                <label>存單類別</label>
+                <input class="deposit-input" type="text" name="deposit_type" id="edit_deposit_type">
+            </div>
+            <div class="field-wrap">
+                <label>利率 (%)</label>
+                <input class="deposit-input" type="number" step="0.00001" name="interest_rate" id="edit_interest_rate">
+            </div>
+            <div class="field-wrap">
+                <label>固定/機動</label>
+                <select class="deposit-select" name="rate_type" id="edit_rate_type">
+                    <option value="">請選擇...</option>
+                    <option value="固">固 (固定利率)</option>
+                    <option value="機">機 (機動利率)</option>
+                </select>
+            </div>
+            <div class="field-wrap full-width">
+                <label>金額 (NTD) *</label>
+                <input class="deposit-input" type="number" name="amount" id="edit_amount" required>
+            </div>
+        </div>
+        <div class="dialog-actions">
+            <button class="deposit-btn secondary" type="button" onclick="this.closest('dialog').close()">取消</button>
+            <button class="deposit-btn" type="submit">儲存修改</button>
+        </div>
+    </form>
+</dialog>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function openEditDialog(id, category, duration, period, type, no, rate, rateType, amount) {
+        document.getElementById('edit_deposit_id').value = id;
+        document.getElementById('edit_category').value = category;
+        document.getElementById('edit_duration').value = duration;
+        document.getElementById('edit_period').value = period;
+        document.getElementById('edit_deposit_type').value = type;
+        document.getElementById('edit_deposit_no').value = no;
+        document.getElementById('edit_interest_rate').value = rate;
+        document.getElementById('edit_rate_type').value = rateType;
+        document.getElementById('edit_amount').value = parseFloat(amount);
+        
+        document.getElementById('editDepositDialog').showModal();
+    }
+</script>
+{% endblock %}
