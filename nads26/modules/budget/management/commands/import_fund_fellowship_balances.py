@@ -32,7 +32,7 @@ class Command(BaseCommand):
         if "基金餘額" in wb.sheetnames:
             self.stdout.write('Parsing sheet "基金餘額" ...')
             s_fund = wb['基金餘額']
-            
+
             # Map column to Fund
             funds_map = {}
             for col in range(2, s_fund.max_column + 1):
@@ -41,7 +41,7 @@ class Command(BaseCommand):
                     name = str(name).strip()
                     note_val = s_fund.cell(2, col).value
                     note = str(note_val).strip() if note_val else ''
-                    
+
                     fund = Fund.objects.create(
                         name=name,
                         note=note,
@@ -49,14 +49,14 @@ class Command(BaseCommand):
                     )
                     funds_map[col] = fund
                     self.stdout.write(f'Created Fund: {fund.name} (col={col})')
-            
+
             # Insert monthly balances
             fund_balances_to_create = []
             for r in range(3, s_fund.max_row + 1):
                 date_val = s_fund.cell(r, 1).value
                 if date_val is None:
                     continue
-                    
+
                 # Parse date
                 dt = self.parse_date(date_val)
                 if not dt:
@@ -86,7 +86,7 @@ class Command(BaseCommand):
         if "團契餘額" in wb.sheetnames:
             self.stdout.write('Parsing sheet "團契餘額" ...')
             s_fellowship = wb['團契餘額']
-            
+
             # Map column to Fellowship
             fellowships_map = {}
             for col in range(2, s_fellowship.max_column + 1):
@@ -95,7 +95,7 @@ class Command(BaseCommand):
                     name = str(name).strip()
                     note_val = s_fellowship.cell(2, col).value
                     note = str(note_val).strip() if note_val else ''
-                    
+
                     fellowship = Fellowship.objects.create(
                         name=name,
                         note=note,
@@ -103,14 +103,14 @@ class Command(BaseCommand):
                     )
                     fellowships_map[col] = fellowship
                     self.stdout.write(f'Created Fellowship: {fellowship.name} (col={col})')
-            
+
             # Insert monthly balances
             fellowship_balances_to_create = []
             for r in range(3, s_fellowship.max_row + 1):
                 date_val = s_fellowship.cell(r, 1).value
                 if date_val is None:
                     continue
-                    
+
                 dt = self.parse_date(date_val)
                 if not dt:
                     continue

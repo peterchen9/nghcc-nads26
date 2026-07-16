@@ -17,7 +17,7 @@ def offering_dashboard(request):
     # Prepare Monthly Trend Chart Data (past 36 months)
     monthly_trend_qs = list(monthly_qs)[-36:]
     monthly_labels = [m.month.strftime('%Y-%m') for m in monthly_trend_qs]
-    
+
     # Categories list and mappings
     categories = [
         ('sunday', '主日奉獻'),
@@ -35,7 +35,7 @@ def offering_dashboard(request):
 
     monthly_categories_data = {key: [] for key, _ in categories}
     monthly_totals = []
-    
+
     for m in monthly_trend_qs:
         monthly_totals.append(float(m.total))
         for key, _ in categories:
@@ -46,7 +46,7 @@ def offering_dashboard(request):
     annual_qs = AnnualOffering.objects.order_by('year')
     annual_labels = [a.year for a in annual_qs]
     annual_totals = [float(a.total) for a in annual_qs]
-    
+
     # Prepare Annual Pledge People Trend
     annual_people_labels = []
     annual_people_data = []
@@ -61,10 +61,10 @@ def offering_dashboard(request):
         'monthly_totals': monthly_totals,
         'monthly_categories_data': monthly_categories_data,
         'categories': categories,
-        
+
         'annual_labels': annual_labels,
         'annual_totals': annual_totals,
-        
+
         'annual_people_labels': annual_people_labels,
         'annual_people_data': annual_people_data,
     }
@@ -76,12 +76,12 @@ def get_monthly_offering_data(request):
     month_str = request.GET.get('month', '')
     if not month_str:
         return JsonResponse({'status': 'error', 'message': 'Month is required'}, status=400)
-    
+
     try:
         dt = datetime.strptime(month_str, '%Y-%m').date()
     except ValueError:
         return JsonResponse({'status': 'error', 'message': 'Invalid month format'}, status=400)
-        
+
     offering = MonthlyOffering.objects.filter(month=dt).first()
     if offering:
         data = {
@@ -130,7 +130,7 @@ def save_monthly_offering(request):
         'sunday', 'pledge', 'thanksgiving', 'building', 'planting',
         'designated', 'mission', 'galilee', 'timothy', 'kingdom', 'venue'
     ]
-    
+
     defaults = {'pledge_people_count': people_count}
     for f in fields:
         val = request.POST.get(f)

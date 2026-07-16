@@ -10,14 +10,14 @@
     .finance-title h2 { margin: 0 0 6px; font-size: 1.7rem; }
     .finance-title p { margin: 0; color: var(--text-secondary); font-size: 0.92rem; }
     .finance-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-    
+
     .finance-btn { border: 0; border-radius: 7px; padding: 10px 16px; font-weight: 700; cursor: pointer; text-decoration: none; color: #17324d; background: var(--accent-color); font-family: inherit; font-size: 0.9rem; line-height: 1.1; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease; }
     .finance-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(188, 220, 255, 0.2); }
     .finance-btn.secondary { background: rgba(255,255,255,0.12); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.12); }
     .finance-btn.secondary:hover { background: rgba(255,255,255,0.18); }
 
     .finance-select { border-radius: 7px; border: 1px solid rgba(255,255,255,0.15); background: rgba(15,23,42,0.45); color: var(--text-primary); padding: 8px 12px; font-family: inherit; font-size: 0.9rem; outline: none; cursor: pointer; }
-    
+
     /* Stats grid */
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
     .stat-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 8px; position: relative; overflow: hidden; }
@@ -26,16 +26,16 @@
     .stat-card.total::before { background: #60a5fa; }
     .stat-label { font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
     .stat-value { font-size: 1.8rem; font-weight: 700; font-family: 'Outfit', sans-serif; color: #fff; }
-    
+
     /* Charts grid */
     .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .chart-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 16px; min-height: 400px; }
     .chart-card.full-width { grid-column: span 2; }
     .chart-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 12px; }
     .chart-title h3 { margin: 0; font-size: 1.15rem; font-weight: 600; color: #e2e8f0; }
-    
+
     .chart-body { position: relative; flex-grow: 1; width: 100%; height: 100%; min-height: 320px; }
-    
+
     /* Table styling for details */
     .detail-table-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 24px; margin-top: 10px; }
     .table-wrap { overflow-x: auto; margin-top: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); }
@@ -67,7 +67,7 @@
                 <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }}</option>
                 {% endfor %}
             </select>
-            
+
             <a class="finance-btn" href="{% url 'manage-balances' %}?month={{ selected_month }}">
                 <span>📝 帳戶餘額</span>
             </a>
@@ -181,10 +181,10 @@
     // Prepare Data from context
     const chart1Labels = {{ chart1_labels|safe }};
     const chart1Data = {{ chart1_data|safe }};
-    
+
     const chart2Labels = {{ chart2_labels|safe }};
     const chart2Data = {{ chart2_data|safe }};
-    
+
     const trendLabels = {{ trend_labels|safe }};
     const trendTotalData = {{ trend_data|safe }};
     const catTrends = {{ cat_trends|safe }};
