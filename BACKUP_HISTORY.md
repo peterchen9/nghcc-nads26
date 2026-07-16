@@ -15,3 +15,13 @@
 - `nads26-files.tar.gz` SHA-256: `e7c8bd925c534ac7e395df9208e81049d4090a641828986e23e7c5439fcff6ed`
 - Verification: remote and local SHA-256 checks passed; archive listing passed; SQL completion marker passed
 - Runtime state during backup: `nads26-web` and `nads26db` remained running; no source data or directory structure was changed
+
+## 2026-07-16 16:57:15 +08:00
+
+- Purpose: restore the three existing finance routes for bank balances, fund/fellowship balances, and offering statistics.
+- Remote backup: `/home/peterchen/backups/nads26-pre-finance-fix-20260716-165715/`
+- Local backup: `backups/nads26-pre-finance-fix-20260716-165715/` (intentionally ignored by Git)
+- Database: complete `nads26db` logical dump, 14,922,086 bytes.
+- Database SHA-256: `d92fb7025ca2528327032db772d4b547fbe6d0b660891dbcc914fb8b4d967c27`
+- Previous URL configuration SHA-256: `82e2a37267e541f985c683e5e71164d741b680a597623f125fe38e660cb8cd64`
+- Verification: SQL completion marker and SHA-256 checks passed; deployment changed only three URL registrations and did not modify finance data.

@@ -1,0 +1,346 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}銀行帳戶結餘 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .finance-shell { display: flex; flex-direction: column; gap: 20px; }
+    .finance-head { position: sticky; top: 70px; z-index: 30; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 12px; margin: -18px -12px 0; background: #2f4156; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .finance-title h2 { margin: 0 0 6px; font-size: 1.7rem; }
+    .finance-title p { margin: 0; color: var(--text-secondary); font-size: 0.92rem; }
+    .finance-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    
+    .finance-btn { border: 0; border-radius: 7px; padding: 10px 16px; font-weight: 700; cursor: pointer; text-decoration: none; color: #17324d; background: var(--accent-color); font-family: inherit; font-size: 0.9rem; line-height: 1.1; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease; }
+    .finance-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(188, 220, 255, 0.2); }
+    .finance-btn.secondary { background: rgba(255,255,255,0.12); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.12); }
+    .finance-btn.secondary:hover { background: rgba(255,255,255,0.18); }
+
+    .finance-select { border-radius: 7px; border: 1px solid rgba(255,255,255,0.15); background: rgba(15,23,42,0.45); color: var(--text-primary); padding: 8px 12px; font-family: inherit; font-size: 0.9rem; outline: none; cursor: pointer; }
+    
+    /* Stats grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .stat-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 8px; position: relative; overflow: hidden; }
+    .stat-card::before { content: ""; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--accent-color); }
+    .stat-card.deposit::before { background: #34d399; }
+    .stat-card.total::before { background: #60a5fa; }
+    .stat-label { font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-value { font-size: 1.8rem; font-weight: 700; font-family: 'Outfit', sans-serif; color: #fff; }
+    
+    /* Charts grid */
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .chart-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 16px; min-height: 400px; }
+    .chart-card.full-width { grid-column: span 2; }
+    .chart-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 12px; }
+    .chart-title h3 { margin: 0; font-size: 1.15rem; font-weight: 600; color: #e2e8f0; }
+    
+    .chart-body { position: relative; flex-grow: 1; width: 100%; height: 100%; min-height: 320px; }
+    
+    /* Table styling for details */
+    .detail-table-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 24px; margin-top: 10px; }
+    .table-wrap { overflow-x: auto; margin-top: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); }
+    .finance-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
+    .finance-table th, .finance-table td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .finance-table th { background: rgba(15,23,42,0.35); font-weight: 600; color: var(--accent-color); }
+    .finance-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .finance-table td.money { text-align: right; font-family: monospace; font-weight: 600; }
+
+    @media (max-width: 1024px) {
+        .charts-grid { grid-template-columns: 1fr; }
+        .chart-card.full-width { grid-column: span 1; }
+        .finance-head { top: 0; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="finance-shell">
+    <div class="finance-head">
+        <div class="finance-title">
+            <h2>銀行帳戶餘額 Dashboard</h2>
+            <p>即時掌握各類帳戶資產與定期存單現額</p>
+        </div>
+        <div class="finance-actions">
+            <span style="color: var(--text-secondary); font-size: 0.9rem;">選擇月份：</span>
+            <select class="finance-select" onchange="location.href='?month=' + this.value">
+                {% for m in available_months %}
+                <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }}</option>
+                {% endfor %}
+            </select>
+            
+            <a class="finance-btn" href="{% url 'manage-balances' %}?month={{ selected_month }}">
+                <span>📝 帳戶餘額</span>
+            </a>
+            <a class="finance-btn secondary" href="{% url 'manage-deposits' %}">
+                <span>📁 定期存單</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats summary cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">銀行活存與一般帳戶餘額 ({{ selected_month }})</div>
+            <div class="stat-value">${{ total_bank_balance|floatformat:0|intcomma }}</div>
+        </div>
+        <div class="stat-card deposit">
+            <div class="stat-label">定期存單現額 (合計)</div>
+            <div class="stat-value">${{ total_deposit_balance|floatformat:0|intcomma }}</div>
+        </div>
+        <div class="stat-card total">
+            <div class="stat-label">總結餘資產估算</div>
+            <div class="stat-value">${{ total_bank_balance|add:total_deposit_balance|floatformat:0|intcomma }}</div>
+        </div>
+    </div>
+
+    <!-- Charts area -->
+    <div class="charts-grid">
+        <!-- Chart 1: 各銀行帳戶結餘 -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <h3>各銀行帳戶結餘 ({{ selected_month }})</h3>
+                </div>
+            </div>
+            <div class="chart-body">
+                <canvas id="chartBankBalances"></canvas>
+            </div>
+        </div>
+
+        <!-- Chart 2: 定期存單餘額 -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <h3>定期存單餘額 (依類別)</h3>
+                </div>
+            </div>
+            <div class="chart-body">
+                <canvas id="chartTimeDeposits"></canvas>
+            </div>
+        </div>
+
+        <!-- Chart 3: 按月各帳戶餘額之趨勢 (Full width) -->
+        <div class="chart-card full-width">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <h3>按月帳戶餘額之趨勢</h3>
+                </div>
+                <div class="chart-filter">
+                    <span style="font-size: 0.85rem; color: var(--text-secondary); margin-right: 6px;">篩選類別：</span>
+                    <select class="finance-select" id="trendCategorySelect" style="padding: 4px 8px; font-size: 0.85rem;">
+                        <option value="ALL">總資產 (合計)</option>
+                        {% for cat in categories_list %}
+                        <option value="{{ cat }}">{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="chart-body">
+                <canvas id="chartMonthlyTrend"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details Table -->
+    <div class="detail-table-card">
+        <h3 style="margin: 0 0 10px 0; font-size: 1.2rem; color: #fff;">帳戶細目列表 ({{ selected_month }})</h3>
+        <div class="table-wrap">
+            <table class="finance-table">
+                <thead>
+                    <tr>
+                        <th>帳戶類別</th>
+                        <th>銀行</th>
+                        <th>帳號</th>
+                        <th style="text-align: right;">餘額 (NTD)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in balances %}
+                    <tr>
+                        <td style="font-weight: 600; color: #fff;">{{ b.account.category }}</td>
+                        <td>{{ b.account.bank|default:"-" }}</td>
+                        <td>{{ b.account.account_no|default:"-" }}</td>
+                        <td class="money">${{ b.balance|floatformat:0|intcomma }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 20px;">此月份尚無帳戶餘額資料</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Import Chart.js from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Prepare Data from context
+    const chart1Labels = {{ chart1_labels|safe }};
+    const chart1Data = {{ chart1_data|safe }};
+    
+    const chart2Labels = {{ chart2_labels|safe }};
+    const chart2Data = {{ chart2_data|safe }};
+    
+    const trendLabels = {{ trend_labels|safe }};
+    const trendTotalData = {{ trend_data|safe }};
+    const catTrends = {{ cat_trends|safe }};
+
+    // Chart.js global options for dark theme styling
+    Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
+    Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)';
+    Chart.defaults.font.family = "'Inter', sans-serif";
+
+    // 1. Chart Bank Balances (Horizontal Bar Chart)
+    const ctx1 = document.getElementById('chartBankBalances').getContext('2d');
+    const chart1 = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+            labels: chart1Labels,
+            datasets: [{
+                label: '帳戶餘額',
+                data: chart1Data,
+                backgroundColor: 'rgba(188, 220, 255, 0.65)',
+                borderColor: 'rgba(188, 220, 255, 1)',
+                borderWidth: 1.5,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return '餘額: $' + context.raw.toLocaleString();
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: {
+                        callback: function(value) { return '$' + (value / 1000).toLocaleString() + 'k'; }
+                    }
+                },
+                y: { grid: { display: false } }
+            }
+        }
+    });
+
+    // 2. Chart Time Deposits (Vertical Bar Chart)
+    const ctx2 = document.getElementById('chartTimeDeposits').getContext('2d');
+    const chart2 = new Chart(ctx2, {
+        type: 'bar',
+        data: {
+            labels: chart2Labels,
+            datasets: [{
+                label: '存單現額',
+                data: chart2Data,
+                backgroundColor: 'rgba(52, 211, 153, 0.65)',
+                borderColor: 'rgba(52, 211, 153, 1)',
+                borderWidth: 1.5,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return '現額: $' + context.raw.toLocaleString();
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: {
+                        callback: function(value) { return '$' + (value / 1000).toLocaleString() + 'k'; }
+                    }
+                },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    // 3. Chart Monthly Trend (Line / Area Chart)
+    const ctx3 = document.getElementById('chartMonthlyTrend').getContext('2d');
+    const chart3 = new Chart(ctx3, {
+        type: 'line',
+        data: {
+            labels: trendLabels,
+            datasets: [{
+                label: '總資產 (合計)',
+                data: trendTotalData,
+                backgroundColor: 'rgba(96, 165, 250, 0.15)',
+                borderColor: 'rgba(96, 165, 250, 1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.35,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: 'rgba(96, 165, 250, 1)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: { display: true, position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': $' + context.raw.toLocaleString();
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: {
+                        callback: function(value) { return '$' + (value / 1000000).toLocaleString() + 'M'; }
+                    }
+                },
+                x: { grid: { color: 'rgba(255, 255, 255, 0.03)' } }
+            }
+        }
+    });
+
+    // Handle Trend Category Filter Change
+    document.getElementById('trendCategorySelect').addEventListener('change', function() {
+        const selectedVal = this.value;
+        if (selectedVal === 'ALL') {
+            chart3.data.datasets[0].data = trendTotalData;
+            chart3.data.datasets[0].label = '總資產 (合計)';
+            chart3.data.datasets[0].borderColor = 'rgba(96, 165, 250, 1)';
+            chart3.data.datasets[0].backgroundColor = 'rgba(96, 165, 250, 0.15)';
+            chart3.data.datasets[0].pointBackgroundColor = 'rgba(96, 165, 250, 1)';
+        } else {
+            const catData = catTrends[selectedVal] || [];
+            chart3.data.datasets[0].data = catData;
+            chart3.data.datasets[0].label = selectedVal + ' 帳戶餘額';
+            chart3.data.datasets[0].borderColor = 'rgba(244, 114, 182, 1)';
+            chart3.data.datasets[0].backgroundColor = 'rgba(244, 114, 182, 0.15)';
+            chart3.data.datasets[0].pointBackgroundColor = 'rgba(244, 114, 182, 1)';
+        }
+        chart3.update();
+    });
+</script>
+{% endblock %}

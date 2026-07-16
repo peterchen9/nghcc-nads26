@@ -48,6 +48,9 @@ urlpatterns = [
     path('facility/', include('modules.facility.urls')),
     path('staff/', include('modules.staff.urls')),
     path('finance/budget/', include('modules.budget.urls')),
+    path('finance/bank-balances/', include('modules.budget.bank_urls')),
+    path('finance/fund-fellowship-balances/', include('modules.budget.fund_fellowship_urls')),
+    path('finance/offering-statistics/', include('modules.budget.offering_urls')),
     path('eureka/', include('modules.eureka.urls')),
     path('', include('modules.pages.urls')),
 ]
