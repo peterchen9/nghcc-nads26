@@ -20,9 +20,9 @@
 
     .manage-input { width: 100%; box-sizing: border-box; border-radius: 7px; border: 1px solid rgba(255,255,255,0.15); background: rgba(15,23,42,0.35); color: #fff; padding: 10px 12px; font-family: inherit; font-size: 0.95rem; }
     .manage-input::placeholder { color: rgba(255,255,255,0.3); }
-    
+
     .editor-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 24px; }
-    
+
     /* Table format styling */
     .table-wrap { overflow-x: auto; margin-top: 18px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); }
     .finance-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
@@ -30,7 +30,7 @@
     .finance-table th { background: rgba(15,23,42,0.35); font-weight: 600; color: var(--accent-color); }
     .finance-table tr:hover td { background: rgba(255,255,255,0.02); }
     .note-text { font-size: 0.85rem; color: var(--text-secondary); }
-    
+
     /* Dialog styling */
     .manage-dialog { width: min(480px, calc(100vw - 32px)); border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; background: #31465f; color: var(--text-primary); padding: 0; box-shadow: 0 24px 80px rgba(0,0,0,0.55); }
     .manage-dialog::backdrop { background: rgba(5, 12, 22, 0.65); backdrop-filter: blur(3px); }
@@ -51,7 +51,7 @@
         <div class="manage-actions">
             <span style="color: var(--text-secondary); font-size: 0.9rem;">切換月份：</span>
             <input type="month" value="{{ selected_month }}" class="manage-input" style="width: auto; padding: 6px 12px; display: inline-block;" onchange="location.href='?month=' + this.value">
-            
+
             <button class="manage-btn" onclick="document.getElementById('addFellowshipDialog').showModal()">➕ 新增團契項目</button>
             <a class="manage-btn secondary" href="{% url 'fund-fellowship-dashboard' %}?month={{ selected_month }}">返回 Dashboard</a>
         </div>
@@ -62,7 +62,7 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="save_balances">
             <input type="hidden" name="month" value="{{ selected_month }}">
-            
+
             <h3 style="margin: 0 0 10px; color: #fff;">請輸入各團契於 {{ selected_month }} 之結餘金額</h3>
             <p style="margin: 0 0 20px; font-size: 0.85rem; color: var(--text-secondary);">
                 * 若無輸入，將預設使用上月份結餘（預設值顯示在輸入框背景中）。
@@ -84,21 +84,21 @@
                             <td style="font-weight: 600; color: #fff;">{{ item.fellowship.name }}</td>
                             <td class="note-text">{{ item.fellowship.note|default:"-" }}</td>
                             <td>
-                                <input class="manage-input" 
+                                <input class="manage-input"
                                        style="text-align: right; padding: 6px 10px;"
-                                       id="balance_{{ item.fellowship.id }}" 
-                                       name="balance_{{ item.fellowship.id }}" 
-                                       type="number" 
-                                       step="0.01" 
-                                       value="{{ item.value }}" 
+                                       id="balance_{{ item.fellowship.id }}"
+                                       name="balance_{{ item.fellowship.id }}"
+                                       type="number"
+                                       step="0.01"
+                                       value="{{ item.value }}"
                                        placeholder="{{ item.placeholder|floatformat:2 }}">
                             </td>
                             <td style="text-align: center; white-space: nowrap;">
-                                <button type="button" class="manage-btn secondary" style="padding: 4px 8px; font-size: 0.8rem;" 
+                                <button type="button" class="manage-btn secondary" style="padding: 4px 8px; font-size: 0.8rem;"
                                         onclick="openEditDialog('{{ item.fellowship.id }}', '{{ item.fellowship.name|escapejs }}', '{{ item.fellowship.note|escapejs }}')">
                                     編輯
                                 </button>
-                                <button type="button" class="manage-btn danger" style="padding: 4px 8px; font-size: 0.8rem;" 
+                                <button type="button" class="manage-btn danger" style="padding: 4px 8px; font-size: 0.8rem;"
                                         onclick="confirmDelete('{{ item.fellowship.id }}', '{{ item.fellowship.name|escapejs }}')">
                                     刪除
                                 </button>
@@ -127,7 +127,7 @@
         {% csrf_token %}
         <input type="hidden" name="action" value="add_fellowship">
         <input type="hidden" name="month" value="{{ selected_month }}">
-        
+
         <div class="dialog-head">
             <h3>新增團契項目</h3>
             <button class="manage-btn secondary" type="button" style="padding: 4px 8px; font-size: 0.8rem;" onclick="this.closest('dialog').close()">X</button>
@@ -156,7 +156,7 @@
         <input type="hidden" name="action" value="update_fellowship">
         <input type="hidden" name="fellowship_id" id="edit_fellowship_id">
         <input type="hidden" name="month" value="{{ selected_month }}">
-        
+
         <div class="dialog-head">
             <h3>編輯團契項目</h3>
             <button class="manage-btn secondary" type="button" style="padding: 4px 8px; font-size: 0.8rem;" onclick="this.closest('dialog').close()">X</button>
@@ -195,7 +195,7 @@
         document.getElementById('edit_fellowship_note').value = note;
         document.getElementById('editFellowshipDialog').showModal();
     }
-    
+
     function confirmDelete(id, name) {
         if (confirm('您確定要刪除「' + name + '」這個團契項目嗎？這將會連同刪除該項目在所有月份的餘額紀錄！')) {
             document.getElementById('delete_fellowship_id').value = id;
