@@ -43,7 +43,7 @@ class Command(BaseCommand):
 
                 # Core data: cols 2 to 18
                 pledge_people = self.clean_int(ws_year.cell(r, 2).value)
-                
+
                 sunday = self.clean_decimal(ws_year.cell(r, 3).value)
                 pledge = self.clean_decimal(ws_year.cell(r, 4).value)
                 thanksgiving = self.clean_decimal(ws_year.cell(r, 5).value)
@@ -106,7 +106,7 @@ class Command(BaseCommand):
                     continue
 
                 pledge_people = self.clean_int(ws_month.cell(r, 2).value)
-                
+
                 sunday = self.clean_decimal(ws_month.cell(r, 3).value)
                 pledge = self.clean_decimal(ws_month.cell(r, 4).value)
                 thanksgiving = self.clean_decimal(ws_month.cell(r, 5).value)

@@ -21,7 +21,7 @@ def bank_balances_dashboard(request):
     # Determine default/selected month
     latest_month = available_months[0] if available_months else timezone.now().strftime('%Y-%m')
     selected_month_str = request.GET.get('month', latest_month)
-    
+
     try:
         selected_date = datetime.strptime(selected_month_str, '%Y-%m').date()
     except ValueError:
@@ -30,7 +30,7 @@ def bank_balances_dashboard(request):
 
     # Get balances for the selected month
     balances = AccountBalance.objects.filter(month=selected_date).select_related('account').order_by('account__order', 'account__id')
-    
+
     # Prepare data for Chart 1: 各銀行帳戶結餘 (Latest balances)
     chart1_labels = []
     chart1_data = []
@@ -61,7 +61,7 @@ def bank_balances_dashboard(request):
     monthly_trend_qs = AccountBalance.objects.values('month').annotate(total_balance=Sum('balance')).order_by('month')
     # Limit to past 36 records to avoid over-crowding, but show enough history
     monthly_trend_qs = list(monthly_trend_qs)[-36:]
-    
+
     trend_labels = [item['month'].strftime('%Y-%m') for item in monthly_trend_qs]
     trend_data = [float(item['total_balance']) for item in monthly_trend_qs]
 
@@ -112,7 +112,7 @@ def manage_balances(request):
         selected_date = datetime.strptime(selected_month_str, '%Y-%m').date()
 
     accounts = BankAccount.objects.filter(is_active=True).order_by('order', 'id')
-    
+
     # Handle POST
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -135,7 +135,7 @@ def manage_balances(request):
                         # If left blank, delete the record for that month (or keep it None?)
                         AccountBalance.objects.filter(account=acc, month=selected_date).delete()
             return redirect(f'/finance/bank-balances/?month={selected_month_str}')
-            
+
         elif action == 'add_account':
             category = request.POST.get('category', '').strip()
             bank = request.POST.get('bank', '').strip()
@@ -153,7 +153,7 @@ def manage_balances(request):
 
     # Fetch existing balances for this month
     existing_balances = {b.account_id: b.balance for b in AccountBalance.objects.filter(month=selected_date)}
-    
+
     # Helper: fetch previous month's balances to use as placeholders/defaults
     import calendar
     prev_month_date = selected_date
@@ -190,7 +190,7 @@ def manage_deposits(request):
             period = request.POST.get('period', '').strip()
             deposit_type = request.POST.get('deposit_type', '').strip()
             deposit_no = request.POST.get('deposit_no', '').strip()
-            
+
             rate_val = request.POST.get('interest_rate', '').strip()
             interest_rate = None
             if rate_val:
@@ -198,15 +198,15 @@ def manage_deposits(request):
                     interest_rate = Decimal(rate_val)
                 except (InvalidOperation, ValueError):
                     pass
-            
+
             rate_type = request.POST.get('rate_type', '').strip()
-            
+
             amount_val = request.POST.get('amount', '').strip()
             try:
                 amount = Decimal(amount_val)
             except (InvalidOperation, ValueError):
                 amount = Decimal('0')
-                
+
             max_order = TimeDeposit.objects.filter(is_active=True).aggregate(max_order=Sum('order'))['max_order'] or 0
             TimeDeposit.objects.create(
                 category=category,
@@ -219,7 +219,7 @@ def manage_deposits(request):
                 amount=amount,
                 order=max_order + 1
             )
-            
+
         elif action == 'update':
             dep_id = request.POST.get('deposit_id')
             deposit = get_object_or_404(TimeDeposit, pk=dep_id)
@@ -228,7 +228,7 @@ def manage_deposits(request):
             deposit.period = request.POST.get('period', '').strip()
             deposit.deposit_type = request.POST.get('deposit_type', '').strip()
             deposit.deposit_no = request.POST.get('deposit_no', '').strip()
-            
+
             rate_val = request.POST.get('interest_rate', '').strip()
             if rate_val:
                 try:
@@ -237,28 +237,28 @@ def manage_deposits(request):
                     deposit.interest_rate = None
             else:
                 deposit.interest_rate = None
-                
+
             deposit.rate_type = request.POST.get('rate_type', '').strip()
-            
+
             amount_val = request.POST.get('amount', '').strip()
             try:
                 deposit.amount = Decimal(amount_val)
             except (InvalidOperation, ValueError):
                 pass
-                
+
             deposit.save()
-            
+
         elif action == 'delete':
             dep_id = request.POST.get('deposit_id')
             deposit = get_object_or_404(TimeDeposit, pk=dep_id)
             # Soft delete or hard delete, let's soft delete by setting active to False or just delete it
             deposit.delete()
-            
+
         return redirect('/finance/bank-balances/manage-deposits/')
 
     deposits = TimeDeposit.objects.filter(is_active=True).order_by('order', 'id')
     categories = list(BankAccount.objects.values_list('category', flat=True).distinct())
-    
+
     context = {
         'deposits': deposits,
         'categories': categories,

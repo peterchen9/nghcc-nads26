@@ -29,7 +29,7 @@ class Command(BaseCommand):
         # 2. Parse Sheet 1: 銀行帳戶結餘
         self.stdout.write('Parsing sheet "銀行帳戶結餘" ...')
         s1 = wb['銀行帳戶結餘']
-        
+
         # Identify bank account columns
         accounts_map = {} # col_idx -> BankAccount object
         for col in range(2, s1.max_column + 1):
@@ -38,12 +38,12 @@ class Command(BaseCommand):
             if category and str(category).strip() not in ('合計', 'Total', '總計', '合計總額'):
                 bank = s1.cell(3, col).value or ''
                 acc_no = s1.cell(4, col).value or ''
-                
+
                 # Clean up values
                 category = str(category).strip()
                 bank = str(bank).strip() if bank else ''
                 acc_no = str(acc_no).strip() if acc_no else ''
-                
+
                 account = BankAccount.objects.create(
                     category=category,
                     bank=bank,
@@ -59,7 +59,7 @@ class Command(BaseCommand):
             date_val = s1.cell(r, 1).value
             if date_val is None:
                 continue
-                
+
             # Parse date
             if isinstance(date_val, datetime):
                 dt = date_val.date()
@@ -83,7 +83,7 @@ class Command(BaseCommand):
                 if val is not None and val != '':
                     row_has_balances = True
                     break
-            
+
             if not row_has_balances:
                 continue
 
@@ -111,28 +111,28 @@ class Command(BaseCommand):
         # 3. Parse Sheet 2: 定期存單
         self.stdout.write('Parsing sheet "定期存單" ...')
         s2 = wb['定期存單']
-        
+
         current_cat = None
         deposits_to_create = []
         order_counter = 0
-        
+
         for r in range(2, s2.max_row + 1):
             row_vals = [s2.cell(r, c).value for c in range(1, 9)]
             if not any(row_vals[1:8]): # If all columns except maybe category are empty, skip
                 continue
-                
+
             cat = row_vals[0]
             if cat is not None:
                 current_cat = str(cat).strip()
-            
+
             if not current_cat:
                 continue
-                
+
             duration = str(row_vals[1]).strip() if row_vals[1] is not None else ''
             period = str(row_vals[2]).strip() if row_vals[2] is not None else ''
             dep_type = str(row_vals[3]).strip() if row_vals[3] is not None else ''
             dep_no = str(row_vals[4]).strip() if row_vals[4] is not None else ''
-            
+
             rate_val = row_vals[5]
             interest_rate = None
             if rate_val is not None:
@@ -140,9 +140,9 @@ class Command(BaseCommand):
                     interest_rate = Decimal(str(rate_val))
                 except (InvalidOperation, ValueError):
                     pass
-                    
+
             rate_type = str(row_vals[6]).strip() if row_vals[6] is not None else ''
-            
+
             amount_val = row_vals[7]
             if amount_val is None:
                 continue
@@ -152,7 +152,7 @@ class Command(BaseCommand):
                 amount_dec = Decimal(str(amount_val))
             except (InvalidOperation, ValueError):
                 continue
-                
+
             order_counter += 1
             deposits_to_create.append(TimeDeposit(
                 category=current_cat,
@@ -170,5 +170,5 @@ class Command(BaseCommand):
             with transaction.atomic():
                 TimeDeposit.objects.bulk_create(deposits_to_create)
             self.stdout.write(f'Successfully imported {len(deposits_to_create)} time deposit records.')
-            
+
         self.stdout.write(self.style.SUCCESS('Bank accounts, balances, and time deposits import finished!'))

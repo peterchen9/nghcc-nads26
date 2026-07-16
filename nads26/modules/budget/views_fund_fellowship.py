@@ -15,7 +15,7 @@ def fund_fellowship_dashboard(request):
     fellowship_months = list(FellowshipBalance.objects.order_by('-month').values_list('month', flat=True).distinct())
     all_months_set = set(fund_months + fellowship_months)
     all_months = sorted(list(all_months_set), reverse=True)
-    
+
     available_months = []
     for m in all_months:
         m_str = m.strftime('%Y-%m')
@@ -25,7 +25,7 @@ def fund_fellowship_dashboard(request):
     # Determine default/selected month
     latest_month = available_months[0] if available_months else timezone.now().strftime('%Y-%m')
     selected_month_str = request.GET.get('month', latest_month)
-    
+
     try:
         selected_date = datetime.strptime(selected_month_str, '%Y-%m').date()
     except ValueError:
@@ -35,7 +35,7 @@ def fund_fellowship_dashboard(request):
     # Get balances for the selected month
     fund_balances = FundBalance.objects.filter(month=selected_date).select_related('fund').order_by('fund__order', 'fund__id')
     fellowship_balances = FellowshipBalance.objects.filter(month=selected_date).select_related('fellowship').order_by('fellowship__order', 'fellowship__id')
-    
+
     # Total balances
     total_fund_balance = sum(fb.balance for fb in fund_balances)
     total_fellowship_balance = sum(fb.balance for fb in fellowship_balances)
@@ -107,7 +107,7 @@ def manage_funds(request):
         selected_date = datetime.strptime(selected_month_str, '%Y-%m').date()
 
     funds = Fund.objects.filter(is_active=True).order_by('order', 'id')
-    
+
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'save_balances':
@@ -128,7 +128,7 @@ def manage_funds(request):
                     else:
                         FundBalance.objects.filter(fund=fund, month=selected_date).delete()
             return redirect(f'/finance/fund-fellowship-balances/?month={selected_month_str}')
-            
+
         elif action == 'add_fund':
             name = request.POST.get('name', '').strip()
             note = request.POST.get('note', '').strip()
@@ -160,7 +160,7 @@ def manage_funds(request):
 
     # Fetch existing balances for this month
     existing_balances = {b.fund_id: b.balance for b in FundBalance.objects.filter(month=selected_date)}
-    
+
     # Helper: fetch previous month's balances to use as placeholders/defaults
     if selected_date.month == 1:
         prev_month_date = date(selected_date.year - 1, 12, 1)
@@ -195,7 +195,7 @@ def manage_fellowships(request):
         selected_date = datetime.strptime(selected_month_str, '%Y-%m').date()
 
     fellowships = Fellowship.objects.filter(is_active=True).order_by('order', 'id')
-    
+
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'save_balances':
@@ -216,7 +216,7 @@ def manage_fellowships(request):
                     else:
                         FellowshipBalance.objects.filter(fellowship=fs, month=selected_date).delete()
             return redirect(f'/finance/fund-fellowship-balances/?month={selected_month_str}')
-            
+
         elif action == 'add_fellowship':
             name = request.POST.get('name', '').strip()
             note = request.POST.get('note', '').strip()
@@ -248,7 +248,7 @@ def manage_fellowships(request):
 
     # Fetch existing balances for this month
     existing_balances = {b.fellowship_id: b.balance for b in FellowshipBalance.objects.filter(month=selected_date)}
-    
+
     # Helper: fetch previous month's balances to use as placeholders/defaults
     if selected_date.month == 1:
         prev_month_date = date(selected_date.year - 1, 12, 1)

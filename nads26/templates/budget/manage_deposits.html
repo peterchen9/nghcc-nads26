@@ -19,7 +19,7 @@
     .deposit-btn.danger:hover { background: rgba(248,113,113,0.25); }
 
     .deposit-input, .deposit-select { width: 100%; box-sizing: border-box; border-radius: 7px; border: 1px solid rgba(255,255,255,0.15); background: rgba(15,23,42,0.35); color: #fff; padding: 10px 12px; font-family: inherit; font-size: 0.95rem; }
-    
+
     .list-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 24px; }
     .table-wrap { overflow-x: auto; margin-top: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); }
     .deposit-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; min-width: 1000px; }
@@ -27,9 +27,9 @@
     .deposit-table th { background: rgba(15,23,42,0.35); font-weight: 600; color: var(--accent-color); }
     .deposit-table tr:hover td { background: rgba(255,255,255,0.02); }
     .deposit-table td.money { font-family: monospace; font-weight: 600; text-align: right; }
-    
+
     .edit-link { color: var(--accent-color); font-weight: 700; text-decoration: underline; background: none; border: 0; padding: 0; cursor: pointer; }
-    
+
     /* Dialog styling */
     .deposit-dialog { width: min(540px, calc(100vw - 32px)); border: 1px solid rgba(255,255,255,0.14); border-radius: 12px; background: #31465f; color: var(--text-primary); padding: 0; box-shadow: 0 24px 80px rgba(0,0,0,0.55); }
     .deposit-dialog::backdrop { background: rgba(5, 12, 22, 0.65); backdrop-filter: blur(3px); }
@@ -84,7 +84,7 @@
                         <td>{{ d.rate_type|default:"-" }}</td>
                         <td class="money">${{ d.amount|floatformat:0|intcomma }}</td>
                         <td style="text-align: center;">
-                            <button class="deposit-btn secondary" style="padding: 4px 8px; font-size: 0.8rem;" 
+                            <button class="deposit-btn secondary" style="padding: 4px 8px; font-size: 0.8rem;"
                                     onclick="openEditDialog('{{ d.id }}', '{{ d.category }}', '{{ d.duration }}', '{{ d.period }}', '{{ d.deposit_type }}', '{{ d.deposit_no }}', '{{ d.interest_rate|default:'' }}', '{{ d.rate_type }}', '{{ d.amount }}')">
                                 編輯
                             </button>
@@ -114,7 +114,7 @@
     <form method="post">
         {% csrf_token %}
         <input type="hidden" name="action" value="create">
-        
+
         <div class="dialog-head">
             <h3>新增定期存單</h3>
             <button class="deposit-btn secondary" type="button" style="padding: 4px 8px; font-size: 0.8rem;" onclick="this.closest('dialog').close()">X</button>
@@ -175,7 +175,7 @@
         {% csrf_token %}
         <input type="hidden" name="action" value="update">
         <input type="hidden" name="deposit_id" id="edit_deposit_id">
-        
+
         <div class="dialog-head">
             <h3>編輯定期存單</h3>
             <button class="deposit-btn secondary" type="button" style="padding: 4px 8px; font-size: 0.8rem;" onclick="this.closest('dialog').close()">X</button>
@@ -242,7 +242,7 @@
         document.getElementById('edit_interest_rate').value = rate;
         document.getElementById('edit_rate_type').value = rateType;
         document.getElementById('edit_amount').value = parseFloat(amount);
-        
+
         document.getElementById('editDepositDialog').showModal();
     }
 </script>
