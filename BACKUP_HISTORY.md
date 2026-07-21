@@ -46,3 +46,16 @@
 - Feature commit: `c33c81cf`.
 - Deployment scope: `modules/facility/views.py` and `templates/facility/booking_daily_overview.html`; no database, booking data, Docker volume, or unrelated feature was changed.
 - Verification: four isolated Docker tests and Django checks passed; production booking, daily overview, and room pages returned HTTP 200 from the host; browser checks confirmed both booking floor lists, all eight daily overview floor groups, 36 compact vertical room columns, and no console errors.
+
+## 2026-07-21 17:27:20 +08:00
+
+- Purpose: make the facility daily overview interactive while preserving the existing booking workflow and permissions.
+- Feature branch: `codex/facility-daily-booking`.
+- Remote backup: `/home/peterchen/backups/nads26-pre-daily-interactive-20260721-172045/`.
+- Local backup: `backups/nads26-pre-daily-interactive-20260721-172045/` (intentionally ignored by Git).
+- Remote pre-change archive SHA-256: `126711a637fe008ee1c0c847fd5e846ad80337e1e72dc1cb18873864bca58575`.
+- Local pre-change archive SHA-256: `43ebe7e3895084d2b4f50a37bb096aa522f70edd809c4febcd3ba6298d6de9dc`.
+- Deployment archive SHA-256: `02c794581f9be1b24f62d532bab089d88dca36f7fa0f4d69029769489ab21b77`.
+- Feature commit: `cbedcfb`.
+- Deployment scope: `modules/facility/views.py` and `templates/facility/booking_daily_overview.html`; no database schema, booking data, Docker volume, or unrelated feature was changed.
+- Verification: six isolated Docker tests and Django checks passed; browser tests opened a prefilled new-booking form, a permission-aware existing-booking view, and an actual room image without submitting any form; the original eight bookings remained unchanged and no browser console errors were reported.
