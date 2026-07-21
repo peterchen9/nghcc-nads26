@@ -214,6 +214,32 @@ def _build_floor_sections(rooms, entries, day):
     return sections
 
 
+def _build_daily_overview(rooms, entries, day):
+    floor_sections = _build_floor_sections(rooms, entries, day)
+    overview_rooms = []
+    floor_groups = []
+    for section in floor_sections:
+        overview_rooms.extend(section['rooms'])
+        floor_groups.append({
+            'label': section['label'],
+            'room_count': len(section['rooms']),
+        })
+
+    overview_rows = []
+    if floor_sections:
+        row_count = len(floor_sections[0]['rows'])
+        for row_index in range(row_count):
+            cells = []
+            for section in floor_sections:
+                cells.extend(section['rows'][row_index]['cells'])
+            overview_rows.append({
+                'slot': floor_sections[0]['rows'][row_index]['slot'],
+                'cells': cells,
+            })
+
+    return overview_rooms, floor_groups, overview_rows
+
+
 
 def _dictfetchall(cursor):
     columns = [col[0] for col in cursor.description]
@@ -1675,6 +1701,29 @@ def booking_page(request):
         'prev_day': prev_day,
         'next_day': next_day,
         'default_creator': current_username,
+    })
+
+
+def booking_daily_overview(request):
+    selected_date = _parse_date(request.GET.get('date'))
+    current_username = _current_username(request)
+    rooms = _rooms()
+    entries = _entries(selected_date, None, current_username)
+    overview_rooms, floor_groups, overview_rows = _build_daily_overview(
+        rooms,
+        entries,
+        selected_date,
+    )
+
+    return render(request, 'facility/booking_daily_overview.html', {
+        'rooms': overview_rooms,
+        'floor_groups': floor_groups,
+        'rows': overview_rows,
+        'entries': entries,
+        'selected_date': selected_date,
+        'selected_weekday': WEEKDAY_NAMES[selected_date.weekday()],
+        'prev_day': selected_date - timedelta(days=1),
+        'next_day': selected_date + timedelta(days=1),
     })
 
 

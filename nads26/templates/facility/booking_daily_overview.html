@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}場地登記－當天總表{% endblock %}
+
+{% block extra_css %}
+<style>
+    .day-overview-page {
+        display: grid;
+        gap: 16px;
+        width: 100%;
+        min-width: 0;
+    }
+    .day-overview-page .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        padding: 8px 12px;
+        color: var(--accent-color);
+        font: inherit;
+        text-decoration: none;
+        cursor: pointer;
+        border: 1px solid rgba(188, 220, 255, 0.35);
+        border-radius: 7px;
+        background: rgba(188, 220, 255, 0.12);
+    }
+    .day-overview-page .btn.primary {
+        color: var(--sidebar-bg);
+        font-weight: 700;
+        background: var(--accent-color);
+    }
+    .day-overview-toolbar {
+        position: sticky;
+        top: 76px;
+        z-index: 25;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        padding: 16px 18px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        background: rgba(47, 65, 86, 0.94);
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+        backdrop-filter: blur(12px);
+    }
+    .day-overview-title h2 {
+        margin: 0 0 5px;
+        font-size: 1.35rem;
+    }
+    .day-overview-subtitle {
+        color: var(--text-secondary);
+        font-size: 0.92rem;
+    }
+    .day-overview-actions,
+    .day-overview-date-form {
+        display: flex;
+        align-items: end;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .day-overview-date-form label {
+        display: grid;
+        gap: 5px;
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+        font-weight: 700;
+    }
+    .day-overview-date-form input {
+        min-height: 38px;
+        padding: 7px 10px;
+        color: var(--text-primary);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        background: rgba(8, 13, 20, 0.35);
+    }
+    .day-overview-table-wrap {
+        max-height: calc(100vh - 245px);
+        overflow: auto;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.04);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+    }
+    .day-overview-table {
+        width: max-content;
+        min-width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        table-layout: fixed;
+        font-size: 0.78rem;
+    }
+    .day-overview-table th,
+    .day-overview-table td {
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .day-overview-table thead th {
+        position: sticky;
+        z-index: 12;
+        padding: 7px 6px;
+        color: var(--text-primary);
+        text-align: center;
+        background: #354b63;
+    }
+    .day-overview-table thead tr:first-child th { top: 0; }
+    .day-overview-table thead tr:nth-child(2) th { top: 34px; }
+    .day-overview-floor {
+        height: 34px;
+        color: var(--accent-color) !important;
+        font-size: 0.82rem;
+        letter-spacing: 0.04em;
+    }
+    .day-overview-time-head,
+    .day-overview-time {
+        position: sticky !important;
+        left: 0;
+        z-index: 18 !important;
+        width: 68px;
+        min-width: 68px;
+        max-width: 68px;
+        text-align: center;
+        background: #354b63 !important;
+    }
+    .day-overview-time-head { z-index: 22 !important; }
+    .day-overview-room {
+        width: 126px;
+        min-width: 126px;
+        max-width: 126px;
+        line-height: 1.25;
+    }
+    .day-overview-capacity {
+        display: block;
+        margin-top: 3px;
+        color: var(--text-secondary);
+        font-size: 0.7rem;
+        font-weight: 500;
+    }
+    .day-overview-time {
+        height: 27px;
+        padding: 0 6px;
+        color: var(--text-secondary);
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+    }
+    .day-overview-empty {
+        height: 27px;
+        background: rgba(8, 13, 20, 0.30);
+    }
+    .day-overview-table tbody tr:nth-child(even) .day-overview-empty {
+        background: rgba(255, 255, 255, 0.035);
+    }
+    .day-overview-booked {
+        padding: 0;
+        vertical-align: top;
+        background: #8fc867;
+        box-shadow: inset 3px 0 0 #b9ef8c;
+    }
+    .day-overview-booking {
+        display: grid;
+        gap: 3px;
+        min-height: 100%;
+        padding: 7px;
+        color: #102a16;
+        overflow-wrap: anywhere;
+    }
+    .day-overview-booking strong {
+        font-size: 0.8rem;
+        line-height: 1.25;
+    }
+    .day-overview-booking span {
+        font-size: 0.7rem;
+        line-height: 1.25;
+    }
+    .day-overview-empty-state {
+        padding: 42px 20px;
+        color: var(--text-secondary);
+        text-align: center;
+    }
+    @media (max-width: 760px) {
+        .day-overview-toolbar { top: 66px; }
+        .day-overview-actions { width: 100%; }
+        .day-overview-date-form { width: 100%; }
+        .day-overview-date-form label { flex: 1; }
+        .day-overview-date-form input { width: 100%; }
+        .day-overview-table-wrap { max-height: calc(100vh - 310px); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="day-overview-page">
+    <section class="day-overview-toolbar">
+        <div class="day-overview-title">
+            <h2>場地登記－當天總表</h2>
+            <div class="day-overview-subtitle">
+                {{ selected_date|date:'Y-m-d' }}（{{ selected_weekday }}） · {{ rooms|length }} 個場地 · {{ entries|length }} 筆登記
+            </div>
+        </div>
+        <div class="day-overview-actions">
+            <a class="btn" href="/facility/booking/?date={{ selected_date|date:'Y-m-d' }}">返回場地登記</a>
+            <form method="get" class="day-overview-date-form">
+                <label for="overview-date">查看日期
+                    <input id="overview-date" type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+                </label>
+                <button class="btn primary" type="submit">查詢</button>
+                <a class="btn" href="?date={{ prev_day|date:'Y-m-d' }}">前一天</a>
+                <a class="btn" href="?date={{ next_day|date:'Y-m-d' }}">後一天</a>
+            </form>
+        </div>
+    </section>
+
+    {% if rooms %}
+        <div class="day-overview-table-wrap" aria-label="{{ selected_date|date:'Y-m-d' }} 場地登記當天總表">
+            <table class="day-overview-table">
+                <thead>
+                    <tr>
+                        <th class="day-overview-time-head" rowspan="2">時間</th>
+                        {% for group in floor_groups %}
+                            <th class="day-overview-floor" colspan="{{ group.room_count }}">{{ group.label }}</th>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        {% for room in rooms %}
+                            <th class="day-overview-room">
+                                {{ room.room_name }}
+                                {% if room.capacity %}<span class="day-overview-capacity">{{ room.capacity }}人</span>{% endif %}
+                            </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                        <tr>
+                            <td class="day-overview-time">{{ row.slot.label }}</td>
+                            {% for cell in row.cells %}
+                                {% if cell.booking %}
+                                    {% if not cell.skip_booking %}
+                                        <td class="day-overview-booked" rowspan="{{ cell.rowspan }}" title="{{ cell.booking.room_name }} · {{ cell.booking.name }} · {{ cell.booking.start_label }}-{{ cell.booking.end_label }}">
+                                            <div class="day-overview-booking">
+                                                <strong>{{ cell.booking.name }}</strong>
+                                                {% if cell.booking.use_unit %}<span>{{ cell.booking.use_unit }}</span>{% endif %}
+                                                <span>{{ cell.booking.start_label }}-{{ cell.booking.end_label }}</span>
+                                            </div>
+                                        </td>
+                                    {% endif %}
+                                {% else %}
+                                    <td class="day-overview-empty"></td>
+                                {% endif %}
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="day-overview-empty-state">目前沒有可顯示的場地。</div>
+    {% endif %}
+</div>
+{% endblock %}
