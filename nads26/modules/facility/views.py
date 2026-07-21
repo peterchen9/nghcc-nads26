@@ -1680,7 +1680,12 @@ def booking_page(request):
         else:
             return HttpResponseBadRequest('Unknown action')
         query = f'?date={selected_date.isoformat()}'
-        return redirect('/facility/booking/' + query)
+        redirect_path = (
+            '/facility/booking/day/'
+            if request.POST.get('return_view') == 'day'
+            else '/facility/booking/'
+        )
+        return redirect(redirect_path + query)
 
     selected_room_id = None
     current_username = _current_username(request)
@@ -1724,6 +1729,7 @@ def booking_daily_overview(request):
         'selected_weekday': WEEKDAY_NAMES[selected_date.weekday()],
         'prev_day': selected_date - timedelta(days=1),
         'next_day': selected_date + timedelta(days=1),
+        'default_creator': current_username,
     })
 
 
