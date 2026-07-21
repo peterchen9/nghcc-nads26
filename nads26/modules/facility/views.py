@@ -29,7 +29,7 @@ TZ = ZoneInfo('Asia/Taipei')
 MRBS_DB = 'mrbsdb'
 BOOKING_TYPE = 'I'
 
-FLOOR_ORDER = ['6F', '5F', '4F', '3F', '2F', '1F', 'B1F', '其他']
+FLOOR_ORDER = ['1F', '2F', '3F', '4F', '5F', '6F', 'B1F', '其他']
 FLOOR_RANK = {name: index for index, name in enumerate(FLOOR_ORDER)}
 SLOT_START_HOUR = 6
 SLOT_END_HOUR = 22
