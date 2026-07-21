@@ -35,3 +35,14 @@
 - Code archive SHA-256: `da9b33abc235c2dfeb97ecbb8f4a202a5b03a038d9c2a9cff325aed140a5839e`
 - Feature commit: `da30d32`.
 - Verification: three isolated Docker tests passed; the production daily overview, existing booking page, and room page returned HTTP 200; browser date switching and console checks passed.
+
+## 2026-07-21 16:04:51 +08:00
+
+- Purpose: reorder facility booking floors to `1F/2F/3F/4F/5F/6F/B1F/其他` and compact the daily overview into vertical one-character-wide room columns.
+- Remote backup: `/home/peterchen/backups/nads26-pre-booking-order-20260721-141928/`.
+- Local backup: `backups/nads26-pre-booking-order-20260721-141928/` (intentionally ignored by Git).
+- Remote code archive SHA-256: `0053609594165392a9402dabbf8933f7a1e60bca2393bf44eb04368cf7e5aaa5`.
+- Local pre-change archive SHA-256: `344c49a065e1164b6be3a544062671b7c8f0caebe971c58aa1217fd1fbe4bfe8`.
+- Feature commit: `c33c81cf`.
+- Deployment scope: `modules/facility/views.py` and `templates/facility/booking_daily_overview.html`; no database, booking data, Docker volume, or unrelated feature was changed.
+- Verification: four isolated Docker tests and Django checks passed; production booking, daily overview, and room pages returned HTTP 200 from the host; browser checks confirmed both booking floor lists, all eight daily overview floor groups, 36 compact vertical room columns, and no console errors.
