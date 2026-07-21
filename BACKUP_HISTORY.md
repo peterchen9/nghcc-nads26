@@ -25,3 +25,13 @@
 - Database SHA-256: `d92fb7025ca2528327032db772d4b547fbe6d0b660891dbcc914fb8b4d967c27`
 - Previous URL configuration SHA-256: `82e2a37267e541f985c683e5e71164d741b680a597623f125fe38e660cb8cd64`
 - Verification: SQL completion marker and SHA-256 checks passed; deployment changed only three URL registrations and did not modify finance data.
+
+## 2026-07-21 14:00:29 +08:00
+
+- Purpose: add a read-only daily overview to the existing facility booking page.
+- Remote backup: `/home/peterchen/backups/nads26-pre-booking-day-20260721-140029/`
+- Local backup: `backups/nads26-pre-booking-day-20260721-140029/` (intentionally ignored by Git)
+- Backup scope: the existing facility booking view, URL configuration, and booking template; no database schema or booking data was changed.
+- Code archive SHA-256: `da9b33abc235c2dfeb97ecbb8f4a202a5b03a038d9c2a9cff325aed140a5839e`
+- Feature commit: `da30d32`.
+- Verification: three isolated Docker tests passed; the production daily overview, existing booking page, and room page returned HTTP 200; browser date switching and console checks passed.
