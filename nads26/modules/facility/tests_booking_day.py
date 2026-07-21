@@ -40,6 +40,26 @@ def sample_entries():
 
 
 class DailyOverviewHelperTests(SimpleTestCase):
+    def test_floor_sections_follow_requested_order(self):
+        rooms = [
+            {
+                'id': index, 'area_id': 1, 'room_name': room_name,
+                'sort_key': room_name, 'description': '', 'capacity': 10,
+                'photo_urls': [],
+            }
+            for index, room_name in enumerate(
+                ['B01', '咖啡吧', '601', '501', '401', '301', '201', '101'],
+                start=1,
+            )
+        ]
+
+        sections = views._group_rooms_by_floor(rooms)
+
+        self.assertEqual(
+            [section['label'] for section in sections],
+            ['1F', '2F', '3F', '4F', '5F', '6F', 'B1F', '其他'],
+        )
+
     def test_combines_floor_sections_and_preserves_rowspan(self):
         rooms, floor_groups, rows = views._build_daily_overview(
             sample_rooms(),
@@ -68,6 +88,8 @@ class DailyOverviewPageTests(TestCase):
         self.assertContains(response, '場地登記－當天總表')
         self.assertContains(response, '2026-07-21')
         self.assertContains(response, '測試聚會')
+        self.assertContains(response, 'writing-mode: vertical-rl')
+        self.assertContains(response, 'class="day-overview-booking-unit"')
         self.assertEqual(response.context['prev_day'], date(2026, 7, 20))
         self.assertEqual(response.context['next_day'], date(2026, 7, 22))
 

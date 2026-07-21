@@ -125,14 +125,18 @@
     }
     .day-overview-time-head { z-index: 22 !important; }
     .day-overview-room {
-        width: 126px;
-        min-width: 126px;
-        max-width: 126px;
-        line-height: 1.25;
+        width: 30px;
+        min-width: 30px;
+        max-width: 30px;
+        height: 132px;
+        padding: 7px 2px !important;
+        line-height: 1;
+        writing-mode: vertical-rl;
+        text-orientation: upright;
     }
     .day-overview-capacity {
-        display: block;
-        margin-top: 3px;
+        display: inline;
+        margin-top: 5px;
         color: var(--text-secondary);
         font-size: 0.7rem;
         font-weight: 500;
@@ -152,26 +156,44 @@
         background: rgba(255, 255, 255, 0.035);
     }
     .day-overview-booked {
+        width: 30px;
+        min-width: 30px;
+        max-width: 30px;
         padding: 0;
         vertical-align: top;
         background: #8fc867;
         box-shadow: inset 3px 0 0 #b9ef8c;
     }
     .day-overview-booking {
-        display: grid;
-        gap: 3px;
+        display: block;
         min-height: 100%;
-        padding: 7px;
+        max-width: 30px;
+        padding: 4px 2px;
         color: #102a16;
-        overflow-wrap: anywhere;
+        overflow: hidden;
+        writing-mode: vertical-rl;
+        text-orientation: upright;
     }
     .day-overview-booking strong {
+        display: inline;
         font-size: 0.8rem;
-        line-height: 1.25;
+        line-height: 1;
     }
-    .day-overview-booking span {
+    .day-overview-booking-unit {
+        display: inline;
         font-size: 0.7rem;
-        line-height: 1.25;
+        line-height: 1;
+    }
+    .day-overview-booking-time {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
     }
     .day-overview-empty-state {
         padding: 42px 20px;
@@ -240,8 +262,8 @@
                                         <td class="day-overview-booked" rowspan="{{ cell.rowspan }}" title="{{ cell.booking.room_name }} · {{ cell.booking.name }} · {{ cell.booking.start_label }}-{{ cell.booking.end_label }}">
                                             <div class="day-overview-booking">
                                                 <strong>{{ cell.booking.name }}</strong>
-                                                {% if cell.booking.use_unit %}<span>{{ cell.booking.use_unit }}</span>{% endif %}
-                                                <span>{{ cell.booking.start_label }}-{{ cell.booking.end_label }}</span>
+                                                {% if cell.booking.use_unit %}<span class="day-overview-booking-unit">·{{ cell.booking.use_unit }}</span>{% endif %}
+                                                <span class="day-overview-booking-time">{{ cell.booking.start_label }}-{{ cell.booking.end_label }}</span>
                                             </div>
                                         </td>
                                     {% endif %}
