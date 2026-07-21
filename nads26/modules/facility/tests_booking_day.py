@@ -90,8 +90,45 @@ class DailyOverviewPageTests(TestCase):
         self.assertContains(response, '測試聚會')
         self.assertContains(response, 'writing-mode: vertical-rl')
         self.assertContains(response, 'class="day-overview-booking-unit"')
+        self.assertContains(response, 'class="day-overview-slot-button"')
+        self.assertContains(response, 'class="day-overview-booked-button"')
+        self.assertContains(response, 'class="day-overview-room-button"')
+        self.assertContains(response, '場地圖')
+        self.assertContains(response, 'action="/facility/booking/?date=2026-07-21"')
+        self.assertContains(response, 'name="return_view" value="day"')
         self.assertEqual(response.context['prev_day'], date(2026, 7, 20))
         self.assertEqual(response.context['next_day'], date(2026, 7, 22))
+
+    @patch('modules.facility.views._create_entry', return_value=(date(2026, 7, 21), 1))
+    @patch('modules.facility.views._rooms', return_value=sample_rooms())
+    def test_daily_overview_submission_returns_to_daily_view(self, _rooms_mock, _create_mock):
+        response = self.client.post(reverse('facility-booking'), {
+            'action': 'create',
+            'return_view': 'day',
+            'date': '2026-07-21',
+            'room_id': '1',
+        })
+
+        self.assertRedirects(
+            response,
+            '/facility/booking/day/?date=2026-07-21',
+            fetch_redirect_response=False,
+        )
+
+    @patch('modules.facility.views._create_entry', return_value=(date(2026, 7, 21), 1))
+    @patch('modules.facility.views._rooms', return_value=sample_rooms())
+    def test_existing_submission_still_returns_to_existing_view(self, _rooms_mock, _create_mock):
+        response = self.client.post(reverse('facility-booking'), {
+            'action': 'create',
+            'date': '2026-07-21',
+            'room_id': '1',
+        })
+
+        self.assertRedirects(
+            response,
+            '/facility/booking/?date=2026-07-21',
+            fetch_redirect_response=False,
+        )
 
     @patch('modules.facility.views._entries', return_value=sample_entries())
     @patch('modules.facility.views._rooms', return_value=sample_rooms())
