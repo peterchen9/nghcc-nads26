@@ -168,10 +168,6 @@
         outline: 2px solid var(--accent-color);
         outline-offset: 1px;
     }
-    .day-overview-map-label {
-        color: var(--accent-color);
-        font-size: 0.66rem;
-    }
     .day-overview-time {
         height: 27px;
         padding: 0 6px;
@@ -179,6 +175,7 @@
         font-variant-numeric: tabular-nums;
         font-weight: 700;
     }
+    .day-overview-table tbody tr { height: 27px; }
     .day-overview-empty {
         height: 27px;
         padding: 0;
@@ -190,6 +187,12 @@
         outline: 1px solid var(--accent-color);
         outline-offset: -1px;
     }
+    .day-overview-slot-button,
+    .day-overview-booked-button {
+        height: 27px !important;
+        min-height: 27px !important;
+        max-height: 27px !important;
+    }
     .day-overview-table tbody tr:nth-child(even) .day-overview-empty {
         background: rgba(255, 255, 255, 0.035);
     }
@@ -197,16 +200,21 @@
         width: 30px;
         min-width: 30px;
         max-width: 30px;
+        height: 27px;
         padding: 0;
         vertical-align: top;
         background: #8fc867;
-        box-shadow: inset 3px 0 0 #b9ef8c;
+        box-shadow: inset 2px 0 0 #b9ef8c;
     }
     .day-overview-booking {
         display: block;
-        min-height: 100%;
+        position: absolute;
+        inset: 0;
+        box-sizing: border-box;
+        width: 100%;
+        height: 27px;
         max-width: 30px;
-        padding: 4px 2px;
+        padding: 2px;
         color: #102a16;
         overflow: hidden;
         writing-mode: vertical-rl;
@@ -216,15 +224,19 @@
         outline: 2px solid #ffffff;
         outline-offset: -2px;
     }
+    .day-overview-booked-button {
+        position: relative;
+        display: block;
+        overflow: hidden;
+    }
     .day-overview-booking strong {
         display: inline;
-        font-size: 0.8rem;
+        font-size: 0.72rem;
         line-height: 1;
+        white-space: nowrap;
     }
     .day-overview-booking-unit {
-        display: inline;
-        font-size: 0.7rem;
-        line-height: 1;
+        display: none;
     }
     .day-overview-booking-time {
         position: absolute;
@@ -442,7 +454,6 @@
                                         aria-label="查看 {{ room.room_name }} 場地圖">
                                     {{ room.room_name }}
                                     {% if room.capacity %}<span class="day-overview-capacity">{{ room.capacity }}人</span>{% endif %}
-                                    <span class="day-overview-map-label">場地圖</span>
                                 </button>
                             </th>
                         {% endfor %}
@@ -454,28 +465,28 @@
                             <td class="day-overview-time">{{ row.slot.label }}</td>
                             {% for cell in row.cells %}
                                 {% if cell.booking %}
-                                    {% if not cell.skip_booking %}
-                                        <td class="day-overview-booked" rowspan="{{ cell.rowspan }}" title="{{ cell.booking.room_name }} · {{ cell.booking.name }} · {{ cell.booking.start_label }}-{{ cell.booking.end_label }}">
-                                            <button class="day-overview-booked-button" type="button"
-                                                    data-entry-id="{{ cell.booking.id }}"
-                                                    data-room-id="{{ cell.booking.room_id }}"
-                                                    data-room-name="{{ cell.booking.room_name }}"
-                                                    data-start="{{ cell.booking.start_label }}"
-                                                    data-end="{{ cell.booking.end_label }}"
-                                                    data-name="{{ cell.booking.name }}"
-                                                    data-use-unit="{{ cell.booking.use_unit|default:'' }}"
-                                                    data-create-by="{{ cell.booking.create_by }}"
-                                                    data-description="{{ cell.booking.description|default:'' }}"
-                                                    data-can-edit="{% if cell.booking.can_edit %}1{% else %}0{% endif %}"
-                                                    aria-label="查看 {{ cell.booking.name }} {{ cell.booking.start_label }} 到 {{ cell.booking.end_label }} 的場地登記">
+                                    <td class="day-overview-booked" title="{{ cell.booking.room_name }} · {{ cell.booking.name }} · {{ cell.booking.start_label }}-{{ cell.booking.end_label }}">
+                                        <button class="day-overview-booked-button" type="button"
+                                                data-entry-id="{{ cell.booking.id }}"
+                                                data-room-id="{{ cell.booking.room_id }}"
+                                                data-room-name="{{ cell.booking.room_name }}"
+                                                data-start="{{ cell.booking.start_label }}"
+                                                data-end="{{ cell.booking.end_label }}"
+                                                data-name="{{ cell.booking.name }}"
+                                                data-use-unit="{{ cell.booking.use_unit|default:'' }}"
+                                                data-create-by="{{ cell.booking.create_by }}"
+                                                data-description="{{ cell.booking.description|default:'' }}"
+                                                data-can-edit="{% if cell.booking.can_edit %}1{% else %}0{% endif %}"
+                                                aria-label="查看 {{ cell.booking.name }} {{ cell.booking.start_label }} 到 {{ cell.booking.end_label }} 的場地登記">
+                                            {% if not cell.skip_booking %}
                                                 <span class="day-overview-booking">
                                                     <strong>{{ cell.booking.name }}</strong>
                                                     {% if cell.booking.use_unit %}<span class="day-overview-booking-unit">·{{ cell.booking.use_unit }}</span>{% endif %}
                                                     <span class="day-overview-booking-time">{{ cell.booking.start_label }}-{{ cell.booking.end_label }}</span>
                                                 </span>
-                                            </button>
-                                        </td>
-                                    {% endif %}
+                                            {% endif %}
+                                        </button>
+                                    </td>
                                 {% else %}
                                     <td class="day-overview-empty">
                                         <button class="day-overview-slot-button" type="button"
