@@ -94,6 +94,12 @@ class DailyOverviewPageTests(TestCase):
         self.assertContains(response, 'class="day-overview-booked-button"')
         self.assertContains(response, 'class="day-overview-room-button"')
         self.assertContains(response, '場地圖')
+        self.assertNotContains(response, 'class="day-overview-map-label"')
+        self.assertNotContains(response, 'class="day-overview-booked" rowspan=')
+        self.assertEqual(
+            response.content.decode('utf-8').count('class="day-overview-booked"'),
+            3,
+        )
         self.assertContains(response, 'action="/facility/booking/?date=2026-07-21"')
         self.assertContains(response, 'name="return_view" value="day"')
         self.assertEqual(response.context['prev_day'], date(2026, 7, 20))
