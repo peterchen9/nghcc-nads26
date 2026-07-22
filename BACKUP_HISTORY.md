@@ -59,3 +59,15 @@
 - Feature commit: `cbedcfb`.
 - Deployment scope: `modules/facility/views.py` and `templates/facility/booking_daily_overview.html`; no database schema, booking data, Docker volume, or unrelated feature was changed.
 - Verification: six isolated Docker tests and Django checks passed; browser tests opened a prefilled new-booking form, a permission-aware existing-booking view, and an actual room image without submitting any form; the original eight bookings remained unchanged and no browser console errors were reported.
+
+## 2026-07-22 17:31:56 +08:00
+
+- Purpose: remove the visible room-map label and normalize all daily-overview time cells while retaining every interaction.
+- Remote backup: `/home/peterchen/backups/nads26-pre-daily-cell-fix-20260722-172029/`.
+- Local backup: `backups/nads26-pre-daily-cell-fix-20260722-172029/` (intentionally ignored by Git).
+- Remote pre-change archive SHA-256: `139a202fdb7a04ebbc69f430b3b91d3929f8b4021208f3f94a71febee5bcb67b`.
+- Local pre-change archive SHA-256: `5dd2ba6f388d9ad592f7fb01292ff5729b48dbc58532ab43f9fefcea97d755cb`.
+- Final deployment archive SHA-256: `18c1e0366cee1e195c16ad443f40aa022af0ec7a476281e455b0c0996301e90b`.
+- Feature commit: `82115ac1`.
+- Deployment scope: `templates/facility/booking_daily_overview.html` only; tests were updated locally, and no database schema, booking data, Docker volume, or unrelated feature was changed.
+- Verification: six isolated Docker tests and Django checks passed; production browser checks confirmed no visible map labels, no booking rowspans, equal empty/booked row heights, working new-booking/existing-booking/room-map dialogs, and no console errors. No form was submitted.
