@@ -1658,59 +1658,35 @@ def room_admin_page(request):
 
 
 def booking_page(request):
+    selected_date = _parse_date(request.GET.get('date'))
+
+    if request.method != 'POST':
+        return render(
+            request,
+            'facility/booking_daily_overview.html',
+            _daily_overview_context(request, selected_date),
+        )
+
     rooms = _rooms()
     rooms_by_id = {room['id']: room for room in rooms}
-    selected_date = _parse_date(request.GET.get('date'))
-    selected_room = request.GET.get('room')
-    try:
-        selected_room_id = int(selected_room) if selected_room else None
-    except ValueError:
-        selected_room_id = None
-
-    if request.method == 'POST':
-        action = request.POST.get('action')
-        if action == 'create':
-            selected_date, selected_room_id = _create_entry(request, rooms_by_id)
-        elif action == 'update':
-            selected_date, selected_room_id = _update_entry(request, rooms_by_id)
-        elif action == 'delete':
-            result = _delete_entry(request)
-            if result is not None:
-                return result
-        else:
-            return HttpResponseBadRequest('Unknown action')
-        query = f'?date={selected_date.isoformat()}'
-        redirect_path = (
-            '/facility/booking/day/'
-            if request.POST.get('return_view') == 'day'
-            else '/facility/booking/'
-        )
-        return redirect(redirect_path + query)
-
     selected_room_id = None
-    current_username = _current_username(request)
-    entries = _entries(selected_date, None, current_username)
-    prev_day = selected_date - timedelta(days=1)
-    next_day = selected_date + timedelta(days=1)
-    selected_room_obj = rooms_by_id.get(selected_room_id)
-    floor_sections = _build_floor_sections(rooms, entries, selected_date)
 
-    return render(request, 'facility/booking.html', {
-        'rooms': rooms,
-        'entries': entries,
-        'floor_sections': floor_sections,
-        'selected_date': selected_date,
-        'selected_weekday': WEEKDAY_NAMES[selected_date.weekday()],
-        'selected_room_id': selected_room_id,
-        'selected_room': selected_room_obj,
-        'prev_day': prev_day,
-        'next_day': next_day,
-        'default_creator': current_username,
-    })
+    action = request.POST.get('action')
+    if action == 'create':
+        selected_date, selected_room_id = _create_entry(request, rooms_by_id)
+    elif action == 'update':
+        selected_date, selected_room_id = _update_entry(request, rooms_by_id)
+    elif action == 'delete':
+        result = _delete_entry(request)
+        if result is not None:
+            return result
+    else:
+        return HttpResponseBadRequest('Unknown action')
+    query = f'?date={selected_date.isoformat()}'
+    return redirect('/facility/booking/' + query)
 
 
-def booking_daily_overview(request):
-    selected_date = _parse_date(request.GET.get('date'))
+def _daily_overview_context(request, selected_date):
     current_username = _current_username(request)
     rooms = _rooms()
     entries = _entries(selected_date, None, current_username)
@@ -1720,7 +1696,7 @@ def booking_daily_overview(request):
         selected_date,
     )
 
-    return render(request, 'facility/booking_daily_overview.html', {
+    return {
         'rooms': overview_rooms,
         'floor_groups': floor_groups,
         'rows': overview_rows,
@@ -1730,7 +1706,12 @@ def booking_daily_overview(request):
         'prev_day': selected_date - timedelta(days=1),
         'next_day': selected_date + timedelta(days=1),
         'default_creator': current_username,
-    })
+    }
+
+
+def booking_daily_overview(request):
+    selected_date = _parse_date(request.GET.get('date'))
+    return redirect(f'/facility/booking/?date={selected_date.isoformat()}')
 
 
 

@@ -80,12 +80,13 @@ class DailyOverviewHelperTests(SimpleTestCase):
 class DailyOverviewPageTests(TestCase):
     @patch('modules.facility.views._entries', return_value=sample_entries())
     @patch('modules.facility.views._rooms', return_value=sample_rooms())
-    def test_daily_overview_renders_selected_date(self, _rooms_mock, _entries_mock):
-        response = self.client.get(reverse('facility-booking-day'), {'date': '2026-07-21'})
+    def test_booking_page_renders_interactive_overview_as_single_entry(self, _rooms_mock, _entries_mock):
+        response = self.client.get(reverse('facility-booking'), {'date': '2026-07-21'})
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'facility/booking_daily_overview.html')
-        self.assertContains(response, '場地登記－當天總表')
+        self.assertTemplateNotUsed(response, 'facility/booking.html')
+        self.assertContains(response, '<h2>場地登記</h2>', html=True)
         self.assertContains(response, '2026-07-21')
         self.assertContains(response, '測試聚會')
         self.assertContains(response, 'writing-mode: vertical-rl')
@@ -101,13 +102,23 @@ class DailyOverviewPageTests(TestCase):
             3,
         )
         self.assertContains(response, 'action="/facility/booking/?date=2026-07-21"')
-        self.assertContains(response, 'name="return_view" value="day"')
+        self.assertNotContains(response, 'name="return_view"')
+        self.assertNotContains(response, '返回場地登記')
         self.assertEqual(response.context['prev_day'], date(2026, 7, 20))
         self.assertEqual(response.context['next_day'], date(2026, 7, 22))
 
+    def test_old_daily_overview_url_redirects_to_single_entry(self):
+        response = self.client.get(reverse('facility-booking-day'), {'date': '2026-07-21'})
+
+        self.assertRedirects(
+            response,
+            '/facility/booking/?date=2026-07-21',
+            fetch_redirect_response=False,
+        )
+
     @patch('modules.facility.views._create_entry', return_value=(date(2026, 7, 21), 1))
     @patch('modules.facility.views._rooms', return_value=sample_rooms())
-    def test_daily_overview_submission_returns_to_daily_view(self, _rooms_mock, _create_mock):
+    def test_obsolete_return_view_still_returns_to_single_entry(self, _rooms_mock, _create_mock):
         response = self.client.post(reverse('facility-booking'), {
             'action': 'create',
             'return_view': 'day',
@@ -117,7 +128,7 @@ class DailyOverviewPageTests(TestCase):
 
         self.assertRedirects(
             response,
-            '/facility/booking/day/?date=2026-07-21',
+            '/facility/booking/?date=2026-07-21',
             fetch_redirect_response=False,
         )
 
@@ -135,13 +146,3 @@ class DailyOverviewPageTests(TestCase):
             '/facility/booking/?date=2026-07-21',
             fetch_redirect_response=False,
         )
-
-    @patch('modules.facility.views._entries', return_value=sample_entries())
-    @patch('modules.facility.views._rooms', return_value=sample_rooms())
-    def test_booking_page_keeps_existing_page_and_adds_overview_link(self, _rooms_mock, _entries_mock):
-        response = self.client.get(reverse('facility-booking'), {'date': '2026-07-21'})
-
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'facility/booking.html')
-        self.assertContains(response, '/facility/booking/day/?date=2026-07-21')
-        self.assertContains(response, '當天總表')
