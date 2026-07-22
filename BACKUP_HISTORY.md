@@ -71,3 +71,16 @@
 - Feature commit: `82115ac1`.
 - Deployment scope: `templates/facility/booking_daily_overview.html` only; tests were updated locally, and no database schema, booking data, Docker volume, or unrelated feature was changed.
 - Verification: six isolated Docker tests and Django checks passed; production browser checks confirmed no visible map labels, no booking rowspans, equal empty/booked row heights, working new-booking/existing-booking/room-map dialogs, and no console errors. No form was submitted.
+
+## 2026-07-22 17:59:10 +08:00
+
+- Purpose: use the interactive all-room overview as the single facility-booking entry while preserving the previous dual-view design.
+- Preserved GitHub branch: `codex/facility-booking-dual-view-archive-20260722` at commit `3a15fbb2`.
+- Remote backup: `/home/peterchen/backups/nads26-pre-booking-single-entry-20260722-175452/`.
+- Local backup: `backups/nads26-pre-booking-single-entry-20260722-175452/` (intentionally ignored by Git).
+- Remote dual-view archive SHA-256: `44ba55845f4013d6f714059cd27d59a42319cbc6976e03becad27a38a28ad4fb`.
+- Local dual-view archive SHA-256: `deb3ff3a6ba510fa2aa4c5944247728c98720e2ae7b69647cba7214d19806bdb`.
+- Deployment archive SHA-256: `7be19eb4645ca4231d3525279fd366edd30f2adc6ac650cf9eed2972329ef452`.
+- Feature commit: `38ff948`.
+- Deployment scope: `modules/facility/views.py` and `templates/facility/booking_daily_overview.html`; the previous `templates/facility/booking.html` remains intact, and no database schema, booking data, Docker volume, or unrelated feature was changed.
+- Verification: six isolated Docker tests and Django checks passed; production checks confirmed `/facility/booking/` renders the interactive overview, the old `/facility/booking/day/` URL redirects with its date intact, booking and room-image dialogs work, and no console errors were reported. No form was submitted.
