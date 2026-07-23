@@ -32,42 +32,53 @@
         background: var(--accent-color);
     }
     .day-overview-toolbar {
-        position: sticky;
-        top: 76px;
+        position: relative;
         z-index: 25;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 16px;
-        flex-wrap: wrap;
-        padding: 16px 18px;
+        gap: 18px;
+        flex-wrap: nowrap;
+        padding: 12px 18px;
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 14px;
         background: rgba(47, 65, 86, 0.94);
         box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
         backdrop-filter: blur(12px);
     }
+    .day-overview-title {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-width: 0;
+    }
     .day-overview-title h2 {
-        margin: 0 0 5px;
+        flex: 0 0 auto;
+        margin: 0;
         font-size: 1.35rem;
+        white-space: nowrap;
     }
     .day-overview-subtitle {
         color: var(--text-secondary);
         font-size: 0.92rem;
+        white-space: nowrap;
     }
     .day-overview-actions,
     .day-overview-date-form {
         display: flex;
-        align-items: end;
+        align-items: center;
         gap: 8px;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
     }
+    .day-overview-actions { flex: 0 0 auto; }
     .day-overview-date-form label {
-        display: grid;
-        gap: 5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
         color: var(--text-secondary);
         font-size: 0.8rem;
         font-weight: 700;
+        white-space: nowrap;
     }
     .day-overview-date-form input {
         min-height: 38px;
@@ -106,13 +117,19 @@
         text-align: center;
         background: #354b63;
     }
+    .day-overview-table thead tr:first-child { height: 34px; }
     .day-overview-table thead tr:first-child th { top: 0; }
     .day-overview-table thead tr:nth-child(2) th { top: 34px; }
     .day-overview-floor {
         height: 34px;
+        min-height: 34px;
+        padding: 7px 6px !important;
         color: var(--accent-color) !important;
         font-size: 0.82rem;
+        line-height: 19px;
         letter-spacing: 0.04em;
+        white-space: nowrap;
+        overflow: visible;
     }
     .day-overview-time-head,
     .day-overview-time {
@@ -387,10 +404,26 @@
         text-align: center;
     }
     @media (max-width: 760px) {
-        .day-overview-toolbar { top: 66px; }
+        .day-overview-toolbar {
+            align-items: stretch;
+            flex-wrap: wrap;
+            padding: 12px;
+        }
+        .day-overview-title {
+            display: grid;
+            gap: 4px;
+        }
+        .day-overview-subtitle { white-space: normal; }
         .day-overview-actions { width: 100%; }
-        .day-overview-date-form { width: 100%; }
-        .day-overview-date-form label { flex: 1; }
+        .day-overview-date-form {
+            width: 100%;
+            flex-wrap: wrap;
+        }
+        .day-overview-date-form label {
+            display: grid;
+            flex: 1;
+            gap: 5px;
+        }
         .day-overview-date-form input { width: 100%; }
         .day-overview-table-wrap { max-height: calc(100vh - 310px); }
         .day-overview-modal-grid,
