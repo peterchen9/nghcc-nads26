@@ -61,14 +61,15 @@
         }
 
         .sidebar-header {
-            padding: 40px 30px;
+            padding: 14px 20px 12px;
             text-align: center;
+            flex-shrink: 0;
         }
 
         .sidebar-header h1 {
             margin: 0;
             font-family: 'Outfit', sans-serif;
-            font-size: 2.5rem;
+            font-size: 1.2rem;
             font-weight: 700;
             background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
             -webkit-background-clip: text;
@@ -162,9 +163,76 @@
         }
 
         .sidebar-logo {
-            width: 120px;
+            width: 80px;
             height: auto;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
+        }
+
+        .sidebar-tagline {
+            margin: 4px 0 0;
+            font-size: 0.75rem;
+            opacity: 0.6;
+        }
+
+        .user-profile {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            margin-top: 8px;
+            font-size: 0.72rem;
+        }
+
+        .user-menu-btn {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 3px 7px;
+            border: 0;
+            border-radius: 7px;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+        }
+
+        .user-menu-btn:hover,
+        .user-menu-btn:focus-visible {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .user-avatar {
+            width: 22px;
+            height: 22px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--sidebar-bg);
+            font-weight: bold;
+            flex: 0 0 auto;
+        }
+
+        .user-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 110;
+            margin-top: 6px;
+            min-width: 180px;
+            padding: 10px;
+            background: var(--sidebar-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            font-size: 0.85rem;
+            text-align: left;
+        }
+
+        .sidebar-login-link {
+            color: var(--accent-color);
+            text-decoration: none;
         }
 
         .nav-link:hover {
@@ -189,9 +257,9 @@
 
         header.top-bar {
             height: 70px;
-            display: flex;
+            display: none;
             align-items: center;
-            justify-content: space-between;
+            justify-content: flex-start;
             padding: 0 40px;
             background-color: rgba(47, 65, 86, 0.8);
             backdrop-filter: blur(10px);
@@ -331,10 +399,26 @@
                 display: flex;
             }
             header.top-bar {
+                display: flex;
+                height: 58px;
                 padding: 0 20px;
             }
             .content-area {
                 padding: 20px;
+            }
+
+            .account-toolbar,
+            .expense-toolbar,
+            .leave-toolbar,
+            .rooms-toolbar,
+            .pastoral-toolbar,
+            .admin-toolbar,
+            .maintenance-toolbar,
+            .budget-head,
+            .lan-sticky,
+            .wlan-sticky,
+            .content-area > .card > h2:first-child {
+                top: 58px !important;
             }
         }
 
@@ -387,13 +471,13 @@
         .leave-toolbar,
         .rooms-toolbar {
             position: sticky;
-            top: 70px;
+            top: 0;
             z-index: 70;
         }
 
         .content-area > .card > h2:first-child {
             position: sticky;
-            top: 70px;
+            top: 0;
             z-index: 70;
             margin: -30px -30px 20px;
             padding: 30px 30px 12px;
@@ -472,16 +556,15 @@
             }
 
             .sidebar-header {
-                padding: 18px 24px 14px !important;
+                padding: 14px 24px 12px !important;
             }
 
             .sidebar-logo {
-                width: 86px;
-                margin-bottom: 6px;
+                width: 80px;
             }
 
             .sidebar-header h1 {
-                font-size: 1.55rem !important;
+                font-size: 1.2rem !important;
                 line-height: 1.2;
             }
 
@@ -521,7 +604,7 @@
             }
 
             .user-profile span {
-                max-width: 42vw;
+                max-width: 46vw;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
@@ -608,10 +691,30 @@
                     <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
             </button>
-            <div class="sidebar-header" style="padding: 20px 30px; text-align: center;">
+            <div class="sidebar-header">
                 <img src="/static/images/logo.png" class="sidebar-logo" alt="Logo" onerror="this.style.display='none'">
-                <h1 style="font-size: 1.8rem;">{{ site_name }}</h1>
-                <p style="font-size: 0.75rem; opacity: 0.6; margin-top: 5px;">委身基督，發光發熱</p>
+                <h1>{{ site_name }}</h1>
+                <p class="sidebar-tagline">委身基督，發光發熱</p>
+                <div class="user-profile">
+                    {% if user.is_authenticated %}
+                        <button type="button" id="userMenuBtn" class="user-menu-btn" aria-haspopup="true" aria-expanded="false">
+                            <span class="user-avatar">{{ user.username|first|upper }}</span>
+                            <span>{{ user.username }}</span>
+                            <span aria-hidden="true">▼</span>
+                        </button>
+                        <div id="userDropdown" class="user-dropdown">
+                            <a href="/staff/password/" style="display: block; padding: 10px; color: var(--text-primary); text-decoration: none; border-radius: 8px;">修改密碼</a>
+                            <a href="/staff/profile/" style="display: block; padding: 10px; color: var(--text-primary); text-decoration: none; border-radius: 8px;">個人資料</a>
+                            <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 8px 0;">
+                            <form action="{% url 'logout' %}" method="post" id="logoutForm">
+                                {% csrf_token %}
+                                <button type="submit" style="width: 100%; text-align: left; background: none; border: none; padding: 10px; color: #f87171; cursor: pointer; font-family: inherit;">登出</button>
+                            </form>
+                        </div>
+                    {% else %}
+                        <a href="{% url 'login' %}?next=/" class="sidebar-login-link">登入</a>
+                    {% endif %}
+                </div>
             </div>
             <nav>
                 <ul class="nav-menu">
@@ -659,30 +762,6 @@
                         <line x1="3" y1="18" x2="21" y2="18"></line>
                     </svg>
                 </button>
-                <div class="search-box"></div>
-                <div class="user-profile" style="position: relative; cursor: pointer;">
-                    {% if user.is_authenticated %}
-                        <div id="userMenuBtn" style="display: flex; align-items: center; gap: 10px;">
-                            <div style="width: 32px; height: 32px; background: var(--accent-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--sidebar-bg); font-weight: bold;">
-                                {{ user.username|first|upper }}
-                            </div>
-                            <span>{{ user.username }}</span>
-                            <span style="font-size: 0.8rem;">▼</span>
-                        </div>
-                        <!-- Dropdown Menu -->
-                        <div id="userDropdown" style="display: none; position: absolute; top: 100%; right: 0; background: var(--sidebar-bg); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 10px; min-width: 180px; margin-top: 10px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);">
-                            <a href="/staff/password/" style="display: block; padding: 10px; color: var(--text-primary); text-decoration: none; border-radius: 8px;">修改密碼</a>
-                            <a href="/staff/profile/" style="display: block; padding: 10px; color: var(--text-primary); text-decoration: none; border-radius: 8px;">個人資料</a>
-                            <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 8px 0;">
-                            <form action="{% url 'logout' %}" method="post" id="logoutForm">
-                                {% csrf_token %}
-                                <button type="submit" style="width: 100%; text-align: left; background: none; border: none; padding: 10px; color: #f87171; cursor: pointer; font-family: inherit;">登出</button>
-                            </form>
-                        </div>
-                    {% else %}
-                        <a href="{% url 'login' %}?next=/" style="color: var(--accent-color); text-decoration: none;">登入</a>
-                    {% endif %}
-                </div>
             </header>
 
             <main class="content-area">
@@ -854,10 +933,13 @@
         if (btn && dropdown) {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+                const isOpen = dropdown.style.display !== 'none' && dropdown.style.display !== '';
+                dropdown.style.display = isOpen ? 'none' : 'block';
+                btn.setAttribute('aria-expanded', String(!isOpen));
             });
             document.addEventListener('click', () => {
                 dropdown.style.display = 'none';
+                btn.setAttribute('aria-expanded', 'false');
             });
         }
 
