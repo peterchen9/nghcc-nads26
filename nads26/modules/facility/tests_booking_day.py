@@ -94,6 +94,8 @@ class DailyOverviewPageTests(TestCase):
         self.assertContains(response, 'class="day-overview-slot-button"')
         self.assertContains(response, 'class="day-overview-booked-button"')
         self.assertContains(response, 'class="day-overview-room-button"')
+        self.assertContains(response, 'style="--booking-row-count: 3; z-index: 5;"')
+        self.assertContains(response, 'height: calc(var(--booking-row-count, 1) * 27px)')
         self.assertNotContains(response, 'class="day-overview-capacity"')
         self.assertContains(response, '::-webkit-calendar-picker-indicator')
         self.assertContains(response, '場地圖')
