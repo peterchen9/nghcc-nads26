@@ -84,3 +84,15 @@
 - Feature commit: `38ff948`.
 - Deployment scope: `modules/facility/views.py` and `templates/facility/booking_daily_overview.html`; the previous `templates/facility/booking.html` remains intact, and no database schema, booking data, Docker volume, or unrelated feature was changed.
 - Verification: six isolated Docker tests and Django checks passed; production checks confirmed `/facility/booking/` renders the interactive overview, the old `/facility/booking/day/` URL redirects with its date intact, booking and room-image dialogs work, and no console errors were reported. No form was submitted.
+
+## 2026-07-24 11:41:37 +08:00
+
+- Purpose: make the booking date-picker icon yellow, hide room-capacity text from the overview header, and remove the obsolete `t1` room from the active 1F list.
+- Pre-change Git recovery branch: `codex/pre-room-capacity-cleanup-20260724` at commit `4bc78e2b`.
+- UI commit: `0c330a63`.
+- Room data source: the administration platform reads persistent room records from its local room database; rooms are maintained manually through the built-in room-maintenance page. No room-import or room-sync job exists in the application scripts or deployment-user schedule. Historical migration notes state that the old MRBS interface and data were moved into Docker.
+- `t1` pre-change state: active, capacity 22, with zero linked booking rows.
+- `t1` deployment action: changed only its active state to disabled; the original row and capacity remain stored for direct rollback.
+- A server-side pre-change backup of the affected templates and `t1` row was created. Its operational path and database identifiers are intentionally kept out of GitHub.
+- Rollback: switch to the pre-change Git branch and re-enable the preserved `t1` room record.
+- Verification: six isolated facility tests and Django checks passed; production returned HTTP 200, showed 35 active rooms, contained the yellow calendar-indicator rule, rendered no room-capacity labels, did not render `t1`, and contained no common fatal-error markers.
