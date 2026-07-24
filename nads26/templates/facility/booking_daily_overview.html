@@ -89,9 +89,16 @@
         min-height: 38px;
         padding: 7px 10px;
         color: var(--text-primary);
+        color-scheme: dark;
+        accent-color: #facc15;
         border: 1px solid rgba(255, 255, 255, 0.14);
         border-radius: 8px;
         background: rgba(8, 13, 20, 0.35);
+    }
+    .day-overview-date-form input[type="date"]::-webkit-calendar-picker-indicator {
+        opacity: 1;
+        cursor: pointer;
+        filter: invert(88%) sepia(98%) saturate(1650%) hue-rotate(348deg) brightness(105%) contrast(102%);
     }
     .day-overview-table-wrap {
         flex: 1 1 auto;
@@ -159,13 +166,6 @@
         line-height: 1;
         writing-mode: vertical-rl;
         text-orientation: upright;
-    }
-    .day-overview-capacity {
-        display: inline;
-        margin-top: 5px;
-        color: var(--text-secondary);
-        font-size: 0.7rem;
-        font-weight: 500;
     }
     .day-overview-room-button,
     .day-overview-slot-button,
@@ -503,7 +503,6 @@
                                         title="查看 {{ room.room_name }} 場地圖"
                                         aria-label="查看 {{ room.room_name }} 場地圖">
                                     {{ room.room_name }}
-                                    {% if room.capacity %}<span class="day-overview-capacity">{{ room.capacity }}人</span>{% endif %}
                                 </button>
                             </th>
                         {% endfor %}
