@@ -347,7 +347,7 @@ def _staff_name_aliases():
     try:
         from modules.eureka.models import StaffInfo
 
-        staff_records = StaffInfo.objects.select_related('user').filter(is_active=True)
+        staff_records = StaffInfo.objects.select_related('user').all()
         for staff in staff_records:
             canonical_name = _canonical_staff_name(staff.name, aliases)
             aliases[staff.name] = canonical_name
