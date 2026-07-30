@@ -11,7 +11,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from openpyxl import Workbook, load_workbook
 
-from .models import BudgetChangeLog, BudgetItem
+from .models import BUDGET_PAGE_CHOICES, BudgetChangeLog, BudgetItem
 
 FIELDS = [
     ('category', '分類'),
@@ -40,9 +40,10 @@ HEADER_ALIASES = {
     '已使用金額': 'used_amount',
     '使用金額': 'used_amount',
     '美美紀錄': 'used_amount',
+    '所屬分頁': 'page_group',
 }
 
-TRACKED_FIELDS = [field for field, _label in FORM_FIELDS]
+TRACKED_FIELDS = ['page_group'] + [field for field, _label in FORM_FIELDS]
 
 BUDGET_PAGE_GROUPS = [
     {
@@ -90,6 +91,26 @@ def _clean(value):
     return value
 
 
+def _page_group_for_category(category):
+    for page in BUDGET_PAGE_GROUPS:
+        if category in page['categories']:
+            return page['slug']
+    return BUDGET_PAGE_GROUPS[0]['slug']
+
+
+def _page_group_from_value(value, category=''):
+    cleaned_value = str(_clean(value) or '')
+    page_by_value = {
+        choice_value: choice_value
+        for choice_value, _choice_label in BUDGET_PAGE_CHOICES
+    }
+    page_by_value.update({
+        choice_label: choice_value
+        for choice_value, choice_label in BUDGET_PAGE_CHOICES
+    })
+    return page_by_value.get(cleaned_value, _page_group_for_category(category))
+
+
 def _decimal_or_none(value):
     value = _clean(value)
     if value == '':
@@ -102,13 +123,17 @@ def _decimal_or_none(value):
         return None
 
 
-def _payload_from_post(post):
+def _payload_from_post(post, current_page_group=None):
     payload = {}
     for field, _label in FORM_FIELDS:
         if field in ('budget_2026', 'used_amount'):
             payload[field] = _decimal_or_none(post.get(field))
         else:
             payload[field] = (post.get(field) or '').strip()
+    posted_page_group = post.get('page_group')
+    if posted_page_group is None and current_page_group is not None:
+        posted_page_group = current_page_group
+    payload['page_group'] = _page_group_from_value(posted_page_group, payload.get('category', ''))
     return payload
 
 
@@ -195,7 +220,14 @@ def import_budget_items(file_obj, request=None):
             col = mapping.get(field)
             value = sheet.cell(row_idx, col).value if col else None
             row_data[field] = _decimal_or_none(value) if field in ('budget_2026', 'used_amount') else str(_clean(value) or '')
-        if not any(row_data[field] not in ('', None) for field in TRACKED_FIELDS if field not in ('budget_2026', 'used_amount')) and row_data['budget_2026'] is None and row_data['used_amount'] is None:
+        page_group_col = mapping.get('page_group')
+        page_group_value = sheet.cell(row_idx, page_group_col).value if page_group_col else None
+        row_data['page_group'] = _page_group_from_value(page_group_value, row_data['category'])
+        if not any(
+            row_data[field] not in ('', None)
+            for field, _label in FORM_FIELDS
+            if field not in ('budget_2026', 'used_amount')
+        ) and row_data['budget_2026'] is None and row_data['used_amount'] is None:
             continue
         items.append(BudgetItem(**row_data))
 
@@ -216,11 +248,11 @@ def budget_list(request):
         if action == 'create':
             item = BudgetItem.objects.create(**_payload_from_post(request.POST))
             _log_change(request, 'create', item, None, _snapshot(item))
-            return redirect('budget-list')
+            return redirect(request.POST.get('next') or 'budget-list')
         if action == 'update':
             item = get_object_or_404(BudgetItem, pk=request.POST.get('item_id'))
             before = _snapshot(item)
-            for field, value in _payload_from_post(request.POST).items():
+            for field, value in _payload_from_post(request.POST, item.page_group).items():
                 setattr(item, field, value)
             item.save()
             _log_change(request, 'update', item, before, _snapshot(item))
@@ -231,35 +263,36 @@ def budget_list(request):
         return redirect('budget-list')
 
     query = (request.GET.get('q') or '').strip()
-    category_counts = dict(
+    page_counts = dict(
         BudgetItem.objects
-        .values_list('category')
+        .values_list('page_group')
         .annotate(item_count=Count('id'))
         .order_by()
     )
-    configured_categories = {
-        category
-        for page in BUDGET_PAGE_GROUPS
-        for category in page['categories']
-    }
-    unassigned_categories = tuple(
-        category for category in category_counts
-        if category not in configured_categories
+    valid_page_slugs = {page['slug'] for page in BUDGET_PAGE_GROUPS}
+    unassigned_count = sum(
+        count for slug, count in page_counts.items()
+        if slug not in valid_page_slugs
     )
     page_groups = []
     for index, configured_page in enumerate(BUDGET_PAGE_GROUPS):
-        categories = configured_page['categories']
-        if index == 0 and unassigned_categories:
-            categories += unassigned_categories
         page_groups.append({
             **configured_page,
-            'categories': categories,
-            'count': sum(category_counts.get(category, 0) for category in categories),
+            'count': (
+                page_counts.get(configured_page['slug'], 0)
+                + (unassigned_count if index == 0 else 0)
+            ),
         })
 
     page_by_slug = {page['slug']: page for page in page_groups}
     active_page = page_by_slug.get(request.GET.get('group'), page_groups[0])
-    items = BudgetItem.objects.filter(category__in=active_page['categories'])
+    if active_page['slug'] == BUDGET_PAGE_GROUPS[0]['slug']:
+        items = BudgetItem.objects.filter(
+            Q(page_group=active_page['slug']) |
+            ~Q(page_group__in=valid_page_slugs)
+        )
+    else:
+        items = BudgetItem.objects.filter(page_group=active_page['slug'])
     if query:
         items = items.filter(
             Q(budget_code__icontains=query) |
@@ -278,7 +311,7 @@ def budget_list(request):
         'active_page': active_page,
         'query': query,
         'total_count': items.count(),
-        'all_count': sum(category_counts.values()),
+        'all_count': BudgetItem.objects.count(),
         'logs': logs,
     })
 
@@ -288,7 +321,7 @@ def budget_edit(request, pk):
     item = get_object_or_404(BudgetItem, pk=pk)
     if request.method == 'POST':
         before = _snapshot(item)
-        for field, value in _payload_from_post(request.POST).items():
+        for field, value in _payload_from_post(request.POST, item.page_group).items():
             setattr(item, field, value)
         item.save()
         _log_change(request, 'update', item, before, _snapshot(item))
@@ -310,7 +343,7 @@ def budget_export(request):
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = '預算表維護'
-    sheet.append([label for _field, label in FORM_FIELDS] + ['使用比例', '餘額'])
+    sheet.append([label for _field, label in FORM_FIELDS] + ['所屬分頁', '使用比例', '餘額'])
     for item in BudgetItem.objects.order_by('id'):
         ratio = item.usage_ratio
         sheet.append([
@@ -324,6 +357,7 @@ def budget_export(request):
             float(item.budget_2026) if item.budget_2026 is not None else None,
             float(item.used_amount) if item.used_amount is not None else None,
             item.accounting_subject,
+            item.get_page_group_display(),
             float(ratio) / 100 if ratio is not None else None,
             float(item.balance),
         ])

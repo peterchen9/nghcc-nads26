@@ -16,7 +16,8 @@
     .budget-btn.secondary, .budget-file-label { background: rgba(255,255,255,0.12); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.12); }
     .budget-btn.danger { background: rgba(248,113,113,0.18); color: #fecaca; border: 1px solid rgba(248,113,113,0.35); }
     .budget-file-label input { display: none; }
-    .budget-input, .budget-textarea { width: 100%; box-sizing: border-box; border-radius: 7px; border: 1px solid rgba(255,255,255,0.12); background: rgba(15,23,42,0.35); color: var(--text-primary); padding: 8px 9px; font-family: inherit; font-size: 0.88rem; }
+    .budget-input, .budget-textarea, .budget-select { width: 100%; box-sizing: border-box; border-radius: 7px; border: 1px solid rgba(255,255,255,0.12); background: rgba(15,23,42,0.35); color: var(--text-primary); padding: 8px 9px; font-family: inherit; font-size: 0.88rem; }
+    .budget-select option { background: #31465f; color: var(--text-primary); }
     .budget-textarea { min-height: 84px; resize: vertical; }
     .budget-search .budget-input { min-width: 300px; }
     .budget-category-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: thin; }
@@ -133,9 +134,18 @@
     <form method="post">
         {% csrf_token %}
         <input type="hidden" name="action" value="create">
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
         <div class="dialog-head"><h3>新增預算項目</h3><button class="budget-btn secondary" type="button" onclick="this.closest('dialog').close()">關閉</button></div>
         <div class="dialog-body">
             <div class="budget-form-grid">
+                <div class="budget-field">
+                    <label for="new_page_group">所屬分頁</label>
+                    <select class="budget-select" id="new_page_group" name="page_group" required>
+                        {% for page in page_groups %}
+                        <option value="{{ page.slug }}"{% if page.slug == active_page.slug %} selected{% endif %}>{{ page.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 {% for field, label in form_fields %}
                 <div class="budget-field">
                     <label for="new_{{ field }}">{{ label }}</label>
@@ -164,6 +174,14 @@
         <div class="dialog-head"><h3>修改 {{ item.budget_code }} {{ item.ministry }}</h3><button class="budget-btn secondary" type="button" onclick="this.closest('dialog').close()">關閉</button></div>
         <div class="dialog-body">
             <div class="budget-form-grid">
+                <div class="budget-field">
+                    <label for="page_group_{{ item.id }}">所屬分頁</label>
+                    <select class="budget-select" id="page_group_{{ item.id }}" name="page_group" required>
+                        {% for page in page_groups %}
+                        <option value="{{ page.slug }}"{% if page.slug == item.page_group %} selected{% endif %}>{{ page.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 <div class="budget-field"><label>分類</label><input class="budget-input" name="category" value="{{ item.category }}"></div>
                 <div class="budget-field"><label>2026預算代號</label><input class="budget-input" name="budget_code" value="{{ item.budget_code }}"></div>
                 <div class="budget-field"><label>事工</label><input class="budget-input" name="ministry" value="{{ item.ministry }}"></div>
