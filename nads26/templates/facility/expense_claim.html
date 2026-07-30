@@ -24,13 +24,11 @@
     .claim-history-table th, .claim-history-table td { border-bottom: 1px solid rgba(255,255,255,0.08); padding: 10px 12px; text-align: left; vertical-align: middle; }
     .claim-history-table th { position: sticky; top: 0; z-index: 1; color: var(--accent-color); background: #26384d; font-size: 0.86rem; }
     .claim-history-table tr:last-child td { border-bottom: 0; }
-    .claim-no-cell { white-space: nowrap; }
     .claim-history-table .claim-no { color: var(--accent-color); font-weight: 800; }
-    .claim-no-actions { display: flex; align-items: center; gap: 10px; }
-    .claim-pdf-link { color: #bfdbfe; font-size: 0.82rem; font-weight: 800; text-decoration: none; }
-    .claim-pdf-link:hover, .claim-pdf-link:focus-visible { color: #fff; text-decoration: underline; }
-    .history-actions { display: flex; justify-content: flex-end; gap: 8px; }
-    .accepted-note { color: var(--text-secondary); font-size: 0.82rem; }
+    .history-action-column { width: 240px; text-align: center !important; }
+    .history-actions { display: flex; justify-content: center; gap: 8px; white-space: nowrap; }
+    .history-actions .btn { width: 64px; padding-right: 8px; padding-left: 8px; }
+    .accepted-note { color: var(--text-secondary); font-size: 0.82rem; text-align: center; }
     .modal-backdrop { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; padding: 18px; background: rgba(0,0,0,0.56); }
     .modal-backdrop.open { display: flex; }
     .expense-modal { width: min(1120px, 100%); max-height: calc(100vh - 36px); display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; background: #33485f; box-shadow: 0 24px 70px rgba(0,0,0,0.42); }
@@ -96,22 +94,18 @@
         <div class="claim-history-scroll">
             <table class="claim-history-table">
                 <thead>
-                    <tr><th>申請者</th><th>單號</th><th>日期</th><th>總金額</th><th>操作</th></tr>
+                    <tr><th>申請者</th><th>單號</th><th>日期</th><th>總金額</th><th class="history-action-column">操作</th></tr>
                 </thead>
                 <tbody>
                     {% for history_claim in claim_history %}
                         <tr>
                             <td>{{ history_claim.applicant }}</td>
-                            <td class="claim-no-cell">
-                                <div class="claim-no-actions">
-                                    <span class="claim-no">{{ history_claim.claim_no }}</span>
-                                    <a class="claim-pdf-link" href="{{ expense_claim_base_path }}/{{ history_claim.claim_no }}/voucher.pdf" target="_blank" rel="noopener">列印PDF單據</a>
-                                </div>
-                            </td>
+                            <td class="claim-no">{{ history_claim.claim_no }}</td>
                             <td>{{ history_claim.request_date|date:"Y-m-d" }}</td>
                             <td>{{ history_claim.total_amount }}</td>
-                            <td>
+                            <td class="history-action-column">
                                 <div class="history-actions">
+                                    <a class="btn" href="{{ expense_claim_base_path }}/{{ history_claim.claim_no }}/voucher.pdf" target="_blank" rel="noopener">列印</a>
                                     <a class="btn" href="{{ expense_claim_base_path }}/?copy={{ history_claim.claim_no }}">複製</a>
                                     {% if history_claim.accepted_at %}
                                         <span class="btn disabled" title="已被後續流程接受，不能修改">修改</span>
