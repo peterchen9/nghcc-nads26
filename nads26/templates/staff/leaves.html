@@ -153,7 +153,6 @@
         --team-date-column-width: 39px;
         --team-staff-column-width: 28px;
         width: max-content;
-        min-width: 100%;
         border-collapse: separate;
         border-spacing: 0;
         color: var(--text-primary);
@@ -161,6 +160,7 @@
     }
     .team-month-table th,
     .team-month-table td {
+        box-sizing: border-box;
         border-right: 1px solid rgba(255,255,255,0.1);
         border-bottom: 1px solid rgba(255,255,255,0.1);
     }
