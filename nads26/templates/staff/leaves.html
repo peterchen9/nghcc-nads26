@@ -911,6 +911,7 @@
 (() => {
     const entries = JSON.parse('{{ entries_json|escapejs }}');
     const staffNames = JSON.parse('{{ staff_names_json|escapejs }}');
+    const staffNameAliases = JSON.parse('{{ staff_name_aliases_json|escapejs }}');
     const churchEntries = JSON.parse('{{ church_calendar_entries_json|escapejs }}');
     const currentUser = '{{ current_user|escapejs }}';
     const currentStaffName = '{{ current_staff_name|escapejs }}';
@@ -951,39 +952,37 @@
         return currentUserAliases.includes(entry.staff_user) || currentUserAliases.includes(entry.staff_name);
     }
 
+    function canonicalStaffName(staffName) {
+        return staffNameAliases[staffName] || staffName;
+    }
+
+    function isCurrentStaffName(staffName) {
+        const canonicalName = canonicalStaffName(staffName);
+        return currentUserAliases.some((alias) => canonicalStaffName(alias) === canonicalName);
+    }
+
     function entriesForDate(date) {
         return entries.filter((entry) => entry.leave_date === date);
     }
 
     function leaveForStaff(date, staffName, part) {
-        const staffAliases = currentUserAliases.includes(staffName)
-            ? currentUserAliases
-            : [staffName];
+        const canonicalName = canonicalStaffName(staffName);
         return entries.find((entry) => {
             return entry.leave_date === date
                 && entry.day_part === part
-                && (staffAliases.includes(entry.staff_name) || staffAliases.includes(entry.staff_user));
+                && [entry.staff_name, entry.staff_user]
+                    .filter(Boolean)
+                    .some((name) => canonicalStaffName(name) === canonicalName);
         });
     }
 
     function normalizedStaffNames() {
         const normalized = [];
-        let currentStaffInserted = false;
 
         staffNames.forEach((staffName) => {
-            if (currentUserAliases.includes(staffName)) {
-                if (!currentStaffInserted) {
-                    normalized.push(currentStaffName || staffName);
-                    currentStaffInserted = true;
-                }
-                return;
-            }
-            if (!normalized.includes(staffName)) normalized.push(staffName);
+            const canonicalName = canonicalStaffName(staffName);
+            if (canonicalName && !normalized.includes(canonicalName)) normalized.push(canonicalName);
         });
-
-        if (!currentStaffInserted && currentStaffName) {
-            normalized.unshift(currentStaffName);
-        }
         return normalized;
     }
 
@@ -1019,7 +1018,7 @@
         teamStaffNames.forEach((staffName) => {
             const header = document.createElement('th');
             header.className = 'team-staff-head';
-            if (currentUserAliases.includes(staffName)) header.classList.add('current');
+            if (isCurrentStaffName(staffName)) header.classList.add('current');
             header.scope = 'col';
             header.textContent = staffName;
             header.title = staffName;
@@ -1060,7 +1059,7 @@
                     }
                     slot.title = `${staffName} ${date} ${partLabels[part]}：${entry ? `${entry.code}${entry.description ? `－${entry.description}` : ''}` : '上班'}`;
 
-                    if (currentUserAliases.includes(staffName)) {
+                    if (isCurrentStaffName(staffName)) {
                         slot.classList.add('editable');
                         slot.tabIndex = 0;
                         slot.setAttribute('role', 'button');
@@ -1108,7 +1107,7 @@
         });
 
         statusList.innerHTML = '';
-        const visibleStaff = staffNames.filter((name) => !currentUserAliases.includes(name));
+        const visibleStaff = normalizedStaffNames().filter((name) => !isCurrentStaffName(name));
         if (!visibleStaff.length) {
             statusList.innerHTML = '<div class="empty-state">目前沒有同工名單。</div>';
             return;

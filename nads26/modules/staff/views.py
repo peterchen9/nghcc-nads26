@@ -43,6 +43,31 @@ STAFF_LEAVE_SHEET_GIDS = {
 }
 LEAVE_CODES = {'補', '休', '特', '公', '其他'}
 LEAVE_PARTS = {'am': '上午', 'pm': '下午'}
+STAFF_LEAVE_DISPLAY_ORDER = [
+    '明月',
+    '德官',
+    '明珠',
+    '玉筍',
+    '宜庭',
+    '仲甫',
+    '慕聖',
+    '沐恩',
+    '囿余',
+    '小慧',
+    '文正',
+    '美美',
+    '惠萍',
+    '依蓮',
+    '宗英',
+    '方正',
+    '慧芝',
+    '文秀',
+    '彼得陳',
+]
+STAFF_LEAVE_CANONICAL_NAMES = {
+    'peterchen': '彼得陳',
+    '潘傳': '彼得陳',
+}
 STAFF_USER_LEGACY_ALIASES = {
     'peterchen': ['潘傳'],
 }
@@ -274,6 +299,10 @@ def _staff_user_aliases(user):
         *STAFF_USER_LEGACY_ALIASES.get(username, []),
     ]
     return [alias for index, alias in enumerate(aliases) if alias and alias not in aliases[:index]]
+
+
+def _canonical_staff_name(name):
+    return STAFF_LEAVE_CANONICAL_NAMES.get(name, name)
 
 
 def _month_options(today):
@@ -628,9 +657,15 @@ def church_calendar_page(request):
 
 
 def _staff_names_for_month(month_start, entries):
-    names = _legacy_staff_names_for_month(month_start)
+    names = []
+    candidates = [
+        *STAFF_LEAVE_DISPLAY_ORDER,
+        *_legacy_staff_names_for_month(month_start),
+    ]
     for entry in entries:
-        name = entry.get('staff_name') or entry.get('staff_user') or ''
+        candidates.append(entry.get('staff_name') or entry.get('staff_user') or '')
+    for candidate in candidates:
+        name = _canonical_staff_name(candidate)
         if name and name not in names:
             names.append(name)
     return names
@@ -755,6 +790,7 @@ def leave_calendar_page(request):
         'calendar_weeks': _calendar_weeks(selected_month),
         'entries_json': json.dumps(entries, ensure_ascii=False),
         'staff_names_json': json.dumps(staff_names, ensure_ascii=False),
+        'staff_name_aliases_json': json.dumps(STAFF_LEAVE_CANONICAL_NAMES, ensure_ascii=False),
         'church_calendar_entries': church_calendar_entries,
         'church_calendar_entries_json': json.dumps(church_calendar_entries, ensure_ascii=False),
         'current_user': current_user,
