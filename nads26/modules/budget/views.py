@@ -5,9 +5,8 @@ import re
 import subprocess
 
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Min, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from openpyxl import Workbook, load_workbook
@@ -195,7 +194,34 @@ def budget_list(request):
         return redirect('budget-list')
 
     query = (request.GET.get('q') or '').strip()
-    items = BudgetItem.objects.all()
+    category_rows = list(
+        BudgetItem.objects
+        .values('category')
+        .annotate(item_count=Count('id'), first_item_id=Min('id'))
+        .order_by('first_item_id')
+    )
+    category_options = [
+        {
+            'name': row['category'] or '未分類',
+            'value': row['category'],
+            'query_value': row['category'] or '__blank__',
+            'count': row['item_count'],
+        }
+        for row in category_rows
+    ]
+
+    requested_category = request.GET.get('category')
+    if requested_category == '__blank__':
+        requested_category = ''
+    available_categories = {option['value'] for option in category_options}
+    if requested_category not in available_categories:
+        active_category = category_options[0]['value'] if category_options else None
+    else:
+        active_category = requested_category
+
+    items = BudgetItem.objects.none()
+    if active_category is not None:
+        items = BudgetItem.objects.filter(category=active_category)
     if query:
         items = items.filter(
             Q(budget_code__icontains=query) |
@@ -205,14 +231,17 @@ def budget_list(request):
             Q(accounting_subject__icontains=query)
         )
     items = items.order_by('id')
-    page_obj = Paginator(items, 50).get_page(request.GET.get('page'))
     logs = BudgetChangeLog.objects.select_related('changed_by', 'budget_item').order_by('-created_at', '-id')[:200]
     return render(request, 'budget/budget_list.html', {
-        'fields': FIELDS,
+        'fields': FIELDS[1:],
         'form_fields': FORM_FIELDS,
-        'page_obj': page_obj,
+        'items': items,
+        'category_options': category_options,
+        'active_category': active_category,
+        'active_category_query': active_category or '__blank__',
         'query': query,
         'total_count': items.count(),
+        'all_count': sum(option['count'] for option in category_options),
         'logs': logs,
     })
 
