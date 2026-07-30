@@ -6,7 +6,7 @@ import subprocess
 
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Count, Min, Q
+from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from openpyxl import Workbook, load_workbook
@@ -43,6 +43,43 @@ HEADER_ALIASES = {
 }
 
 TRACKED_FIELDS = [field for field, _label in FORM_FIELDS]
+
+BUDGET_PAGE_GROUPS = [
+    {
+        'slug': 'staff-special-reserve',
+        'name': '同工-特別-預備',
+        'categories': ('人事薪資', '全職同工', '董執團隊', '特別計畫', '預備金', '國度基金'),
+    },
+    {'slug': 'administration', 'name': '行政', 'categories': ('行政部',)},
+    {'slug': 'worship', 'name': '崇拜', 'categories': ('崇拜部',)},
+    {'slug': 'education', 'name': '教育', 'categories': ('教育部',)},
+    {'slug': 'mission', 'name': '宣教', 'categories': ('宣教部',)},
+    {'slug': 'care', 'name': '關懷', 'categories': ('關懷部',)},
+    {'slug': 'counseling', 'name': '輔導', 'categories': ('輔導部',)},
+    {'slug': 'technology', 'name': '科技', 'categories': ('科技服務部',)},
+    {
+        'slug': 'gospel',
+        'name': '福音',
+        'categories': ('重修舊好志工團', '伯利恆糧食之家\n(BLH)'),
+    },
+    {
+        'slug': 'pastoral-one',
+        'name': '牧區一',
+        'categories': (
+            '牧區處\nPA', '二魚', '多多牧區', '清一牧區', '清二牧區', '幸福牧區',
+            '百合A區', '百合B區', '百合C區', '橄欖樹牧區', '青草地牧區',
+            '青橄欖', '房角石牧區',
+        ),
+    },
+    {
+        'slug': 'pastoral-two',
+        'name': '牧區二',
+        'categories': (
+            'young牧區', '兒童牧區', '百基拉牧區', '三一牧區', '蒙愛查經團契',
+            '弟兄會', '加樂團契', '蒙恩團契',
+        ),
+    },
+]
 
 
 def _clean(value):
@@ -194,34 +231,35 @@ def budget_list(request):
         return redirect('budget-list')
 
     query = (request.GET.get('q') or '').strip()
-    category_rows = list(
+    category_counts = dict(
         BudgetItem.objects
-        .values('category')
-        .annotate(item_count=Count('id'), first_item_id=Min('id'))
-        .order_by('first_item_id')
+        .values_list('category')
+        .annotate(item_count=Count('id'))
+        .order_by()
     )
-    category_options = [
-        {
-            'name': row['category'] or '未分類',
-            'value': row['category'],
-            'query_value': row['category'] or '__blank__',
-            'count': row['item_count'],
-        }
-        for row in category_rows
-    ]
+    configured_categories = {
+        category
+        for page in BUDGET_PAGE_GROUPS
+        for category in page['categories']
+    }
+    unassigned_categories = tuple(
+        category for category in category_counts
+        if category not in configured_categories
+    )
+    page_groups = []
+    for index, configured_page in enumerate(BUDGET_PAGE_GROUPS):
+        categories = configured_page['categories']
+        if index == 0 and unassigned_categories:
+            categories += unassigned_categories
+        page_groups.append({
+            **configured_page,
+            'categories': categories,
+            'count': sum(category_counts.get(category, 0) for category in categories),
+        })
 
-    requested_category = request.GET.get('category')
-    if requested_category == '__blank__':
-        requested_category = ''
-    available_categories = {option['value'] for option in category_options}
-    if requested_category not in available_categories:
-        active_category = category_options[0]['value'] if category_options else None
-    else:
-        active_category = requested_category
-
-    items = BudgetItem.objects.none()
-    if active_category is not None:
-        items = BudgetItem.objects.filter(category=active_category)
+    page_by_slug = {page['slug']: page for page in page_groups}
+    active_page = page_by_slug.get(request.GET.get('group'), page_groups[0])
+    items = BudgetItem.objects.filter(category__in=active_page['categories'])
     if query:
         items = items.filter(
             Q(budget_code__icontains=query) |
@@ -233,15 +271,14 @@ def budget_list(request):
     items = items.order_by('id')
     logs = BudgetChangeLog.objects.select_related('changed_by', 'budget_item').order_by('-created_at', '-id')[:200]
     return render(request, 'budget/budget_list.html', {
-        'fields': FIELDS[1:],
+        'fields': FIELDS,
         'form_fields': FORM_FIELDS,
         'items': items,
-        'category_options': category_options,
-        'active_category': active_category,
-        'active_category_query': active_category or '__blank__',
+        'page_groups': page_groups,
+        'active_page': active_page,
         'query': query,
         'total_count': items.count(),
-        'all_count': sum(option['count'] for option in category_options),
+        'all_count': sum(category_counts.values()),
         'logs': logs,
     })
 
