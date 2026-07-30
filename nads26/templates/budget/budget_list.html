@@ -43,6 +43,8 @@
     .budget-field { display: flex; flex-direction: column; gap: 6px; }
     .budget-field label { color: #d8e8fb; font-size: 0.8rem; font-weight: 700; }
     .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 16px; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.08); }
+    .dialog-actions.split { justify-content: space-between; flex-wrap: wrap; }
+    .dialog-action-group { display: flex; gap: 8px; }
     .log-list { display: grid; gap: 10px; }
     .log-item { border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; background: rgba(15,23,42,0.22); }
     .log-meta { display: flex; flex-wrap: wrap; gap: 10px; color: #d8e8fb; font-size: 0.86rem; margin-bottom: 8px; }
@@ -174,7 +176,15 @@
                 <div class="budget-field"><label>會計科目</label><input class="budget-input" name="accounting_subject" value="{{ item.accounting_subject }}"></div>
             </div>
         </div>
-        <div class="dialog-actions"><button class="budget-btn secondary" type="button" onclick="this.closest('dialog').close()">取消</button><button class="budget-btn" type="submit">儲存</button></div>
+        <div class="dialog-actions split">
+            <button class="budget-btn danger" type="submit"
+                    formaction="{% url 'budget-delete' item.id %}" formmethod="post" formnovalidate
+                    onclick="return confirm('確定要刪除此項預算？此動作無法復原。')">刪除此項預算</button>
+            <div class="dialog-action-group">
+                <button class="budget-btn secondary" type="button" onclick="this.closest('dialog').close()">取消</button>
+                <button class="budget-btn" type="submit">儲存</button>
+            </div>
+        </div>
     </form>
 </dialog>
 {% endfor %}

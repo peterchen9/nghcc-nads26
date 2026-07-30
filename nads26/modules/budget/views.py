@@ -302,7 +302,7 @@ def budget_delete(request, pk):
         before = _snapshot(item)
         _log_change(request, 'delete', item, before, None)
         item.delete()
-    return redirect('budget-list')
+    return redirect(request.POST.get('next') or 'budget-list')
 
 
 @login_required
