@@ -43,6 +43,9 @@ STAFF_LEAVE_SHEET_GIDS = {
 }
 LEAVE_CODES = {'補', '休', '特', '公', '其他'}
 LEAVE_PARTS = {'am': '上午', 'pm': '下午'}
+STAFF_USER_LEGACY_ALIASES = {
+    'peterchen': ['潘傳'],
+}
 LEGACY_HEADER_SKIP_NAMES = {'\u661f\u671f', '\u6559\u6703\u884c\u653f'}
 LEGACY_OTHER_CODE = '\u5176\u4ed6'
 LEGACY_CODE_PREFIXES = {'\u88dc', '\u4f11', '\u7279', '\u516c'}
@@ -264,7 +267,12 @@ def _staff_display_name(user):
 
 
 def _staff_user_aliases(user):
-    aliases = [user.get_username(), _staff_display_name(user)]
+    username = user.get_username()
+    aliases = [
+        username,
+        _staff_display_name(user),
+        *STAFF_USER_LEGACY_ALIASES.get(username, []),
+    ]
     return [alias for index, alias in enumerate(aliases) if alias and alias not in aliases[:index]]
 
 

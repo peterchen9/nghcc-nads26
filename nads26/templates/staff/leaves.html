@@ -197,17 +197,23 @@
         font-size: 0.7rem;
     }
     .team-staff-head {
-        min-width: 68px;
-        max-width: 86px;
+        width: 46px;
+        min-width: 46px;
+        max-width: 46px;
         overflow: hidden;
+        overflow-wrap: anywhere;
         text-overflow: ellipsis;
+        white-space: normal;
+        line-height: 1.08;
     }
     .team-staff-head.current {
         background: #365f68;
         color: #d5fff8;
     }
     .team-schedule-cell {
-        min-width: 68px;
+        width: 46px;
+        min-width: 46px;
+        max-width: 46px;
         padding: 0;
         background: rgba(255,255,255,0.018);
     }
@@ -907,6 +913,7 @@
     const staffNames = JSON.parse('{{ staff_names_json|escapejs }}');
     const churchEntries = JSON.parse('{{ church_calendar_entries_json|escapejs }}');
     const currentUser = '{{ current_user|escapejs }}';
+    const currentStaffName = '{{ current_staff_name|escapejs }}';
     const currentUserAliases = JSON.parse('{{ current_user_aliases_json|escapejs }}');
     const selectedMonth = '{{ selected_month|date:'Y-m'|escapejs }}';
     const initialDay = '{{ selected_day|date:'Y-m-d'|escapejs }}';
@@ -949,11 +956,35 @@
     }
 
     function leaveForStaff(date, staffName, part) {
+        const staffAliases = currentUserAliases.includes(staffName)
+            ? currentUserAliases
+            : [staffName];
         return entries.find((entry) => {
             return entry.leave_date === date
                 && entry.day_part === part
-                && (entry.staff_name === staffName || entry.staff_user === staffName);
+                && (staffAliases.includes(entry.staff_name) || staffAliases.includes(entry.staff_user));
         });
+    }
+
+    function normalizedStaffNames() {
+        const normalized = [];
+        let currentStaffInserted = false;
+
+        staffNames.forEach((staffName) => {
+            if (currentUserAliases.includes(staffName)) {
+                if (!currentStaffInserted) {
+                    normalized.push(currentStaffName || staffName);
+                    currentStaffInserted = true;
+                }
+                return;
+            }
+            if (!normalized.includes(staffName)) normalized.push(staffName);
+        });
+
+        if (!currentStaffInserted && currentStaffName) {
+            normalized.unshift(currentStaffName);
+        }
+        return normalized;
     }
 
     function setChip(chip, entry) {
@@ -977,6 +1008,7 @@
     function renderTeamMonthTable() {
         const [year, month] = selectedMonth.split('-').map(Number);
         const daysInMonth = new Date(year, month, 0).getDate();
+        const teamStaffNames = normalizedStaffNames();
         const headerRow = document.createElement('tr');
         const dateHeader = document.createElement('th');
         dateHeader.className = 'team-date-head';
@@ -984,7 +1016,7 @@
         dateHeader.textContent = '日期';
         headerRow.appendChild(dateHeader);
 
-        staffNames.forEach((staffName) => {
+        teamStaffNames.forEach((staffName) => {
             const header = document.createElement('th');
             header.className = 'team-staff-head';
             if (currentUserAliases.includes(staffName)) header.classList.add('current');
@@ -1008,7 +1040,7 @@
             dateCell.innerHTML = `${String(day).padStart(2, '0')}<span class="team-date-weekday">週${weekdayLabels[weekday]}</span>`;
             row.appendChild(dateCell);
 
-            staffNames.forEach((staffName) => {
+            teamStaffNames.forEach((staffName) => {
                 const cell = document.createElement('td');
                 cell.className = 'team-schedule-cell';
                 ['am', 'pm'].forEach((part) => {
@@ -1049,7 +1081,7 @@
             rows.appendChild(row);
         }
         teamMonthTable.tBodies[0].replaceChildren(rows);
-        document.getElementById('teamStaffCount').textContent = `${staffNames.length} 位同工`;
+        document.getElementById('teamStaffCount').textContent = `${teamStaffNames.length} 位同工`;
     }
 
     function setActiveView(view) {
