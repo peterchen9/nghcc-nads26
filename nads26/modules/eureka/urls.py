@@ -19,6 +19,7 @@ urlpatterns = [
     path('vacation/', views.vacation_view, name='vacation'),
     path('vacation/sync/', views.sync_vacation_view, name='vacation-sync'),
     path('staff/', views.staff_list_view, name='staff-list'),
+    path('staff/add/', views.add_staff_view, name='staff-add'),
     path('staff/edit/<int:staff_id>/', views.edit_staff_view, name='staff-edit'),
     path('seats/', views.seat_map_view, name='seats'),
     path('seats/save/', views.save_seat_map_view, name='seats-save'),

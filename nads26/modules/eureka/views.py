@@ -6,6 +6,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.http import FileResponse, Http404, HttpResponse
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.db.models import Q, Max, Count
 from django.contrib import messages
 from openpyxl import Workbook
@@ -907,11 +909,54 @@ def sync_vacation_view(request):
 
 from .models import StaffInfo
 
+
+def _staff_payload_from_post(post):
+    name = (post.get('name') or '').strip()
+    if not name:
+        raise ValueError("姓名為必填欄位。")
+
+    user_id = (post.get('user_id') or '').strip()
+    if user_id:
+        try:
+            user_id = int(user_id)
+        except ValueError as exc:
+            raise ValueError("連結的登入帳號無效。") from exc
+        if not User.objects.filter(pk=user_id, is_active=True).exists():
+            raise ValueError("找不到指定的有效登入帳號。")
+    else:
+        user_id = None
+
+    try:
+        annual_leave_quota = float(post.get('annual_leave_quota', '0') or 0.0)
+    except ValueError as exc:
+        raise ValueError("年度特休必須是數字。") from exc
+    if annual_leave_quota < 0:
+        raise ValueError("年度特休不可小於 0。")
+
+    return {
+        'name': name,
+        'identity_code': (post.get('identity_code') or '').strip(),
+        'email': (post.get('email') or '').strip(),
+        'cc_email': (post.get('cc_email') or '').strip(),
+        'onboard_date': (post.get('onboard_date') or '').strip() or None,
+        'employee_no': (post.get('employee_no') or '').strip(),
+        'mobile': (post.get('mobile') or '').strip(),
+        'seat': (post.get('seat') or '').strip(),
+        'locker_no': (post.get('locker_no') or '').strip(),
+        'bank_branch': (post.get('bank_branch') or '').strip(),
+        'bank_account': (post.get('bank_account') or '').strip(),
+        'user_id': user_id,
+        'annual_leave_quota': annual_leave_quota,
+        'is_active': post.get('is_active') == 'true',
+    }
+
+
 @login_required
 def staff_list_view(request):
     """同工基本資料與特休額度列表視圖"""
     can_view_staff = request.user.is_superuser or request.user.has_perm('eureka.view_staffinfo')
     can_edit_staff = request.user.is_superuser or request.user.has_perm('eureka.change_staffinfo')
+    can_add_staff = request.user.is_superuser or request.user.has_perm('eureka.add_staffinfo')
     if not can_view_staff:
         messages.error(request, "只有管理員可以存取同工資料。")
         return redirect('home')
@@ -934,13 +979,45 @@ def staff_list_view(request):
         )
 
     users = User.objects.filter(is_active=True).order_by('username')
+    next_staff_id = (StaffInfo.objects.aggregate(max_id=Max('staff_id'))['max_id'] or 0) + 1
 
     return render(request, 'eureka/staff_list.html', {
         'staff_list': staff_list,
         'query': query,
         'users': users,
         'can_edit_staff': can_edit_staff,
+        'can_add_staff': can_add_staff,
+        'next_staff_id': next_staff_id,
     })
+
+
+@login_required
+def add_staff_view(request):
+    """新增同工資料"""
+    if not (request.user.is_superuser or request.user.has_perm('eureka.add_staffinfo')):
+        messages.error(request, "只有管理員可以新增同工資料。")
+        return redirect('home')
+
+    if request.method == 'POST':
+        try:
+            staff_id = int((request.POST.get('staff_id') or '').strip())
+            if staff_id <= 0:
+                raise ValueError("同工編號必須是正整數。")
+            if StaffInfo.objects.filter(pk=staff_id).exists():
+                raise ValueError(f"同工編號 {staff_id} 已存在。")
+
+            with transaction.atomic():
+                staff = StaffInfo(
+                    staff_id=staff_id,
+                    **_staff_payload_from_post(request.POST),
+                )
+                staff.full_clean()
+                staff.save()
+            messages.success(request, f"已成功新增同工 {staff.name}（編號：{staff.staff_id}）。")
+        except (ValueError, ValidationError, IntegrityError) as exc:
+            messages.error(request, f"新增同工資料失敗：{exc}")
+
+    return redirect('eureka:staff-list')
 
 
 @login_required
@@ -953,37 +1030,13 @@ def edit_staff_view(request, staff_id):
     if request.method == 'POST':
         staff = get_object_or_404(StaffInfo, pk=staff_id)
         try:
-            staff.name = request.POST.get('name', '').strip()
-            staff.identity_code = request.POST.get('identity_code', '').strip()
-            staff.email = request.POST.get('email', '').strip()
-            staff.cc_email = request.POST.get('cc_email', '').strip()
-            
-            onboard_date_str = request.POST.get('onboard_date', '').strip()
-            if onboard_date_str:
-                staff.onboard_date = onboard_date_str
-            else:
-                staff.onboard_date = None
-                
-            staff.employee_no = request.POST.get('employee_no', '').strip()
-            staff.mobile = request.POST.get('mobile', '').strip()
-            staff.seat = request.POST.get('seat', '').strip()
-            staff.locker_no = request.POST.get('locker_no', '').strip()
-            staff.bank_branch = request.POST.get('bank_branch', '').strip()
-            staff.bank_account = request.POST.get('bank_account', '').strip()
-            user_id = request.POST.get('user_id', '').strip()
-            staff.user_id = int(user_id) if user_id else None
-            
-            try:
-                staff.annual_leave_quota = float(request.POST.get('annual_leave_quota', '0') or 0.0)
-            except ValueError:
-                staff.annual_leave_quota = 0.0
-                
-            staff.is_active = request.POST.get('is_active') == 'true'
-            
+            for field, value in _staff_payload_from_post(request.POST).items():
+                setattr(staff, field, value)
+            staff.full_clean()
             staff.save()
             messages.success(request, f"已成功更新同工 {staff.name} 的資料。")
-        except Exception as e:
-            messages.error(request, f"更新同工資料失敗: {e}")
+        except (ValueError, ValidationError, IntegrityError) as exc:
+            messages.error(request, f"更新同工資料失敗：{exc}")
             
     return redirect('eureka:staff-list')
 
