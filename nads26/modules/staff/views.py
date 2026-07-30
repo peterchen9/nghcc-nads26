@@ -359,6 +359,15 @@ def _staff_name_aliases():
                 if full_name:
                     aliases[full_name] = canonical_name
                     aliases[_compact_staff_name(full_name)] = canonical_name
+
+        for user in get_user_model().objects.filter(is_active=True):
+            full_name = user.get_full_name().strip()
+            canonical_name = _canonical_staff_name(full_name, aliases)
+            if canonical_name not in STAFF_LEAVE_DISPLAY_ORDER:
+                continue
+            aliases.setdefault(user.get_username(), canonical_name)
+            aliases.setdefault(full_name, canonical_name)
+            aliases.setdefault(_compact_staff_name(full_name), canonical_name)
     except (OperationalError, ProgrammingError):
         pass
     return aliases
