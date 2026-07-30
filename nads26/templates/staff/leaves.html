@@ -150,7 +150,8 @@
         scrollbar-gutter: stable;
     }
     .team-month-table {
-        --team-staff-column-width: 46px;
+        --team-date-column-width: 39px;
+        --team-staff-column-width: 28px;
         width: max-content;
         min-width: 100%;
         border-collapse: separate;
@@ -179,28 +180,32 @@
     .team-month-table .team-date-cell {
         position: sticky;
         left: 0;
-        min-width: 78px;
-        width: 78px;
+        min-width: var(--team-date-column-width);
+        width: var(--team-date-column-width);
+        max-width: var(--team-date-column-width);
     }
     .team-month-table .team-date-head {
         z-index: 6;
     }
     .team-month-table .team-date-cell {
         z-index: 3;
-        padding: 5px 8px;
+        padding: 4px 2px;
         background: #2c4056;
         font-weight: 800;
-        white-space: nowrap;
+        text-align: center;
     }
     .team-date-weekday {
-        margin-left: 5px;
+        display: block;
+        margin-left: 0;
         color: var(--text-secondary);
-        font-size: 0.7rem;
+        font-size: 0.62rem;
     }
     .team-staff-head {
         width: var(--team-staff-column-width);
         min-width: var(--team-staff-column-width);
         max-width: var(--team-staff-column-width);
+        padding-right: 1px !important;
+        padding-left: 1px !important;
         overflow: hidden;
         overflow-wrap: anywhere;
         text-overflow: ellipsis;
