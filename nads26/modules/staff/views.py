@@ -13,6 +13,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django import forms
 from django.db import connection, transaction
+from django.db.utils import OperationalError, ProgrammingError
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import redirect, render
 
@@ -65,11 +66,32 @@ STAFF_LEAVE_DISPLAY_ORDER = [
     '彼得陳',
 ]
 STAFF_LEAVE_CANONICAL_NAMES = {
+    '林明月': '明月',
+    '董德官': '德官',
+    '德官 董': '德官',
+    '德官董': '德官',
+    '羅明珠': '明珠',
+    '周玉筍': '玉筍',
+    '何宜庭': '宜庭',
+    '鄭仲甫': '仲甫',
+    '張慕聖': '慕聖',
+    '趙沐恩': '沐恩',
+    '陳囿余': '囿余',
+    '謝淑慧': '小慧',
+    '林文正': '文正',
+    '黃美美': '美美',
+    '張惠萍': '惠萍',
+    '陳依蓮': '依蓮',
+    '楊宗英': '宗英',
+    '施方正': '方正',
+    '方正 施': '方正',
+    '方正施': '方正',
+    '郭慧芝': '慧芝',
+    '蔡文秀': '文秀',
     'peterchen': '彼得陳',
     '潘傳': '彼得陳',
-}
-STAFF_USER_LEGACY_ALIASES = {
-    'peterchen': ['潘傳'],
+    '陳潘傳': '彼得陳',
+    '彼得 陳': '彼得陳',
 }
 LEGACY_HEADER_SKIP_NAMES = {'\u661f\u671f', '\u6559\u6703\u884c\u653f'}
 LEGACY_OTHER_CODE = '\u5176\u4ed6'
@@ -292,17 +314,54 @@ def _staff_display_name(user):
 
 
 def _staff_user_aliases(user):
+    alias_map = _staff_name_aliases()
     username = user.get_username()
-    aliases = [
-        username,
-        _staff_display_name(user),
-        *STAFF_USER_LEGACY_ALIASES.get(username, []),
-    ]
+    display_name = _staff_display_name(user)
+    canonical_name = _canonical_staff_name(username, alias_map)
+    if canonical_name == username:
+        canonical_name = _canonical_staff_name(display_name, alias_map)
+    aliases = [username, display_name, canonical_name]
+    aliases.extend(
+        alias
+        for alias, canonical in alias_map.items()
+        if canonical == canonical_name
+    )
     return [alias for index, alias in enumerate(aliases) if alias and alias not in aliases[:index]]
 
 
-def _canonical_staff_name(name):
-    return STAFF_LEAVE_CANONICAL_NAMES.get(name, name)
+def _compact_staff_name(name):
+    return ''.join(str(name or '').split())
+
+
+def _canonical_staff_name(name, alias_map=None):
+    alias_map = alias_map or STAFF_LEAVE_CANONICAL_NAMES
+    text = str(name or '').strip()
+    compact = _compact_staff_name(text)
+    return alias_map.get(text, alias_map.get(compact, text))
+
+
+def _staff_name_aliases():
+    aliases = dict(STAFF_LEAVE_CANONICAL_NAMES)
+    for alias, canonical in list(aliases.items()):
+        aliases.setdefault(_compact_staff_name(alias), canonical)
+    try:
+        from modules.eureka.models import StaffInfo
+
+        staff_records = StaffInfo.objects.select_related('user').filter(is_active=True)
+        for staff in staff_records:
+            canonical_name = _canonical_staff_name(staff.name, aliases)
+            aliases[staff.name] = canonical_name
+            aliases[_compact_staff_name(staff.name)] = canonical_name
+            if staff.user_id:
+                username = staff.user.get_username()
+                full_name = staff.user.get_full_name().strip()
+                aliases[username] = canonical_name
+                if full_name:
+                    aliases[full_name] = canonical_name
+                    aliases[_compact_staff_name(full_name)] = canonical_name
+    except (OperationalError, ProgrammingError):
+        pass
+    return aliases
 
 
 def _month_options(today):
@@ -656,7 +715,8 @@ def church_calendar_page(request):
     return render(request, 'staff/calendar.html', context)
 
 
-def _staff_names_for_month(month_start, entries):
+def _staff_names_for_month(month_start, entries, alias_map=None):
+    alias_map = alias_map or _staff_name_aliases()
     names = []
     candidates = [
         *STAFF_LEAVE_DISPLAY_ORDER,
@@ -665,7 +725,7 @@ def _staff_names_for_month(month_start, entries):
     for entry in entries:
         candidates.append(entry.get('staff_name') or entry.get('staff_user') or '')
     for candidate in candidates:
-        name = _canonical_staff_name(candidate)
+        name = _canonical_staff_name(candidate, alias_map)
         if name and name not in names:
             names.append(name)
     return names
@@ -781,7 +841,8 @@ def leave_calendar_page(request):
     today = date.today()
     entries = _leave_entries(selected_month)
     church_calendar_entries = _church_calendar_entries(selected_month)
-    staff_names = _staff_names_for_month(selected_month, entries)
+    staff_name_aliases = _staff_name_aliases()
+    staff_names = _staff_names_for_month(selected_month, entries, staff_name_aliases)
     current_user = request.user.get_username()
     context = {
         'month_options': _month_options(today),
@@ -790,7 +851,7 @@ def leave_calendar_page(request):
         'calendar_weeks': _calendar_weeks(selected_month),
         'entries_json': json.dumps(entries, ensure_ascii=False),
         'staff_names_json': json.dumps(staff_names, ensure_ascii=False),
-        'staff_name_aliases_json': json.dumps(STAFF_LEAVE_CANONICAL_NAMES, ensure_ascii=False),
+        'staff_name_aliases_json': json.dumps(staff_name_aliases, ensure_ascii=False),
         'church_calendar_entries': church_calendar_entries,
         'church_calendar_entries_json': json.dumps(church_calendar_entries, ensure_ascii=False),
         'current_user': current_user,

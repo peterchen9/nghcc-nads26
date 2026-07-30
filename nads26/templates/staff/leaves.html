@@ -150,6 +150,7 @@
         scrollbar-gutter: stable;
     }
     .team-month-table {
+        --team-staff-column-width: 46px;
         width: max-content;
         min-width: 100%;
         border-collapse: separate;
@@ -197,9 +198,9 @@
         font-size: 0.7rem;
     }
     .team-staff-head {
-        width: 46px;
-        min-width: 46px;
-        max-width: 46px;
+        width: var(--team-staff-column-width);
+        min-width: var(--team-staff-column-width);
+        max-width: var(--team-staff-column-width);
         overflow: hidden;
         overflow-wrap: anywhere;
         text-overflow: ellipsis;
@@ -211,9 +212,9 @@
         color: #d5fff8;
     }
     .team-schedule-cell {
-        width: 46px;
-        min-width: 46px;
-        max-width: 46px;
+        width: var(--team-staff-column-width);
+        min-width: var(--team-staff-column-width);
+        max-width: var(--team-staff-column-width);
         padding: 0;
         background: rgba(255,255,255,0.018);
     }
