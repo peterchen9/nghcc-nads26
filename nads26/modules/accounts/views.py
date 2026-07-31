@@ -7,7 +7,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from modules.menu.models import MenuItem
-from modules.menu.permissions import expand_menu_ids, user_can_access_route
+from modules.menu.permissions import (
+    expand_menu_ids,
+    standard_user_menu_items,
+    user_can_access_route,
+)
 
 def has_user_mgmt_permission(user):
     if not user.is_authenticated:
@@ -89,6 +93,7 @@ def user_create(request):
     profile.department = department
     profile.role = role
     profile.save()
+    profile.allowed_menu_items.set(standard_user_menu_items())
 
     return Response({'status': 'success', 'user_id': user.id})
 

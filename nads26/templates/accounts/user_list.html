@@ -969,7 +969,7 @@
                 cb.type = 'checkbox';
                 cb.id = `perm-item-${child.id}`;
                 cb.value = child.id;
-                cb.checked = allowedIds.includes(child.id) || allowedIds.includes(item.id);
+                cb.checked = allowedIds.includes(child.id);
                 
                 cb.addEventListener('change', () => updateGroupCheckState(groupCheck, childrenDiv));
                 
