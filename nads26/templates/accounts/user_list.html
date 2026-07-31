@@ -13,7 +13,7 @@
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         backdrop-filter: blur(10px);
     }
-    
+
     .btn {
         padding: 10px 20px;
         border-radius: 10px;
@@ -26,33 +26,33 @@
         align-items: center;
         gap: 6px;
     }
-    
+
     .btn-primary {
         background: var(--accent-color);
         color: var(--sidebar-bg);
     }
-    
+
     .btn-primary:hover {
         background: #d0e7ff;
         transform: translateY(-2px);
         box-shadow: 0 5px 15px rgba(188, 220, 255, 0.3);
     }
-    
+
     .btn-secondary {
         background: rgba(255, 255, 255, 0.08);
         color: #fff;
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
-    
+
     .btn-secondary:hover {
         background: rgba(255, 255, 255, 0.15);
     }
-    
+
     .btn-danger {
         background: #ef4444;
         color: #fff;
     }
-    
+
     .btn-danger:hover {
         background: #f87171;
         transform: translateY(-2px);
@@ -93,6 +93,20 @@
         color: var(--text-secondary);
         font-weight: 600;
         font-size: 0.95rem;
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.2s;
+    }
+    .user-table th:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.02);
+    }
+    .user-table th:last-child {
+        cursor: default;
+    }
+    .user-table th:last-child:hover {
+        background: transparent;
+        color: var(--text-secondary);
     }
 
     .user-table td {
@@ -442,9 +456,14 @@
 <div class="user-card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px;">
         <h2>使用者管理</h2>
-        <button class="btn btn-primary" id="btnOpenCreateModal" onclick="openCreateModal()">
-            <span>➕</span> 新增使用者
-        </button>
+        <div style="display: flex; gap: 12px;">
+            <button class="btn btn-secondary" onclick="openIdentityPermModal()">
+                <span>🔑</span> 身分權限管理
+            </button>
+            <button class="btn btn-primary" id="btnOpenCreateModal" onclick="openCreateModal()">
+                <span>➕</span> 新增使用者
+            </button>
+        </div>
     </div>
 
     <!-- Search filtration bar -->
@@ -460,6 +479,8 @@
                     <th>ID</th>
                     <th>帳號</th>
                     <th>顯示名稱</th>
+                    <th>工號</th>
+                    <th>身分</th>
                     <th>部門</th>
                     <th>角色</th>
                     <th>Email</th>
@@ -474,6 +495,10 @@
                     <td>{{ u.id }}</td>
                     <td style="font-weight: 600;">{{ u.username }}</td>
                     <td>{{ u.profile.display_name|default:"-" }}</td>
+                    {% with staff=u.staff_infos.first %}
+                    <td>{{ staff.employee_no|default:"-" }}</td>
+                    <td>{{ staff.identity_code|default:"-" }}</td>
+                    {% endwith %}
                     <td>{{ u.profile.department|default:"-" }}</td>
                     <td>{{ u.profile.role|default:"-" }}</td>
                     <td>{{ u.email|default:"-" }}</td>
@@ -486,7 +511,7 @@
                     </td>
                     <td style="color: var(--text-secondary);">{{ u.date_joined|date:"Y-m-d" }}</td>
                     <td style="text-align: center; white-space: nowrap;">
-                        <button class="action-btn action-btn-edit" 
+                        <button class="action-btn action-btn-edit"
                                 data-id="{{ u.id }}"
                                 data-username="{{ u.username }}"
                                 data-display-name="{{ u.profile.display_name }}"
@@ -497,16 +522,16 @@
                                 onclick="openEditModal(this)">
                             <span>✏️</span> 編輯
                         </button>
-                        
-                        <button class="action-btn action-btn-perm" 
+
+                        <button class="action-btn action-btn-perm"
                                 data-id="{{ u.id }}"
                                 data-display-name="{{ u.profile.display_name|default:u.username }}"
                                 data-allowed-ids="[{% for item in u.profile.allowed_menu_items.all %}{{ item.id }}{% if not forloop.last %},{% endif %}{% endfor %}]"
                                 onclick="openPermModal(this)">
                             <span>🔑</span> 權限
                         </button>
-                        
-                        <button class="action-btn action-btn-delete" 
+
+                        <button class="action-btn action-btn-delete"
                                 data-id="{{ u.id }}"
                                 data-username="{{ u.username }}"
                                 {% if u.id == request.user.id %}disabled style="opacity: 0.5; cursor: not-allowed;"{% endif %}
@@ -539,7 +564,7 @@
                     <input type="password" id="create_password" required class="form-control" autocomplete="new-password">
                 </div>
             </div>
-            
+
             <div class="form-row">
                 <div class="form-group">
                     <label for="create_display_name">顯示名稱 (中文姓名)</label>
@@ -596,7 +621,7 @@
                     <input type="password" id="edit_password" class="form-control" placeholder="******" autocomplete="new-password">
                 </div>
             </div>
-            
+
             <div class="form-row">
                 <div class="form-group">
                     <label for="edit_display_name">顯示名稱 (中文姓名)</label>
@@ -650,7 +675,7 @@
                 <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="selectAllPerms(false)">全不選</button>
             </div>
         </div>
-        
+
         <div class="perm-tree" id="permTreeContainer">
             <div style="text-align: center; padding: 30px; color: var(--text-secondary);">載入中...</div>
         </div>
@@ -682,6 +707,42 @@
     </div>
 </div>
 
+<!-- ==================== IDENTITY PERMISSIONS MODAL ==================== -->
+<div class="modal" id="identityPermModal">
+    <div class="modal-content" style="max-width: 650px; padding: 25px 30px;">
+        <div class="modal-header" style="margin-bottom: 15px; padding-bottom: 10px;">
+            <h3>身分權限管理</h3>
+            <button class="modal-close" onclick="closeModal('identityPermModal')">×</button>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 15px;">
+            <label for="identitySelect">選擇身分</label>
+            <select id="identitySelect" class="form-control" onchange="loadIdentityPermissions(this.value)">
+                <option value="">-- 請選擇身分 --</option>
+            </select>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <p style="margin: 0; font-size: 0.92rem; color: var(--text-secondary);">
+                設定此身分的預設存取權限。儲存後，該身分的所有同工將<strong>同步套用</strong>此權限。
+            </p>
+            <div id="identityPermControls" style="display: none; gap: 8px;">
+                <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="selectAllIdentityPerms(true)">全選</button>
+                <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="selectAllIdentityPerms(false)">全不選</button>
+            </div>
+        </div>
+
+        <div class="perm-tree" id="identityPermTreeContainer" style="display: none;">
+            <div style="text-align: center; padding: 30px; color: var(--text-secondary);">載入中...</div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 15px;">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('identityPermModal')">取消</button>
+            <button type="button" class="btn btn-primary" onclick="submitIdentityPermissions()">儲存身分權限</button>
+        </div>
+    </div>
+</div>
+
 <!-- Toast Notifications -->
 <div id="toastContainer"></div>
 {% endblock %}
@@ -707,14 +768,14 @@
         const container = document.getElementById('toastContainer');
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
-        
+
         const icon = type === 'success' ? '✅' : '❌';
         toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
         container.appendChild(toast);
-        
+
         // Force reflow and show
         setTimeout(() => toast.classList.add('show'), 10);
-        
+
         // Remove toast after 3 seconds
         setTimeout(() => {
             toast.classList.remove('show');
@@ -752,7 +813,7 @@
 
     function submitCreate(e) {
         e.preventDefault();
-        
+
         const username = document.getElementById('create_username').value;
         const password = document.getElementById('create_password').value;
         const display_name = document.getElementById('create_display_name').value;
@@ -806,13 +867,13 @@
         document.getElementById('edit_department').value = department;
         document.getElementById('edit_role').value = role;
         document.getElementById('edit_is_active').checked = isActive;
-        
+
         openModal('editModal');
     }
 
     function submitEdit(e) {
         e.preventDefault();
-        
+
         const id = document.getElementById('edit_user_id').value;
         const username = document.getElementById('edit_username').value;
         const password = document.getElementById('edit_password').value;
@@ -859,7 +920,7 @@
 
     function submitDelete() {
         if (!deleteUserId) return;
-        
+
         fetch(`/users/${deleteUserId}/delete/`, {
             method: 'POST', // POST delete is cleaner for general browser AJAX
             headers: {
@@ -890,17 +951,17 @@
     function openPermModal(btn) {
         permUserId = btn.getAttribute('data-id');
         document.getElementById('permUserTitle').textContent = btn.getAttribute('data-display-name');
-        
+
         // Get allowed IDs from button attribute
         const allowedIds = JSON.parse(btn.getAttribute('data-allowed-ids') || '[]');
-        
+
         openModal('permModal');
-        
+
         if (cachedRoutes) {
             renderRoutes(cachedRoutes, allowedIds);
         } else {
             document.getElementById('permTreeContainer').innerHTML = '<div style="text-align: center; padding: 30px; color: var(--text-secondary);">載入中...</div>';
-            
+
             fetch('/users/routes/')
             .then(res => res.json())
             .then(routes => {
@@ -923,10 +984,10 @@
     function renderRoutes(routes, allowedIds) {
         const container = document.getElementById('permTreeContainer');
         container.innerHTML = '';
-        
+
         const groups = [];
         const standalones = [];
-        
+
         routes.forEach(item => {
             if (item.children && item.children.length > 0) {
                 groups.push(item);
@@ -934,117 +995,117 @@
                 standalones.push(item);
             }
         });
-        
+
         // 1. Render groups first
         groups.forEach(item => {
             const groupDiv = document.createElement('div');
             groupDiv.className = 'perm-group';
-            
+
             const titleDiv = document.createElement('div');
             titleDiv.className = 'perm-group-title';
-            
+
             const groupCheck = document.createElement('input');
             groupCheck.type = 'checkbox';
             groupCheck.id = `perm-item-${item.id}`;
             groupCheck.value = item.id;
             groupCheck.checked = allowedIds.includes(item.id);
-            
+
             const titleLabel = document.createElement('label');
             titleLabel.htmlFor = `perm-item-${item.id}`;
             titleLabel.style.cursor = 'pointer';
             titleLabel.textContent = item.title;
-            
+
             titleDiv.appendChild(groupCheck);
             titleDiv.appendChild(titleLabel);
             groupDiv.appendChild(titleDiv);
-            
+
             const childrenDiv = document.createElement('div');
             childrenDiv.className = 'perm-children';
-            
+
             item.children.forEach(child => {
                 const label = document.createElement('label');
                 label.className = 'perm-item';
-                
+
                 const cb = document.createElement('input');
                 cb.type = 'checkbox';
                 cb.id = `perm-item-${child.id}`;
                 cb.value = child.id;
                 cb.checked = allowedIds.includes(child.id);
-                
+
                 cb.addEventListener('change', () => updateGroupCheckState(groupCheck, childrenDiv));
-                
+
                 const nameSpan = document.createElement('span');
                 nameSpan.textContent = child.title;
                 nameSpan.title = child.title;
-                
+
                 label.appendChild(cb);
                 label.appendChild(nameSpan);
                 childrenDiv.appendChild(label);
             });
-            
+
             groupCheck.addEventListener('change', (e) => {
                 const childChecks = childrenDiv.querySelectorAll('input[type="checkbox"]');
                 childChecks.forEach(cb => cb.checked = e.target.checked);
             });
-            
+
             updateGroupCheckState(groupCheck, childrenDiv);
-            
+
             groupDiv.appendChild(childrenDiv);
             container.appendChild(groupDiv);
         });
-        
+
         // 2. Render all standalones in a single compact 3-column group
         if (standalones.length > 0) {
             const groupDiv = document.createElement('div');
             groupDiv.className = 'perm-group';
-            
+
             const titleDiv = document.createElement('div');
             titleDiv.className = 'perm-group-title';
-            
+
             const groupCheck = document.createElement('input');
             groupCheck.type = 'checkbox';
             groupCheck.id = 'perm-group-standalones';
-            
+
             const titleLabel = document.createElement('label');
             titleLabel.htmlFor = 'perm-group-standalones';
             titleLabel.style.cursor = 'pointer';
             titleLabel.textContent = "獨立功能 / 其他 App";
-            
+
             titleDiv.appendChild(groupCheck);
             titleDiv.appendChild(titleLabel);
             groupDiv.appendChild(titleDiv);
-            
+
             const childrenDiv = document.createElement('div');
             childrenDiv.className = 'perm-children';
-            
+
             standalones.forEach(item => {
                 const label = document.createElement('label');
                 label.className = 'perm-item';
-                
+
                 const cb = document.createElement('input');
                 cb.type = 'checkbox';
                 cb.id = `perm-item-${item.id}`;
                 cb.value = item.id;
                 cb.checked = allowedIds.includes(item.id);
-                
+
                 cb.addEventListener('change', () => updateGroupCheckState(groupCheck, childrenDiv));
-                
+
                 const nameSpan = document.createElement('span');
                 nameSpan.textContent = item.title;
                 nameSpan.title = item.title;
-                
+
                 label.appendChild(cb);
                 label.appendChild(nameSpan);
                 childrenDiv.appendChild(label);
             });
-            
+
             groupCheck.addEventListener('change', (e) => {
                 const childChecks = childrenDiv.querySelectorAll('input[type="checkbox"]');
                 childChecks.forEach(cb => cb.checked = e.target.checked);
             });
-            
+
             updateGroupCheckState(groupCheck, childrenDiv);
-            
+
             groupDiv.appendChild(childrenDiv);
             container.appendChild(groupDiv);
         }
@@ -1059,14 +1120,14 @@
 
     function submitPermissions() {
         if (!permUserId) return;
-        
+
         // Find all checked checkbox values. Group-only checkboxes do not always carry a menu id.
         const container = document.getElementById('permTreeContainer');
         const checkboxes = container.querySelectorAll('input[type="checkbox"]:checked');
         const menuIds = Array.from(checkboxes)
             .map(cb => Number.parseInt(cb.value, 10))
             .filter(Number.isInteger);
-        
+
         fetch(`/users/${permUserId}/permissions/`, {
             method: 'POST',
             headers: {
@@ -1090,5 +1151,299 @@
             showToast(err.message, 'error');
         });
     }
+
+    // Table Sorting
+    let currentSortCol = -1;
+    let currentSortDir = 'asc';
+
+    function sortTable(colIndex) {
+        const table = document.querySelector('.user-table');
+        const tbody = document.getElementById('userTableBody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+
+        const isNumeric = colIndex === 0;
+
+        if (currentSortCol === colIndex) {
+            currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSortCol = colIndex;
+            currentSortDir = 'asc';
+        }
+
+        rows.sort((rowA, rowB) => {
+            const cellA = rowA.cells[colIndex].innerText.trim().toLowerCase();
+            const cellB = rowB.cells[colIndex].innerText.trim().toLowerCase();
+
+            if (isNumeric) {
+                return currentSortDir === 'asc'
+                    ? Number(cellA) - Number(cellB)
+                    : Number(cellB) - Number(cellA);
+            }
+
+            return currentSortDir === 'asc'
+                ? cellA.localeCompare(cellB, 'zh-Hant')
+                : cellB.localeCompare(cellA, 'zh-Hant');
+        });
+
+        tbody.append(...rows);
+
+        const headers = table.querySelectorAll('th');
+        headers.forEach((th, idx) => {
+            if (idx === headers.length - 1) return;
+            let text = th.textContent.replace(/[▲▼]/g, '').trim();
+            if (idx === colIndex) {
+                text += currentSortDir === 'asc' ? ' ▲' : ' ▼';
+            }
+            th.textContent = text;
+        });
+    }
+
+    document.querySelectorAll('.user-table th').forEach((th, index) => {
+        if (index < 10) {
+            th.addEventListener('click', () => sortTable(index));
+        }
+    });
+
+    // Identity Permissions Management
+    let cachedIdentityRoutes = null;
+
+    window.openIdentityPermModal = function() {
+        const select = document.getElementById('identitySelect');
+        select.innerHTML = '<option value="">-- 載入中... --</option>';
+        document.getElementById('identityPermTreeContainer').style.display = 'none';
+        document.getElementById('identityPermControls').style.display = 'none';
+
+        openModal('identityPermModal');
+
+        fetch('/users/identity-list/')
+        .then(res => res.json())
+        .then(list => {
+            select.innerHTML = '<option value="">-- 請選擇身分 --</option>';
+            list.forEach(code => {
+                const opt = document.createElement('option');
+                opt.value = code;
+                opt.textContent = code;
+                select.appendChild(opt);
+            });
+        })
+        .catch(err => {
+            select.innerHTML = '<option value="">-- 載入身分失敗 --</option>';
+            showToast('無法取得身分清單', 'error');
+        });
+    };
+
+    window.loadIdentityPermissions = function(identityCode) {
+        const container = document.getElementById('identityPermTreeContainer');
+        const controls = document.getElementById('identityPermControls');
+        if (!identityCode) {
+            container.style.display = 'none';
+            controls.style.display = 'none';
+            return;
+        }
+
+        container.style.display = 'block';
+        container.innerHTML = '<div style="text-align: center; padding: 30px; color: var(--text-secondary);">載入中...</div>';
+        controls.style.display = 'none';
+
+        const fetchPerms = () => {
+            fetch(`/users/identity-permissions/${encodeURIComponent(identityCode)}/`)
+            .then(res => res.json())
+            .then(data => {
+                const allowedIds = data.menu_ids || [];
+                renderIdentityRoutes(cachedIdentityRoutes, allowedIds);
+                controls.style.display = 'flex';
+            })
+            .catch(err => {
+                container.innerHTML = '<div style="text-align: center; padding: 30px; color: #f87171;">無法載入權限資料。</div>';
+                showToast('載入身分權限失敗', 'error');
+            });
+        };
+
+        if (cachedIdentityRoutes) {
+            fetchPerms();
+        } else {
+            fetch('/users/routes/')
+            .then(res => res.json())
+            .then(routes => {
+                cachedIdentityRoutes = routes;
+                fetchPerms();
+            })
+            .catch(err => {
+                container.innerHTML = '<div style="text-align: center; padding: 30px; color: #f87171;">無法載入選單項目。</div>';
+                showToast('載入選單項目失敗', 'error');
+            });
+        }
+    };
+
+    window.selectAllIdentityPerms = function(checked) {
+        const container = document.getElementById('identityPermTreeContainer');
+        const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = checked);
+    };
+
+    function renderIdentityRoutes(routes, allowedIds) {
+        const container = document.getElementById('identityPermTreeContainer');
+        container.innerHTML = '';
+
+        const groups = [];
+        const standalones = [];
+
+        routes.forEach(item => {
+            if (item.children && item.children.length > 0) {
+                groups.push(item);
+            } else {
+                standalones.push(item);
+            }
+        });
+
+        groups.forEach(item => {
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'perm-group';
+
+            const titleDiv = document.createElement('div');
+            titleDiv.className = 'perm-group-title';
+
+            const groupCheck = document.createElement('input');
+            groupCheck.type = 'checkbox';
+            groupCheck.id = `ident-item-${item.id}`;
+            groupCheck.value = item.id;
+            groupCheck.checked = allowedIds.includes(item.id);
+
+            const titleLabel = document.createElement('label');
+            titleLabel.htmlFor = `ident-item-${item.id}`;
+            titleLabel.style.cursor = 'pointer';
+            titleLabel.textContent = item.title;
+
+            titleDiv.appendChild(groupCheck);
+            titleDiv.appendChild(titleLabel);
+            groupDiv.appendChild(titleDiv);
+
+            const childrenDiv = document.createElement('div');
+            childrenDiv.className = 'perm-children';
+
+            item.children.forEach(child => {
+                const label = document.createElement('label');
+                label.className = 'perm-item';
+
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.id = `ident-item-${child.id}`;
+                cb.value = child.id;
+                cb.checked = allowedIds.includes(child.id);
+
+                cb.addEventListener('change', () => updateGroupCheckState(groupCheck, childrenDiv));
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = child.title;
+                nameSpan.title = child.title;
+
+                label.appendChild(cb);
+                label.appendChild(nameSpan);
+                childrenDiv.appendChild(label);
+            });
+
+            groupCheck.addEventListener('change', (e) => {
+                const childChecks = childrenDiv.querySelectorAll('input[type="checkbox"]');
+                childChecks.forEach(cb => cb.checked = e.target.checked);
+            });
+
+            updateGroupCheckState(groupCheck, childrenDiv);
+
+            groupDiv.appendChild(childrenDiv);
+            container.appendChild(groupDiv);
+        });
+
+        if (standalones.length > 0) {
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'perm-group';
+
+            const titleDiv = document.createElement('div');
+            titleDiv.className = 'perm-group-title';
+
+            const groupCheck = document.createElement('input');
+            groupCheck.type = 'checkbox';
+            groupCheck.id = 'ident-group-standalones';
+
+            const titleLabel = document.createElement('label');
+            titleLabel.htmlFor = 'ident-group-standalones';
+            titleLabel.style.cursor = 'pointer';
+            titleLabel.textContent = "獨立功能 / 其他 App";
+
+            titleDiv.appendChild(groupCheck);
+            titleDiv.appendChild(titleLabel);
+            groupDiv.appendChild(titleDiv);
+
+            const childrenDiv = document.createElement('div');
+            childrenDiv.className = 'perm-children';
+
+            standalones.forEach(item => {
+                const label = document.createElement('label');
+                label.className = 'perm-item';
+
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.id = `ident-item-${item.id}`;
+                cb.value = item.id;
+                cb.checked = allowedIds.includes(item.id);
+
+                cb.addEventListener('change', () => updateGroupCheckState(groupCheck, childrenDiv));
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = item.title;
+                nameSpan.title = item.title;
+
+                label.appendChild(cb);
+                label.appendChild(nameSpan);
+                childrenDiv.appendChild(label);
+            });
+
+            groupCheck.addEventListener('change', (e) => {
+                const childChecks = childrenDiv.querySelectorAll('input[type="checkbox"]');
+                childChecks.forEach(cb => cb.checked = e.target.checked);
+            });
+
+            updateGroupCheckState(groupCheck, childrenDiv);
+
+            groupDiv.appendChild(childrenDiv);
+            container.appendChild(groupDiv);
+        }
+    }
+
+    window.submitIdentityPermissions = function() {
+        const identityCode = document.getElementById('identitySelect').value;
+        if (!identityCode) {
+            showToast('請先選擇身分', 'error');
+            return;
+        }
+
+        const container = document.getElementById('identityPermTreeContainer');
+        const checkboxes = container.querySelectorAll('input[type="checkbox"]:checked');
+        const menuIds = Array.from(checkboxes)
+            .map(cb => Number.parseInt(cb.value, 10))
+            .filter(Number.isInteger);
+
+        fetch(`/users/identity-permissions/${encodeURIComponent(identityCode)}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ menu_ids: menuIds })
+        })
+        .then(async res => {
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || '設定失敗');
+            }
+            return data;
+        })
+        .then(data => {
+            showToast(`成功更新身分 ${identityCode} 的權限，已同步套用至 ${data.updated_users_count} 位同工！`, 'success');
+            closeModal('identityPermModal');
+            setTimeout(() => location.reload(), 1000);
+        })
+        .catch(err => {
+            showToast(err.message, 'error');
+        });
+    };
 </script>
 {% endblock %}
