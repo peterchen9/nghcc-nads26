@@ -1,0 +1,1512 @@
+{% extends "base.html" %}
+
+{% block title %}安息禮拜管理 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Spacing between rows (1/4 padding) */
+    .premium-table td {
+        padding: 6px 15px !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        color: #ffffff;
+        font-size: 0.92rem;
+    }
+    
+    .premium-table th {
+        padding: 10px 15px !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: var(--accent-color);
+        /* Sticky Header */
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: #2b3e55;
+    }
+
+    /* Scrollable table-container */
+    .table-container {
+        width: 100%;
+        max-height: 480px;
+        overflow-y: auto;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.01);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        margin-bottom: 20px;
+    }
+
+    /* Year capsules Horizontal Scroll Filter */
+    .year-capsules-container {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding: 10px 5px 15px 5px;
+        margin-bottom: 15px;
+        scrollbar-width: thin;
+    }
+    
+    .year-capsules-container::-webkit-scrollbar {
+        height: 6px;
+    }
+    
+    .year-capsules-container::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 4px;
+    }
+    
+    .year-capsule {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        color: var(--text-secondary);
+        padding: 6px 14px;
+        border-radius: 30px;
+        cursor: pointer;
+        white-space: nowrap;
+        font-family: 'Outfit', sans-serif;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+    }
+    
+    .year-capsule:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: var(--accent-color);
+        color: #ffffff;
+    }
+    
+    .year-capsule.active {
+        background: var(--accent-color);
+        border-color: var(--accent-color);
+        color: #2f4156;
+        font-weight: 600;
+    }
+
+    /* Split Layout */
+    .split-layout {
+        display: flex;
+        gap: 25px;
+        margin-top: 15px;
+    }
+    
+    .main-column {
+        flex: 7; /* 70% width */
+        min-width: 0;
+    }
+    
+    .side-column {
+        flex: 3; /* 30% width */
+        min-width: 320px;
+    }
+    
+    @media (max-width: 992px) {
+        .split-layout {
+            flex-direction: column;
+        }
+        .side-column {
+            flex: 1;
+            width: 100%;
+        }
+    }
+
+    /* Right side applicant box styling */
+    .applicant-box {
+        background: rgba(139, 92, 246, 0.03); /* Slate purple card */
+        border: 1px solid rgba(139, 92, 246, 0.1);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 4px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Control Panel */
+    .control-panel {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .search-wrapper {
+        position: relative;
+        flex-grow: 1;
+        max-width: 400px;
+    }
+
+    .search-input {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 12px 20px 12px 40px;
+        color: #ffffff;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        box-sizing: border-box;
+    }
+
+    .search-input:focus {
+        outline: none;
+        background: rgba(255, 255, 255, 0.07);
+        border-color: var(--accent-color);
+        box-shadow: 0 0 10px rgba(188, 220, 255, 0.15);
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-secondary);
+        pointer-events: none;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-download {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+    }
+
+    .btn-download:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: var(--accent-color);
+    }
+
+    .btn-action-primary {
+        background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        font-size: 0.9rem;
+    }
+
+    .btn-action-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+        filter: brightness(1.1);
+    }
+
+    /* Modal Styling */
+    .modal-backdrop {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(5px);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .modal-card {
+        background: #253344;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        width: 100%;
+        max-width: 650px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: modalFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes modalFadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-header {
+        padding: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0;
+        color: #ffffff;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+    }
+
+    .modal-close:hover {
+        color: #ffffff;
+    }
+
+    .modal-body {
+        padding: 20px;
+        overflow-y: auto;
+        max-height: 70vh;
+    }
+
+    .modal-footer {
+        padding: 15px 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    /* Modal Form elements */
+    .form-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+    
+    @media (max-width: 576px) {
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .form-group label {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
+
+    .form-control {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 10px;
+        color: #ffffff;
+        font-size: 0.95rem;
+        box-sizing: border-box;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--accent-color);
+    }
+
+    /* Checkbox Styling */
+    .form-check {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 5px;
+    }
+
+    .form-check input {
+        cursor: pointer;
+        width: 16px;
+        height: 16px;
+    }
+
+    /* Pagination */
+    .pagination-panel {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        padding: 10px 5px;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .pagination-buttons {
+        display: flex;
+        gap: 5px;
+    }
+
+    .btn-page {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        color: #ffffff;
+        padding: 8px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+    }
+
+    .btn-page:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: var(--accent-color);
+    }
+
+    .btn-page.active {
+        background: var(--accent-color);
+        color: #2f4156;
+        font-weight: 600;
+        border-color: var(--accent-color);
+    }
+
+    .btn-page:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .highlight {
+        background-color: rgba(250, 204, 21, 0.3);
+        color: #ffffff;
+        padding: 2px 4px;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+
+    .link-name {
+        color: #ffffff;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        text-decoration-color: rgba(255, 255, 255, 0.3);
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .link-name:hover {
+        color: var(--accent-color);
+        text-decoration-color: var(--accent-color);
+    }
+
+    /* Section Divider in Forms */
+    .section-title {
+        font-size: 0.95rem;
+        font-weight: bold;
+        color: var(--accent-color);
+        border-left: 3px solid var(--accent-color);
+        padding-left: 8px;
+        margin: 15px 0 10px 0;
+        grid-column: span 2;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <h2 style="margin: 0; background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">安息禮拜管理主頁</h2>
+        <button type="button" class="btn-action-primary" id="openShiftTableBtn" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); box-shadow: 0 4px 15px rgba(29, 78, 216, 0.3);">📋 安息服事班表</button>
+    </div>
+
+    <!-- Split Columns Layout -->
+    <div class="split-layout">
+        
+        <!-- Left Side: History of Memorial Services (70%) -->
+        <div class="main-column">
+            <span style="display: block; font-size: 1.1rem; font-weight: 600; color: var(--accent-color); margin-bottom: 10px;">歷次安息禮拜紀錄</span>
+            
+            <!-- Year capsules Horizontal Scroll Filter -->
+            <div class="year-capsules-container" id="yearCapsules">
+                <button class="year-capsule active" data-year="all">全部</button>
+            </div>
+
+            <!-- Control Panel -->
+            <div class="control-panel">
+                <div class="search-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" class="search-input" placeholder="搜尋故人、牧師、地點或日期...">
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="table-container">
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 12%;">禮拜日期</th>
+                            <th style="width: 12%;">故人</th>
+                            <th style="width: 10%;">主禮</th>
+                            <th style="width: 10%;">司會</th>
+                            <th style="width: 10%;">讀經</th>
+                            <th style="width: 10%;">禱告</th>
+                            <th style="width: 10%;">入殮</th>
+                            <th style="width: 10%;">火化</th>
+                            <th style="width: 10%;">安厝</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Populated dynamically via JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination Panel -->
+            <div class="pagination-panel">
+                <div id="paginationInfo">顯示第 0 到 0 筆，共 0 筆</div>
+                <div class="pagination-buttons" id="paginationBtns"></div>
+            </div>
+        </div>
+        
+        <!-- Right Side: Upcoming Memorial Services & Scheduling (30%) -->
+        <div class="side-column">
+            <div class="applicant-box">
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 1.1rem; font-weight: 600; color: #ffffff;">預計安息禮拜</span>
+                        <button class="btn-action-primary" id="openNewBtn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px;">
+                            新增登記
+                        </button>
+                    </div>
+                    <button class="btn-download" id="btnBatchComplete" style="display: flex; width: 100%; justify-content: center; padding: 8px 15px; font-size: 0.85rem; border-radius: 8px; border-color: rgba(139, 92, 246, 0.25); box-sizing: border-box;">
+                        完成禮拜者加入總表
+                    </button>
+                </div>
+                
+                <div class="table-container" style="max-height: 520px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                    <table class="premium-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 15%; padding: 8px 10px !important; text-align: center;">
+                                    <input type="checkbox" id="selectAllUpcoming" style="cursor: pointer;">
+                                </th>
+                                <th style="width: 50%; padding: 8px 10px !important;">故人</th>
+                                <th style="padding: 8px 10px !important;">主禮</th>
+                            </tr>
+                        </thead>
+                        <tbody id="upcomingTableBody">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- =================================== -->
+<!-- MODAL: REGISTER FUNERAL (新增)       -->
+<!-- =================================== -->
+<div class="modal-backdrop" id="newModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 class="modal-title">登記預計安息禮拜</h3>
+            <button class="modal-close" id="closeNewModal">&times;</button>
+        </div>
+        <form id="newForm" method="post" action="{% url 'worship-funeral-new' %}">
+            {% csrf_token %}
+            <div class="modal-body">
+                
+                <!-- Section: Deceased -->
+                <div class="section-title">故人基本資料</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newDeceasedName">故人姓名 *</label>
+                        <input type="text" class="form-control" id="newDeceasedName" name="deceased_name" placeholder="請輸入姓名" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newDeceasedAge">安息年齡</label>
+                        <input type="number" class="form-control" id="newDeceasedAge" name="deceased_age" placeholder="例如：80">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newDeceasedBirth">出生日期</label>
+                        <input type="date" class="form-control" id="newDeceasedBirth" name="deceased_date_of_birth">
+                    </div>
+                    <div class="form-group">
+                        <label for="newDeceasedDeath">安息日期</label>
+                        <input type="date" class="form-control" id="newDeceasedDeath" name="deceased_date_of_death">
+                    </div>
+                </div>
+
+                <!-- Section: Family -->
+                <div class="section-title">家屬聯絡資訊</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newFamilyContact">家屬聯絡人</label>
+                        <input type="text" class="form-control" id="newFamilyContact" name="family_contact" placeholder="聯絡人姓名">
+                    </div>
+                    <div class="form-group">
+                        <label for="newFamilyRelationship">關係</label>
+                        <input type="text" class="form-control" id="newFamilyRelationship" name="family_relationship" placeholder="例如：長子、配偶">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="newFamilyPhone">聯絡電話</label>
+                    <input type="text" class="form-control" id="newFamilyPhone" name="family_phone" placeholder="例如：0912-345678">
+                </div>
+
+                <!-- Section: Service Schedule -->
+                <div class="section-title">禮拜排程資訊</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newServiceDate">禮拜日期 *</label>
+                        <input type="date" class="form-control" id="newServiceDate" name="service_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newServiceTime">禮拜時間</label>
+                        <input type="text" class="form-control" id="newServiceTime" name="service_time" placeholder="例如：10:00 - 11:30">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="newLocation">禮拜地點</label>
+                    <input type="text" class="form-control" id="newLocation" name="location" placeholder="例如：新竹市殯儀館景福廳、本堂三樓">
+                </div>
+
+                <!-- Section: Serving Staff -->
+                <div class="section-title">服事人員排班 (支援會友姓名輸入提示)</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newPastor">主禮 / 講道</label>
+                        <input type="text" class="form-control autocomplete-input" id="newPastor" name="pastor" placeholder="請輸入姓名">
+                    </div>
+                    <div class="form-group">
+                        <label for="newLeader">司會人員</label>
+                        <input type="text" class="form-control autocomplete-input" id="newLeader" name="leader" placeholder="請輸入姓名">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newScripture">讀經人員</label>
+                        <input type="text" class="form-control autocomplete-input" id="newScripture" name="scripture" placeholder="請輸入姓名">
+                    </div>
+                    <div class="form-group">
+                        <label for="newPrayer">禱告人員</label>
+                        <input type="text" class="form-control autocomplete-input" id="newPrayer" name="prayer" placeholder="請輸入姓名">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newCoffining">入殮人員</label>
+                        <input type="text" class="form-control autocomplete-input" id="newCoffining" name="coffining" placeholder="請輸入姓名">
+                    </div>
+                    <div class="form-group">
+                        <label for="newCremation">火化人員</label>
+                        <input type="text" class="form-control autocomplete-input" id="newCremation" name="cremation" placeholder="請輸入姓名">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newBurial">安厝人員</label>
+                        <input type="text" class="form-control autocomplete-input" id="newBurial" name="burial" placeholder="請輸入姓名">
+                    </div>
+                    <div class="form-group">
+                        <label for="newPianist">司琴人員</label>
+                        <input type="text" class="form-control autocomplete-input" id="newPianist" name="pianist" placeholder="請輸入姓名">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newSound">司音/音控</label>
+                        <input type="text" class="form-control autocomplete-input" id="newSound" name="sound" placeholder="請輸入姓名">
+                    </div>
+                    <div class="form-group">
+                        <label for="newProjection">投影/簡報</label>
+                        <input type="text" class="form-control autocomplete-input" id="newProjection" name="projection" placeholder="請輸入姓名">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="newUshers">招待人員 (多人以「、」分隔)</label>
+                    <input type="text" class="form-control autocomplete-input" id="newUshers" name="ushers" placeholder="輸入姓名，可自動補上頓號">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newChoir">獻詩/詩班</label>
+                        <input type="text" class="form-control" id="newChoir" name="choir" placeholder="例如：雅歌詩班">
+                    </div>
+                    <div class="form-group">
+                        <label for="newTraffic">交通指引 (多人以「、」分隔)</label>
+                        <input type="text" class="form-control autocomplete-input" id="newTraffic" name="traffic" placeholder="輸入姓名">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 10px;">
+                    <label for="newNote">備註/備忘錄</label>
+                    <textarea class="form-control" id="newNote" name="note" rows="2" placeholder="程序單、家屬特殊交代等備註..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-download" id="cancelNewModal">取消</button>
+                <button type="submit" class="btn-action-primary">登記禮拜</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- =================================== -->
+<!-- MODAL: EDIT FUNERAL RECORD (編輯)   -->
+<!-- =================================== -->
+<div class="modal-backdrop" id="editModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 class="modal-title">編輯安息禮拜排班與紀錄</h3>
+            <button class="modal-close" id="closeEditModal">&times;</button>
+        </div>
+        <form id="editForm" method="post" action="">
+            {% csrf_token %}
+            <div class="modal-body">
+                <input type="hidden" id="editId">
+                
+                <!-- Section: Deceased -->
+                <div class="section-title">故人基本資料</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editDeceasedName">故人姓名 *</label>
+                        <input type="text" class="form-control" id="editDeceasedName" name="deceased_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editDeceasedAge">安息年齡</label>
+                        <input type="number" class="form-control" id="editDeceasedAge" name="deceased_age">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editDeceasedBirth">出生日期</label>
+                        <input type="date" class="form-control" id="editDeceasedBirth" name="deceased_date_of_birth">
+                    </div>
+                    <div class="form-group">
+                        <label for="editDeceasedDeath">安息日期</label>
+                        <input type="date" class="form-control" id="editDeceasedDeath" name="deceased_date_of_death">
+                    </div>
+                </div>
+
+                <!-- Section: Family -->
+                <div class="section-title">家屬聯絡資訊</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editFamilyContact">家屬聯絡人</label>
+                        <input type="text" class="form-control" id="editFamilyContact" name="family_contact">
+                    </div>
+                    <div class="form-group">
+                        <label for="editFamilyRelationship">關係</label>
+                        <input type="text" class="form-control" id="editFamilyRelationship" name="family_relationship">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="editFamilyPhone">聯絡電話</label>
+                    <input type="text" class="form-control" id="editFamilyPhone" name="family_phone">
+                </div>
+
+                <!-- Section: Service Schedule -->
+                <div class="section-title">禮拜排程資訊</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editServiceDate">禮拜日期 *</label>
+                        <input type="date" class="form-control" id="editServiceDate" name="service_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editServiceTime">禮拜時間</label>
+                        <input type="text" class="form-control" id="editServiceTime" name="service_time">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="editLocation">禮拜地點</label>
+                    <input type="text" class="form-control" id="editLocation" name="location">
+                </div>
+
+                <!-- Section: Serving Staff -->
+                <div class="section-title">服事人員排班 (支援會友姓名輸入提示)</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editPastor">主禮 / 講道</label>
+                        <input type="text" class="form-control autocomplete-input" id="editPastor" name="pastor">
+                    </div>
+                    <div class="form-group">
+                        <label for="editLeader">司會人員</label>
+                        <input type="text" class="form-control autocomplete-input" id="editLeader" name="leader">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editScripture">讀經人員</label>
+                        <input type="text" class="form-control autocomplete-input" id="editScripture" name="scripture">
+                    </div>
+                    <div class="form-group">
+                        <label for="editPrayer">禱告人員</label>
+                        <input type="text" class="form-control autocomplete-input" id="editPrayer" name="prayer">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editCoffining">入殮人員</label>
+                        <input type="text" class="form-control autocomplete-input" id="editCoffining" name="coffining">
+                    </div>
+                    <div class="form-group">
+                        <label for="editCremation">火化人員</label>
+                        <input type="text" class="form-control autocomplete-input" id="editCremation" name="cremation">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editBurial">安厝人員</label>
+                        <input type="text" class="form-control autocomplete-input" id="editBurial" name="burial">
+                    </div>
+                    <div class="form-group">
+                        <label for="editPianist">司琴人員</label>
+                        <input type="text" class="form-control autocomplete-input" id="editPianist" name="pianist">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editSound">司音/音控</label>
+                        <input type="text" class="form-control autocomplete-input" id="editSound" name="sound">
+                    </div>
+                    <div class="form-group">
+                        <label for="editProjection">投影/簡報</label>
+                        <input type="text" class="form-control autocomplete-input" id="editProjection" name="projection">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="editUshers">招待人員 (多人以「、」分隔)</label>
+                    <input type="text" class="form-control autocomplete-input" id="editUshers" name="ushers">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editChoir">獻詩/詩班</label>
+                        <input type="text" class="form-control" id="editChoir" name="choir">
+                    </div>
+                    <div class="form-group">
+                        <label for="editTraffic">交通指引 (多人以「、」分隔)</label>
+                        <input type="text" class="form-control autocomplete-input" id="editTraffic" name="traffic">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 10px;">
+                    <label for="editNote">備註/備忘錄</label>
+                    <textarea class="form-control" id="editNote" name="note" rows="2"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <div class="form-check">
+                        <input type="checkbox" id="editIsCompleted" name="is_completed">
+                        <label for="editIsCompleted" style="color: #ffffff; cursor: pointer; font-weight: bold;">禮拜已完成 (移至左側歷次紀錄)</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-download" id="cancelEditModal">取消</button>
+                <button type="submit" class="btn-action-primary">儲存修改</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- =================================== -->
+<!-- MODAL: FUNERAL SERVICE SHIFTS (班表) -->
+<!-- =================================== -->
+<div class="modal-backdrop" id="shiftTableModal">
+    <div class="modal-card" style="max-width: 850px; width: 95%;">
+        <div class="modal-header">
+            <h3 class="modal-title">📋 安息服事班表編輯</h3>
+            <button class="modal-close" id="closeShiftTableModal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 0; margin-bottom: 15px;">
+                您可以直接在下方表格中修改各組別的服事人員。編輯完成後請點擊「儲存班表」。
+            </p>
+            <div style="max-height: 52vh; overflow-y: auto; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; background: rgba(0, 0, 0, 0.15);">
+                <table class="premium-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th style="width: 12%; text-align: center;">組別</th>
+                            <th style="width: 29%;">講道(主理)</th>
+                            <th style="width: 29%;">司會</th>
+                            <th style="width: 29%;">讀經+禱告</th>
+                            <th style="width: 8%; text-align: center;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shiftTableBody">
+                        <!-- Populated dynamically via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer" style="justify-content: space-between;">
+            <button type="button" class="btn-download" id="btnAddShiftGroup" style="border-color: rgba(255, 255, 255, 0.2);">
+                ➕ 新增組別
+            </button>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" class="btn-download" id="cancelShiftTableBtn">取消</button>
+                <button type="button" class="btn-action-primary" id="saveShiftTableBtn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);">
+                    💾 儲存班表
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Embed the JSON database records
+    let rawData = {{ services_json|safe }};
+    let memberNames = {{ member_names_json|safe }};
+    let shiftsData = {{ shifts_json|safe }};
+    
+    // Filter & Pagination State
+    let selectedYear = 'all';
+    let currentPage = 1;
+    const rowsPerPage = 15;
+
+    // Elements
+    const searchInput = document.getElementById('searchInput');
+    const tableBody = document.getElementById('tableBody');
+    const upcomingTableBody = document.getElementById('upcomingTableBody');
+    const paginationInfo = document.getElementById('paginationInfo');
+    const paginationBtns = document.getElementById('paginationBtns');
+    const yearCapsules = document.getElementById('yearCapsules');
+    
+    // Modals
+    const newModal = document.getElementById('newModal');
+    const editModal = document.getElementById('editModal');
+    const openNewBtn = document.getElementById('openNewBtn');
+    
+    // Forms
+    const newForm = document.getElementById('newForm');
+    const editForm = document.getElementById('editForm');
+    
+    // Batch Checkbox
+    const selectAllUpcoming = document.getElementById('selectAllUpcoming');
+    const btnBatchComplete = document.getElementById('btnBatchComplete');
+
+    // Autocomplete helper function
+    function setupAutocomplete(inputEl, suggestions) {
+        // Create wrapper
+        const wrapper = document.createElement('div');
+        wrapper.className = 'autocomplete-wrapper';
+        inputEl.parentNode.appendChild(wrapper);
+        
+        inputEl.parentNode.style.position = 'relative';
+        
+        Object.assign(wrapper.style, {
+            position: 'absolute',
+            top: '100%',
+            left: '0',
+            right: '0',
+            background: '#1e293b',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '8px',
+            maxHeight: '180px',
+            overflowY: 'auto',
+            zIndex: '1000',
+            display: 'none',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.4)'
+        });
+        
+        inputEl.addEventListener('input', function() {
+            const val = this.value.trim();
+            wrapper.innerHTML = '';
+            if (!val) {
+                wrapper.style.display = 'none';
+                return;
+            }
+            
+            // For multiple inputs, extract last name typed
+            const words = val.split(/[，,、\s]+/);
+            const lastWord = words[words.length - 1].trim();
+            
+            if (!lastWord) {
+                wrapper.style.display = 'none';
+                return;
+            }
+            
+            const matches = suggestions.filter(name => name.toLowerCase().includes(lastWord.toLowerCase())).slice(0, 5);
+            if (matches.length === 0) {
+                wrapper.style.display = 'none';
+                return;
+            }
+            
+            matches.forEach(name => {
+                const item = document.createElement('div');
+                item.textContent = name;
+                Object.assign(item.style, {
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    color: '#ffffff',
+                    fontSize: '0.9rem',
+                    borderBottom: '1px solid rgba(255,255,255,0.03)'
+                });
+                item.addEventListener('mouseenter', () => item.style.background = 'rgba(255,255,255,0.07)');
+                item.addEventListener('mouseleave', () => item.style.background = 'transparent');
+                item.addEventListener('click', function() {
+                    const isMulti = inputEl.id.includes('Ushers') || inputEl.id.includes('Traffic') || inputEl.id.includes('ushers') || inputEl.id.includes('traffic');
+                    if (isMulti) {
+                        const currentVal = inputEl.value;
+                        const lastIndex = currentVal.lastIndexOf(lastWord);
+                        inputEl.value = currentVal.substring(0, lastIndex) + name + '、';
+                    } else {
+                        inputEl.value = name;
+                    }
+                    wrapper.style.display = 'none';
+                    inputEl.focus();
+                });
+                wrapper.appendChild(item);
+            });
+            
+            wrapper.style.display = 'block';
+        });
+        
+        document.addEventListener('click', function(e) {
+            if (e.target !== inputEl && e.target !== wrapper) {
+                wrapper.style.display = 'none';
+            }
+        });
+    }
+
+    // Initialize autocompletes
+    document.querySelectorAll('.autocomplete-input').forEach(el => {
+        setupAutocomplete(el, memberNames);
+    });
+
+    // Modal Control: New Register
+    openNewBtn.onclick = () => {
+        newForm.reset();
+        newModal.style.display = 'flex';
+    };
+    const hideNewModal = () => { newModal.style.display = 'none'; };
+    document.getElementById('closeNewModal').onclick = hideNewModal;
+    document.getElementById('cancelNewModal').onclick = hideNewModal;
+
+    // Modal Control: Edit
+    const hideEditModal = () => { editModal.style.display = 'none'; };
+    document.getElementById('closeEditModal').onclick = hideEditModal;
+    document.getElementById('cancelEditModal').onclick = hideEditModal;
+
+    // Form submits: New (AJAX)
+    newForm.onsubmit = function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(res => {
+            if (res.success) {
+                rawData.unshift(res.service);
+                filterAndRender();
+                updateYearCapsules();
+                hideNewModal();
+                alert('安息禮拜登記成功！');
+            } else {
+                alert('登記失敗: ' + res.error);
+            }
+        })
+        .catch(err => alert('連線錯誤: ' + err));
+    };
+
+    // Form submits: Edit (AJAX)
+    editForm.onsubmit = function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        formData.set('is_completed', document.getElementById('editIsCompleted').checked ? 'true' : 'false');
+        
+        fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(res => {
+            if (res.success) {
+                const idx = rawData.findIndex(x => x.id === res.service.id);
+                if (idx !== -1) {
+                    rawData[idx] = res.service;
+                }
+                filterAndRender();
+                updateYearCapsules();
+                hideEditModal();
+                alert('排班資料儲存成功！');
+            } else {
+                alert('儲存失敗: ' + res.error);
+            }
+        })
+        .catch(err => alert('連線錯誤: ' + err));
+    };
+
+    // Open Edit Modal
+    function openEdit(id) {
+        const item = rawData.find(x => x.id === id);
+        if (!item) return;
+        
+        document.getElementById('editId').value = item.id;
+        document.getElementById('editDeceasedName').value = item.deceased_name;
+        document.getElementById('editDeceasedAge').value = item.deceased_age || '';
+        document.getElementById('editDeceasedBirth').value = item.deceased_date_of_birth || '';
+        document.getElementById('editDeceasedDeath').value = item.deceased_date_of_death || '';
+        document.getElementById('editFamilyContact').value = item.family_contact || '';
+        document.getElementById('editFamilyRelationship').value = item.family_relationship || '';
+        document.getElementById('editFamilyPhone').value = item.family_phone || '';
+        
+        // Convert date format back to YYYY-MM-DD
+        const cleanDate = item.service_date.replace(/\//g, '-');
+        document.getElementById('editServiceDate').value = cleanDate;
+        document.getElementById('editServiceTime').value = item.service_time || '';
+        document.getElementById('editLocation').value = item.location || '';
+        document.getElementById('editNote').value = item.note || '';
+        
+        document.getElementById('editPastor').value = item.pastor || '';
+        document.getElementById('editPreacher').value = item.preacher || '';
+        document.getElementById('editLeader').value = item.leader || '';
+        document.getElementById('editPianist').value = item.pianist || '';
+        document.getElementById('editSound').value = item.sound || '';
+        document.getElementById('editProjection').value = item.projection || '';
+        document.getElementById('editUshers').value = item.ushers || '';
+        document.getElementById('editChoir').value = item.choir || '';
+        document.getElementById('editTraffic').value = item.traffic || '';
+        document.getElementById('editCoffining').value = item.coffining || '';
+        document.getElementById('editCremation').value = item.cremation || '';
+        document.getElementById('editScripture').value = item.scripture || '';
+        document.getElementById('editPrayer').value = item.prayer || '';
+        document.getElementById('editBurial').value = item.burial || '';
+        
+        document.getElementById('editIsCompleted').checked = item.is_completed;
+        
+        editForm.action = `/worship/funeral/edit/${item.id}/`;
+        editModal.style.display = 'flex';
+    }
+
+    // Close on click backdrop
+    window.onclick = function(event) {
+        if (event.target === newModal) hideNewModal();
+        else if (event.target === editModal) hideEditModal();
+    };
+
+    // Highlight text helper
+    function highlightText(text, searchVal) {
+        if (!text) return '';
+        if (!searchVal) return text;
+        const escapedSearch = searchVal.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const regex = new RegExp(`(${escapedSearch})`, 'gi');
+        return text.replace(regex, '<span class="highlight">$1</span>');
+    }
+
+    // Core Filter Logic
+    function filterAndRender() {
+        const query = searchInput.value.trim().toLowerCase();
+        
+        // Split Completed and Upcoming
+        const completedList = rawData.filter(x => x.is_completed);
+        const upcomingList = rawData.filter(x => !x.is_completed);
+        
+        // Filter Completed List
+        const filteredCompleted = completedList.filter(item => {
+            const itemYear = item.service_date.split('/')[0];
+            const matchesYear = (selectedYear === 'all' || itemYear === selectedYear);
+            
+            const matchesSearch = !query || (
+                item.deceased_name.toLowerCase().includes(query) ||
+                (item.pastor && item.pastor.toLowerCase().includes(query)) ||
+                (item.location && item.location.toLowerCase().includes(query)) ||
+                item.service_date.includes(query) ||
+                (item.note && item.note.toLowerCase().includes(query))
+            );
+            return matchesYear && matchesSearch;
+        });
+
+        // Filter Upcoming List
+        const filteredUpcoming = upcomingList.filter(item => {
+            const matchesSearch = !query || (
+                item.deceased_name.toLowerCase().includes(query) ||
+                (item.location && item.location.toLowerCase().includes(query)) ||
+                item.service_date.includes(query)
+            );
+            return matchesSearch;
+        });
+
+        currentPage = 1;
+        renderCompletedTable(filteredCompleted);
+        renderUpcomingTable(filteredUpcoming);
+    }
+
+    // Render Completed List
+    function renderCompletedTable(pageDataList) {
+        tableBody.innerHTML = '';
+        const searchVal = searchInput.value.trim();
+        
+        if (pageDataList.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-secondary); padding: 40px 0;">未找到符合條件的歷次安息禮拜</td></tr>`;
+            paginationInfo.textContent = `顯示第 0 到 0 筆，共 0 筆`;
+            paginationBtns.innerHTML = '';
+            return;
+        }
+
+        const startIdx = (currentPage - 1) * rowsPerPage;
+        const endIdx = Math.min(startIdx + rowsPerPage, pageDataList.length);
+        const pagedData = pageDataList.slice(startIdx, endIdx);
+
+        pagedData.forEach(item => {
+            const tr = document.createElement('tr');
+            const nameLink = `<a class="link-name" onclick="openEdit(${item.id})">${highlightText(item.deceased_name, searchVal)}</a>`;
+            
+            tr.innerHTML = `
+                <td style="font-family: 'Outfit', sans-serif;">${highlightText(item.service_date, searchVal)}</td>
+                <td style="font-weight: 600;">${nameLink}</td>
+                <td>${highlightText(item.pastor || '-', searchVal)}</td>
+                <td>${highlightText(item.leader || '-', searchVal)}</td>
+                <td>${highlightText(item.scripture || '-', searchVal)}</td>
+                <td>${highlightText(item.prayer || '-', searchVal)}</td>
+                <td>${highlightText(item.coffining || '-', searchVal)}</td>
+                <td>${highlightText(item.cremation || '-', searchVal)}</td>
+                <td>${highlightText(item.burial || '-', searchVal)}</td>
+            `;
+            tableBody.appendChild(tr);
+        });
+
+        paginationInfo.textContent = `顯示第 ${startIdx + 1} 到 ${endIdx} 筆，共 ${pageDataList.length} 筆`;
+        renderPaginationButtons(pageDataList);
+    }
+
+    // Render Pager Buttons
+    function renderPaginationButtons(pageDataList) {
+        paginationBtns.innerHTML = '';
+        const totalPages = Math.ceil(pageDataList.length / rowsPerPage);
+        if (totalPages <= 1) return;
+
+        const addBtn = (page, label, disabled = false, active = false) => {
+            const btn = document.createElement('button');
+            btn.className = `btn-page ${active ? 'active' : ''}`;
+            btn.textContent = label;
+            btn.disabled = disabled;
+            btn.onclick = () => {
+                currentPage = page;
+                renderCompletedTable(pageDataList);
+            };
+            paginationBtns.appendChild(btn);
+        };
+
+        addBtn(1, '«', currentPage === 1);
+        addBtn(currentPage - 1, '‹', currentPage === 1);
+
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+        if (endPage - startPage < 4) {
+            startPage = Math.max(1, endPage - 4);
+        }
+
+        for (let p = startPage; p <= endPage; p++) {
+            addBtn(p, p, false, p === currentPage);
+        }
+
+        addBtn(currentPage + 1, '›', currentPage === totalPages);
+        addBtn(totalPages, '»', currentPage === totalPages);
+    }
+
+    // Render Right side Upcoming List
+    function renderUpcomingTable(upcomingList) {
+        upcomingTableBody.innerHTML = '';
+        selectAllUpcoming.checked = false;
+        
+        if (upcomingList.length === 0) {
+            upcomingTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-secondary); padding: 30px 0; font-size: 0.9rem;">無登記預計安息禮拜</td></tr>`;
+            return;
+        }
+
+        upcomingList.forEach(item => {
+            const tr = document.createElement('tr');
+            const nameLink = `<a class="link-name" onclick="openEdit(${item.id})">${item.deceased_name}</a>`;
+            
+            tr.innerHTML = `
+                <td style="text-align: center; padding: 6px 10px !important;">
+                    <input type="checkbox" class="upcoming-cb" data-id="${item.id}" style="cursor: pointer;">
+                </td>
+                <td style="font-weight: 600; padding: 6px 10px !important;">
+                    ${nameLink}
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); font-family: 'Outfit'; margin-top: 2px;">
+                        日期: ${item.service_date} (${item.service_time || '時間未定'})
+                    </div>
+                </td>
+                <td style="padding: 6px 10px !important; font-size: 0.85rem; color: var(--text-secondary);">${item.pastor || '-'}</td>
+            `;
+            upcomingTableBody.appendChild(tr);
+        });
+    }
+
+    // Checkbox Select All Toggle
+    selectAllUpcoming.onchange = function() {
+        const checkboxes = document.querySelectorAll('.upcoming-cb');
+        checkboxes.forEach(cb => cb.checked = selectAllUpcoming.checked);
+    };
+
+    // Batch Complete Action (AJAX POST)
+    btnBatchComplete.onclick = function() {
+        const checkedBoxes = document.querySelectorAll('.upcoming-cb:checked');
+        if (checkedBoxes.length === 0) {
+            alert('請選擇您想要完成的預計安息禮拜。');
+            return;
+        }
+
+        if (!confirm(`您確定要將這 ${checkedBoxes.length} 個安息禮拜標記為已完成，並併入歷次總表嗎？`)) {
+            return;
+        }
+
+        const serviceIds = Array.from(checkedBoxes).map(cb => parseInt(cb.getAttribute('data-id')));
+
+        fetch("{% url 'worship-funeral-batch-complete' %}", {
+            method: 'POST',
+            body: JSON.stringify({ service_ids: serviceIds }),
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(res => {
+            if (res.success) {
+                res.services.forEach(updated => {
+                    const idx = rawData.findIndex(x => x.id === updated.id);
+                    if (idx !== -1) {
+                        rawData[idx] = updated;
+                    }
+                });
+                filterAndRender();
+                updateYearCapsules();
+                alert('安息禮拜已成功轉入歷次總表！');
+            } else {
+                alert('移轉失敗: ' + res.error);
+            }
+        })
+        .catch(err => alert('連線錯誤: ' + err));
+    };
+
+    // Update Year Capsules list dynamically
+    function updateYearCapsules() {
+        const yearsSet = new Set();
+        rawData.filter(x => x.is_completed).forEach(item => {
+            if (item.service_date) {
+                const year = item.service_date.split('/')[0];
+                yearsSet.add(year);
+            }
+        });
+        
+        const yearsArray = Array.from(yearsSet).sort((a, b) => b - a);
+        yearCapsules.innerHTML = `<button class="year-capsule ${selectedYear === 'all' ? 'active' : ''}" data-year="all">全部</button>`;
+        
+        yearsArray.forEach(year => {
+            const btn = document.createElement('button');
+            btn.className = `year-capsule ${selectedYear === year ? 'active' : ''}`;
+            btn.setAttribute('data-year', year);
+            btn.textContent = year + ' 年';
+            btn.onclick = () => {
+                document.querySelectorAll('.year-capsule').forEach(el => el.classList.remove('active'));
+                btn.classList.add('active');
+                selectedYear = year;
+                filterAndRender();
+            };
+            yearCapsules.appendChild(btn);
+        });
+    }
+
+    // Input listeners
+    searchInput.addEventListener('input', filterAndRender);
+
+    // ===================================
+    // SHIFT TABLE MODAL LOGIC
+    // ===================================
+    const shiftTableModal = document.getElementById('shiftTableModal');
+    const openShiftTableBtn = document.getElementById('openShiftTableBtn');
+    const closeShiftTableModal = document.getElementById('closeShiftTableModal');
+    const cancelShiftTableBtn = document.getElementById('cancelShiftTableBtn');
+    const saveShiftTableBtn = document.getElementById('saveShiftTableBtn');
+    const btnAddShiftGroup = document.getElementById('btnAddShiftGroup');
+    const shiftTableBody = document.getElementById('shiftTableBody');
+
+    let currentShifts = [];
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function renderShiftTableModal() {
+        if (!shiftTableBody) return;
+        shiftTableBody.innerHTML = '';
+        currentShifts.sort((a, b) => (parseInt(a.group_no) || 0) - (parseInt(b.group_no) || 0));
+
+        if (currentShifts.length === 0) {
+            shiftTableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 25px; color: var(--text-secondary);">
+                        目前尚無班表資料，請按「新增組別」建立。
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        currentShifts.forEach((shift, index) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="text-align: center; padding: 8px !important;">
+                    <input type="number" class="form-control shift-gno" value="${shift.group_no}" min="1" style="width: 55px; text-align: center; padding: 4px 6px; font-weight: bold; font-family: 'Outfit';" data-index="${index}">
+                </td>
+                <td style="padding: 8px !important;">
+                    <input type="text" class="form-control autocomplete-input shift-preacher" value="${escapeHtml(shift.preacher || '')}" placeholder="講道(主理)" style="padding: 6px 10px;" data-index="${index}">
+                </td>
+                <td style="padding: 8px !important;">
+                    <input type="text" class="form-control autocomplete-input shift-leader" value="${escapeHtml(shift.leader || '')}" placeholder="司會" style="padding: 6px 10px;" data-index="${index}">
+                </td>
+                <td style="padding: 8px !important;">
+                    <input type="text" class="form-control autocomplete-input shift-scripture" value="${escapeHtml(shift.scripture_prayer || '')}" placeholder="讀經+禱告" style="padding: 6px 10px;" data-index="${index}">
+                </td>
+                <td style="text-align: center; padding: 8px !important;">
+                    <button type="button" class="btn-delete-shift" data-index="${index}" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.1rem; padding: 4px;" title="刪除此組">
+                        🗑️
+                    </button>
+                </td>
+            `;
+            shiftTableBody.appendChild(tr);
+
+            // Bind autocomplete
+            const autocompleteInputs = tr.querySelectorAll('.autocomplete-input');
+            autocompleteInputs.forEach(inp => setupAutocomplete(inp, memberNames));
+        });
+
+        // Bind delete actions
+        document.querySelectorAll('.btn-delete-shift').forEach(btn => {
+            btn.onclick = function() {
+                const idx = parseInt(this.getAttribute('data-index'));
+                currentShifts.splice(idx, 1);
+                renderShiftTableModal();
+            };
+        });
+    }
+
+    function openShiftModal() {
+        currentShifts = JSON.parse(JSON.stringify(shiftsData || []));
+        renderShiftTableModal();
+        if (shiftTableModal) shiftTableModal.style.display = 'flex';
+    }
+
+    function closeShiftModal() {
+        if (shiftTableModal) shiftTableModal.style.display = 'none';
+    }
+
+    if (openShiftTableBtn) openShiftTableBtn.onclick = openShiftModal;
+    if (closeShiftTableModal) closeShiftTableModal.onclick = closeShiftModal;
+    if (cancelShiftTableBtn) cancelShiftTableBtn.onclick = closeShiftModal;
+
+    if (btnAddShiftGroup) {
+        btnAddShiftGroup.onclick = function() {
+            const nextGroupNo = currentShifts.length > 0 ? Math.max(...currentShifts.map(s => parseInt(s.group_no) || 0)) + 1 : 1;
+            currentShifts.push({
+                group_no: nextGroupNo,
+                preacher: '',
+                leader: '',
+                scripture_prayer: ''
+            });
+            renderShiftTableModal();
+        };
+    }
+
+    if (saveShiftTableBtn) {
+        saveShiftTableBtn.onclick = function() {
+            const rows = shiftTableBody.querySelectorAll('tr');
+            const updatedShifts = [];
+            let hasInvalidGroup = false;
+
+            rows.forEach(tr => {
+                const gnoInput = tr.querySelector('.shift-gno');
+                const preacherInput = tr.querySelector('.shift-preacher');
+                const leaderInput = tr.querySelector('.shift-leader');
+                const scriptureInput = tr.querySelector('.shift-scripture');
+
+                if (gnoInput) {
+                    const gno = parseInt(gnoInput.value);
+                    if (isNaN(gno) || gno <= 0) {
+                        hasInvalidGroup = true;
+                    } else {
+                        updatedShifts.push({
+                            group_no: gno,
+                            preacher: preacherInput ? preacherInput.value.trim() : '',
+                            leader: leaderInput ? leaderInput.value.trim() : '',
+                            scripture_prayer: scriptureInput ? scriptureInput.value.trim() : ''
+                        });
+                    }
+                }
+            });
+
+            if (hasInvalidGroup) {
+                alert('請輸入有效的組別數字。');
+                return;
+            }
+
+            saveShiftTableBtn.disabled = true;
+            saveShiftTableBtn.innerText = '儲存中...';
+
+            fetch("{% url 'worship-funeral-shifts' %}", {
+                method: 'POST',
+                body: JSON.stringify({ shifts: updatedShifts }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(res => res.json())
+            .then(res => {
+                saveShiftTableBtn.disabled = false;
+                saveShiftTableBtn.innerText = '💾 儲存班表';
+                if (res.success) {
+                    shiftsData = res.shifts;
+                    alert('安息服事班表儲存成功！');
+                    closeShiftModal();
+                } else {
+                    alert('儲存失敗: ' + res.error);
+                }
+            })
+            .catch(err => {
+                saveShiftTableBtn.disabled = false;
+                saveShiftTableBtn.innerText = '💾 儲存班表';
+                alert('連線錯誤: ' + err);
+            });
+        };
+    }
+
+    // Modal backdrop click handler
+    const originalOnClick = window.onclick;
+    window.onclick = function(event) {
+        if (originalOnClick) originalOnClick(event);
+        if (event.target === shiftTableModal) closeShiftModal();
+    };
+
+    // Initial render
+    updateYearCapsules();
+    filterAndRender();
+</script>
+{% endblock %}

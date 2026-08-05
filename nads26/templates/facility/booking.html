@@ -471,6 +471,7 @@
                 <button class="btn" type="submit">查詢</button>
                 <a class="btn" href="?date={{ prev_day|date:'Y-m-d' }}">前一天</a>
                 <a class="btn" href="?date={{ next_day|date:'Y-m-d' }}">後一天</a>
+                <a class="btn primary" href="/facility/booking/day/?date={{ selected_date|date:'Y-m-d' }}">當天總表</a>
                 <a class="btn" href="/facility/booking/export/?date={{ selected_date|date:'Y-m-d' }}">匯出報表</a>
             </form>
         </div>

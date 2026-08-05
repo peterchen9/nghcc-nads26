@@ -663,139 +663,6 @@
     .modal-btn-action-primary:hover {
         background-color: #0369a1;
     }
-
-    @media (max-width: 700px) {
-        .eureka-workspace-wrapper {
-            padding: 12px;
-            border-radius: 8px;
-            min-height: auto;
-        }
-
-        .eureka-layout {
-            gap: 12px;
-        }
-
-        .search-panel-card {
-            padding: 14px;
-            border-radius: 8px;
-        }
-
-        .search-title,
-        .results-count-title {
-            font-size: 1rem;
-            margin-bottom: 12px;
-        }
-
-        .search-item-row {
-            gap: 6px;
-        }
-
-        .search-select-op {
-            width: 66px;
-            height: 40px;
-            font-size: 0.75rem;
-        }
-
-        .search-input {
-            height: 40px;
-            font-size: 16px !important;
-        }
-
-        .member-card {
-            display: grid;
-            grid-template-columns: 64px minmax(0, 1fr);
-            gap: 12px;
-            align-items: flex-start;
-            padding: 12px;
-            border-radius: 8px;
-        }
-
-        .member-photo {
-            width: 64px;
-            height: 82px;
-        }
-
-        .member-name-link {
-            font-size: 1rem;
-        }
-
-        .info-row {
-            gap: 8px;
-            font-size: 0.82rem;
-        }
-
-        .info-item {
-            width: 100%;
-        }
-
-        .empty-state {
-            padding: 28px 16px;
-        }
-
-        .eureka-modal-backdrop {
-            align-items: stretch;
-            padding: 8px;
-        }
-
-        .eureka-modal-container {
-            width: 100%;
-            max-width: 100%;
-            max-height: calc(100vh - 16px);
-            padding: 16px;
-            border-radius: 8px;
-        }
-
-        .eureka-modal-close {
-            top: 10px;
-            right: 10px;
-            width: 42px;
-            height: 42px;
-        }
-
-        .modal-header-flex {
-            gap: 12px;
-        }
-
-        .modal-member-photo-large {
-            width: 96px;
-            height: 120px;
-        }
-
-        .modal-profile-name-new {
-            font-size: 1.35rem;
-            line-height: 1.2;
-        }
-
-        .modal-data-row {
-            display: grid;
-            grid-template-columns: 82px minmax(0, 1fr);
-            gap: 8px;
-            font-size: 0.86rem;
-        }
-
-        .modal-data-label {
-            width: auto;
-        }
-
-        #modal-map {
-            height: 220px;
-        }
-
-        .modal-chart-container {
-            overflow-x: auto;
-            justify-content: flex-start;
-        }
-
-        .modal-action-buttons {
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .modal-btn-action {
-            min-height: 44px;
-            justify-content: center;
-        }
-    }
 </style>
 {% endblock %}
 
@@ -1060,176 +927,212 @@
             <i class="bi bi-x-lg"></i>
         </a>
         
-        <div class="modal-two-columns">
-            <!-- Left Column: Member Photo, Header, Contact Info, Personal Info, Family -->
-            <div>
-                <!-- Photo and Header Details side-by-side -->
-                <div class="modal-header-flex">
-                    <img src="{% url 'eureka:eureka-photo' m.church_id %}.jpg"
-                         onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'185\' viewBox=\'0 0 150 185\'%3E%3Crect width=\'150\' height=\'185\' fill=\'%231e293b\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'sans-serif\' font-size=\'16\' fill=\'%2364748b\'%3E無照片%3C/text%3E%3C/svg%3E';"
-                         class="modal-member-photo-large" alt="{{ m.name }}">
-                    <div class="modal-profile-meta-new">
-                        <h2 class="modal-profile-name-new">{{ m.name }}</h2>
-                        <div class="modal-profile-sub-new">
-                            <span style="color: #64748b;">#{{ m.church_id }}</span>
-                            {% if m.gender %}
-                                <span class="badge-gender">{{ m.gender }}</span>
-                            {% endif %}
-                            {% if m.marital %}
-                                <span class="badge-marital">{{ m.marital }}</span>
+        <form method="post" action="{% url 'eureka:eureka-melos' m.church_id %}{% if query_params_url %}?{{ query_params_url }}{% endif %}" style="margin: 0; width: 100%;">
+            {% csrf_token %}
+            <div class="modal-two-columns">
+                <!-- Left Column: Member Photo, Header, Contact Info, Personal Info, Family -->
+                <div>
+                    <!-- Photo and Header Details side-by-side -->
+                    <div class="modal-header-flex">
+                        <img src="{% url 'eureka:eureka-photo' m.church_id %}.jpg"
+                             onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'185\' viewBox=\'0 0 150 185\'%3E%3Crect width=\'150\' height=\'185\' fill=\'%231e293b\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'sans-serif\' font-size=\'16\' fill=\'%2364748b\'%3E無照片%3C/text%3E%3C/svg%3E';"
+                             class="modal-member-photo-large" alt="{{ m.name }}">
+                        <div class="modal-profile-meta-new">
+                            <h2 class="modal-profile-name-new view-mode">{{ m.name }}</h2>
+                            <input type="text" name="name" value="{{ m.name }}" class="search-input text-white edit-mode" style="display: none; font-size: 1.25rem; font-weight: bold; height: auto; padding: 4px 8px; margin-bottom: 8px; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px;" required>
+                            <div class="modal-profile-sub-new">
+                                <span style="color: #64748b;">#{{ m.church_id }}</span>
+                                {% if m.gender %}
+                                    <span class="badge-gender">{{ m.gender }}</span>
+                                {% endif %}
+                                {% if m.marital %}
+                                    <span class="badge-marital">{{ m.marital }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="modal-badge-group view-mode">
+                                {% if m.section %}
+                                    <span class="badge-section-green">{{ m.section }}</span>
+                                {% endif %}
+                                {% if m.family1 %}
+                                    <span class="badge-group-purple">{{ m.family1 }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="edit-mode" style="display: none; margin-top: 8px;">
+                                <div style="display: flex; gap: 8px;">
+                                    <div style="flex: 1;">
+                                        <label class="small text-muted" style="display: block; margin-bottom: 2px;">牧區</label>
+                                        <input type="text" name="section" value="{{ m.section }}" class="search-input text-white" style="height: 30px; padding: 4px 8px; font-size: 0.85rem; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px;">
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <label class="small text-muted" style="display: block; margin-bottom: 2px;">小組</label>
+                                        <input type="text" name="family1" value="{{ m.family1 }}" class="search-input text-white" style="height: 30px; padding: 4px 8px; font-size: 0.85rem; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr style="border-top: 1px solid #223049; margin: 12px 0;">
+
+                    <!-- 聯絡資訊 -->
+                    <div class="modal-section-new">
+                        <h5 class="modal-section-title-new">
+                            <i class="bi bi-telephone text-info"></i>聯絡資訊
+                        </h5>
+                        <div class="modal-data-row">
+                            <span class="modal-data-label">手機</span>
+                            <span class="modal-data-val view-mode">{{ m.mobile1|default:"-" }}</span>
+                            <input type="text" name="mobile1" value="{{ m.mobile1 }}" class="search-input text-white edit-mode" style="display: none; height: 28px; padding: 4px 8px; font-size: 0.85rem; width: 65%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px;">
+                        </div>
+                        <div class="modal-data-row">
+                            <span class="modal-data-label">家電</span>
+                            <span class="modal-data-val">{{ m.mobile2|default:"-" }}</span>
+                        </div>
+                        <div class="modal-data-row">
+                            <span class="modal-data-label">email1</span>
+                            <span class="modal-data-val view-mode">{{ m.email1|default:"-" }}</span>
+                            <input type="email" name="email1" value="{{ m.email1 }}" class="search-input text-white edit-mode" style="display: none; height: 28px; padding: 4px 8px; font-size: 0.85rem; width: 65%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px;">
+                        </div>
+                        <div class="modal-data-row">
+                            <span class="modal-data-label">地址</span>
+                            <span class="modal-data-val view-mode" id="member_address">{{ m.address|default:"-" }}</span>
+                            <input type="text" name="address" value="{{ m.address }}" class="search-input text-white edit-mode" style="display: none; height: 28px; padding: 4px 8px; font-size: 0.85rem; width: 65%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px;">
+                        </div>
+                    </div>
+                    
+                    <hr style="border-top: 1px solid #223049; margin: 12px 0;">
+
+                    <!-- 個人資訊 -->
+                    <div class="modal-section-new">
+                        <h5 class="modal-section-title-new">
+                            <i class="bi bi-person text-info"></i>個人資訊
+                        </h5>
+                        <div class="modal-data-row">
+                            <span class="modal-data-label">生日</span>
+                            <span class="modal-data-val">{{ m.birthday|date:"Y-m-d"|default:"-" }}</span>
+                        </div>
+                        <div class="modal-data-row">
+                            <span class="modal-data-label">受洗</span>
+                            <span class="modal-data-val">{% if m.baptized == '是' or m.baptized == 'y' or m.baptized == '已受洗' %}足{% else %}{{ m.baptized|default:"-" }}{% endif %}</span>
+                        </div>
+                        <div class="modal-data-row">
+                            <span class="modal-data-label">加入日期</span>
+                            <span class="modal-data-val">{{ m.join_date|date:"Y-m-d"|default:"-" }}</span>
+                        </div>
+                        <div class="modal-data-row">
+                            <span class="modal-data-label">首次打卡</span>
+                            <span class="modal-data-val">{{ first_checkin|default:"-" }}</span>
+                        </div>
+                        <div class="modal-data-row">
+                            <span class="modal-data-label">Family ID</span>
+                            <span class="modal-data-val view-mode">{{ m.family_id|default:"-" }}</span>
+                            <input type="number" name="family_id" value="{% if m.family_id %}{{ m.family_id }}{% endif %}" class="search-input text-white edit-mode" style="display: none; height: 28px; padding: 4px 8px; font-size: 0.85rem; width: 65%; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px;" placeholder="家族ID">
+                        </div>
+                        <div class="modal-data-row align-items-start">
+                            <span class="modal-data-label">備註</span>
+                            <span class="modal-data-val view-mode" style="white-space: pre-line;">{{ m.note|default:"-" }}</span>
+                            <textarea name="note" class="search-input text-white edit-mode" style="display: none; height: 60px; padding: 4px 8px; font-size: 0.85rem; width: 65%; resize: vertical; background-color: #1e293b; border: 1px solid #334155; border-radius: 6px;">{{ m.note }}</textarea>
+                        </div>
+                    </div>
+                    
+                    <hr style="border-top: 1px solid #223049; margin: 12px 0;">
+
+                    <!-- 家人 -->
+                    <div class="modal-section-new">
+                        <h5 class="modal-section-title-new">
+                            <i class="bi bi-people text-info"></i>家人
+                        </h5>
+                        <div class="modal-family-row">
+                            {% if family %}
+                                {% for member in family %}
+                                <a href="{% url 'eureka:eureka-melos' member.church_id %}{% if query_params_url %}?{{ query_params_url }}{% endif %}"
+                                   class="modal-family-item">
+                                    <img src="{% url 'eureka:eureka-photo' member.church_id %}.jpg"
+                                         onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'46\' height=\'46\' viewBox=\'0 0 46 46\'%3E%3Crect width=\'46\' height=\'46\' fill=\'%231e293b\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'sans-serif\' font-size=\'14\' fill=\'%2364748b\'%3E?%3C/text%3E%3C/svg%3E';"
+                                         class="modal-family-avatar" alt="{{ member.name }}">
+                                    <div class="modal-family-name">{{ member.name }}</div>
+                                </a>
+                                {% endfor %}
+                            {% else %}
+                                <span class="small text-muted py-1 w-100">查無其他家族成員資料。</span>
                             {% endif %}
                         </div>
-                        <div class="modal-badge-group">
-                            {% if m.section %}
-                                <span class="badge-section-green">{{ m.section }}</span>
-                            {% endif %}
-                            {% if m.family1 %}
-                                <span class="badge-group-purple">{{ m.family1 }}</span>
+                    </div>
+                </div>
+                
+                <!-- Right Column: Map and Attendance -->
+                <div>
+                    <!-- 地圖 -->
+                    <div class="modal-section-new">
+                        <h5 class="modal-section-title-new">地圖</h5>
+                        <div id="modal-map"></div>
+                    </div>
+                    
+                    <hr style="border-top: 1px solid #223049; margin: 12px 0;">
+
+                    <!-- 出席狀態 -->
+                    <div class="modal-section-new">
+                        <h5 class="modal-section-title-new">
+                            <i class="bi bi-calendar-check text-info"></i>出席狀態
+                        </h5>
+                        
+                        <!-- Attendance Blocks -->
+                        <div class="modal-attendance-blocks">
+                            {% if m.data_str %}
+                                {% for char in m.data_str %}
+                                    {% if char == '|' %}
+                                        <span class="modal-att-square attended" title="出席"></span>
+                                    {% elif char == '_' %}
+                                        <span class="modal-att-square absent" title="缺席"></span>
+                                    {% elif char == ' ' %}
+                                        <span class="modal-att-square spacer"></span>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <span class="small text-muted py-1">無出席歷史紀錄。</span>
                             {% endif %}
                         </div>
-                    </div>
-                </div>
-                
-                <hr style="border-top: 1px solid #223049; margin: 12px 0;">
-
-                <!-- 聯絡資訊 -->
-                <div class="modal-section-new">
-                    <h5 class="modal-section-title-new">
-                        <i class="bi bi-telephone text-info"></i>聯絡資訊
-                    </h5>
-                    <div class="modal-data-row">
-                        <span class="modal-data-label">手機</span>
-                        <span class="modal-data-val">{{ m.mobile1|default:"-" }}</span>
-                    </div>
-                    <div class="modal-data-row">
-                        <span class="modal-data-label">家電</span>
-                        <span class="modal-data-val">{{ m.mobile2|default:"-" }}</span>
-                    </div>
-                    <div class="modal-data-row">
-                        <span class="modal-data-label">email1</span>
-                        <span class="modal-data-val">{{ m.email1|default:"-" }}</span>
-                    </div>
-                    <div class="modal-data-row">
-                        <span class="modal-data-label">地址</span>
-                        <span class="modal-data-val" id="member_address">{{ m.address|default:"-" }}</span>
-                    </div>
-                </div>
-                
-                <hr style="border-top: 1px solid #223049; margin: 12px 0;">
-
-                <!-- 個人資訊 -->
-                <div class="modal-section-new">
-                    <h5 class="modal-section-title-new">
-                        <i class="bi bi-person text-info"></i>個人資訊
-                    </h5>
-                    <div class="modal-data-row">
-                        <span class="modal-data-label">生日</span>
-                        <span class="modal-data-val">{{ m.birthday|date:"Y-m-d"|default:"-" }}</span>
-                    </div>
-                    <div class="modal-data-row">
-                        <span class="modal-data-label">受洗</span>
-                        <span class="modal-data-val">{% if m.baptized == '是' or m.baptized == 'y' or m.baptized == '已受洗' %}足{% else %}{{ m.baptized|default:"-" }}{% endif %}</span>
-                    </div>
-                    <div class="modal-data-row">
-                        <span class="modal-data-label">加入日期</span>
-                        <span class="modal-data-val">{{ m.join_date|date:"Y-m-d"|default:"-" }}</span>
-                    </div>
-                    <div class="modal-data-row">
-                        <span class="modal-data-label">首次打卡</span>
-                        <span class="modal-data-val">{{ first_checkin|default:"-" }}</span>
-                    </div>
-                    <div class="modal-data-row align-items-start">
-                        <span class="modal-data-label">備註</span>
-                        <span class="modal-data-val" style="white-space: pre-line;">{{ m.note|default:"-" }}</span>
-                    </div>
-                </div>
-                
-                <hr style="border-top: 1px solid #223049; margin: 12px 0;">
-
-                <!-- 家人 -->
-                <div class="modal-section-new">
-                    <h5 class="modal-section-title-new">
-                        <i class="bi bi-people text-info"></i>家人
-                    </h5>
-                    <div class="modal-family-row">
-                        {% if family %}
-                            {% for member in family %}
-                            <a href="{% url 'eureka:eureka-melos' member.church_id %}{% if query_params_url %}?{{ query_params_url }}{% endif %}"
-                               class="modal-family-item">
-                                <img src="{% url 'eureka:eureka-photo' member.church_id %}.jpg"
-                                     onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'46\' height=\'46\' viewBox=\'0 0 46 46\'%3E%3Crect width=\'46\' height=\'46\' fill=\'%231e293b\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'sans-serif\' font-size=\'14\' fill=\'%2364748b\'%3E?%3C/text%3E%3C/svg%3E';"
-                                     class="modal-family-avatar" alt="{{ member.name }}">
-                                <div class="modal-family-name">{{ member.name }}</div>
-                            </a>
-                            {% endfor %}
-                        {% else %}
-                            <span class="small text-muted py-1 w-100">查無其他家族成員資料。</span>
+                        
+                        <!-- Annual Attendance Bar Chart -->
+                        {% if yearly_attendance %}
+                            <div class="modal-chart-container">
+                                {% for item in yearly_attendance %}
+                                <div class="modal-chart-column">
+                                    <div class="modal-chart-bar-wrapper">
+                                        <div class="modal-chart-bar {% if item.rate >= 70 %}high{% else %}low{% endif %}" 
+                                             style="height: {{ item.rate }}%;"></div>
+                                    </div>
+                                    <span class="modal-chart-label-year">{{ item.year }}</span>
+                                    <span class="modal-chart-label-percent">{{ item.rate }}%</span>
+                                </div>
+                                {% endfor %}
+                            </div>
                         {% endif %}
                     </div>
                 </div>
             </div>
             
-            <!-- Right Column: Map and Attendance -->
-            <div>
-                <!-- 地圖 -->
-                <div class="modal-section-new">
-                    <h5 class="modal-section-title-new">地圖</h5>
-                    <div id="modal-map"></div>
-                </div>
-                
-                <hr style="border-top: 1px solid #223049; margin: 12px 0;">
-
-                <!-- 出席狀態 -->
-                <div class="modal-section-new">
-                    <h5 class="modal-section-title-new">
-                        <i class="bi bi-calendar-check text-info"></i>出席狀態
-                    </h5>
-                    
-                    <!-- Attendance Blocks -->
-                    <div class="modal-attendance-blocks">
-                        {% if m.data_str %}
-                            {% for char in m.data_str %}
-                                {% if char == '|' %}
-                                    <span class="modal-att-square attended" title="出席"></span>
-                                {% elif char == '_' %}
-                                    <span class="modal-att-square absent" title="缺席"></span>
-                                {% elif char == ' ' %}
-                                    <span class="modal-att-square spacer"></span>
-                                {% endif %}
-                            {% endfor %}
-                        {% else %}
-                            <span class="small text-muted py-1">無出席歷史紀錄。</span>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Annual Attendance Bar Chart -->
-                    {% if yearly_attendance %}
-                        <div class="modal-chart-container">
-                            {% for item in yearly_attendance %}
-                            <div class="modal-chart-column">
-                                <div class="modal-chart-bar-wrapper">
-                                    <div class="modal-chart-bar {% if item.rate >= 70 %}high{% else %}low{% endif %}" 
-                                         style="height: {{ item.rate }}%;"></div>
-                                </div>
-                                <span class="modal-chart-label-year">{{ item.year }}</span>
-                                <span class="modal-chart-label-percent">{{ item.rate }}%</span>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
+            <!-- Bottom Action Buttons -->
+            <div class="modal-action-buttons view-mode">
+                <button type="button" onclick="copyTextInfo()" class="modal-btn-action">
+                    <i class="bi bi-clipboard"></i> 複製文字資訊
+                </button>
+                <button type="button" onclick="downloadCard()" class="modal-btn-action">
+                    <i class="bi bi-download"></i> 下載圖文小卡
+                </button>
+                <button type="button" onclick="toggleEditMode(true)" class="modal-btn-action modal-btn-action-primary">
+                    <i class="bi bi-pencil-square"></i> 編輯會員資料
+                </button>
             </div>
-        </div>
-        
-        <!-- Bottom Action Buttons -->
-        <div class="modal-action-buttons">
-            <button onclick="copyTextInfo()" class="modal-btn-action">
-                <i class="bi bi-clipboard"></i> 複製文字資訊
-            </button>
-            <button onclick="downloadCard()" class="modal-btn-action modal-btn-action-primary">
-                <i class="bi bi-download"></i> 下載圖文小卡
-            </button>
-        </div>
+            <div class="modal-action-buttons edit-mode" style="display: none;">
+                <button type="button" onclick="toggleEditMode(false)" class="modal-btn-action">
+                    取消
+                </button>
+                <button type="submit" class="modal-btn-action modal-btn-action-primary">
+                    儲存變更
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 {% endif %}
@@ -1239,6 +1142,35 @@
 <!-- Leaflet Map JS script -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
+    function toggleEditMode(isEdit) {
+        const viewModes = document.querySelectorAll('.view-mode');
+        const editModes = document.querySelectorAll('.edit-mode');
+        
+        if (isEdit) {
+            viewModes.forEach(el => el.style.setProperty('display', 'none', 'important'));
+            editModes.forEach(el => {
+                if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.classList.contains('modal-action-buttons')) {
+                    el.style.display = 'flex';
+                } else if (el.tagName === 'DIV') {
+                    el.style.display = 'block';
+                } else {
+                    el.style.display = '';
+                }
+            });
+        } else {
+            viewModes.forEach(el => {
+                if (el.classList.contains('modal-action-buttons')) {
+                    el.style.display = 'flex';
+                } else if (el.classList.contains('modal-badge-group')) {
+                    el.style.display = 'flex';
+                } else {
+                    el.style.display = '';
+                }
+            });
+            editModes.forEach(el => el.style.setProperty('display', 'none', 'important'));
+        }
+    }
+
     // Toggle Search Inputs clear button dynamically
     document.querySelectorAll('.search-input').forEach(input => {
         const wrapper = input.closest('.search-input-wrapper');

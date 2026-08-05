@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>課程公告 - {{ course.subject }}</title>
+    <style>
+        /* Base styles */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif;
+            color: #1e293b;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Printable Area */
+        .print-page {
+            background-color: #ffffff;
+            width: 210mm;
+            min-height: 297mm;
+            box-sizing: border-box;
+            margin: 20px auto;
+            padding: 20mm;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        /* Floating toolbar */
+        .print-toolbar {
+            background-color: #1e293b;
+            color: #ffffff;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-print {
+            background-color: #38bdf8;
+            color: #0f172a;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-print:hover {
+            background-color: #0ea5e9;
+        }
+
+        /* Poster layout elements */
+        .poster-border {
+            border: 4px double #0284c7;
+            padding: 15mm;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .poster-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .badge-announcement {
+            background-color: #0284c7;
+            color: #ffffff;
+            font-size: 1rem;
+            font-weight: 800;
+            padding: 6px 20px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 12px;
+            letter-spacing: 4px;
+        }
+
+        .poster-title {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #0f172a;
+            margin: 0;
+            line-height: 1.3;
+        }
+
+        .poster-subtitle {
+            font-size: 1.1rem;
+            color: #475569;
+            margin: 8px 0 0 0;
+            font-weight: 600;
+        }
+
+        /* Meta details */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            background-color: #f0f9ff;
+            border: 1.5px solid #bae6fd;
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 28px;
+        }
+
+        .info-item {
+            font-size: 1rem;
+            color: #0f172a;
+            display: flex;
+            gap: 8px;
+        }
+
+        .info-label {
+            font-weight: 800;
+            color: #0369a1;
+            white-space: nowrap;
+        }
+
+        .intro-box {
+            font-size: 0.95rem;
+            line-height: 1.7;
+            color: #334155;
+            margin-bottom: 28px;
+            border-left: 4px solid #0284c7;
+            padding-left: 14px;
+            white-space: pre-wrap;
+        }
+
+        /* Table */
+        .syllabus-title {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #0284c7;
+            padding-bottom: 6px;
+        }
+
+        .syllabus-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            margin-bottom: 30px;
+        }
+
+        .syllabus-table th {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            font-weight: 800;
+            border: 1px solid #cbd5e1;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .syllabus-table td {
+            border: 1px solid #cbd5e1;
+            padding: 10px;
+            text-align: left;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        /* Poster footer */
+        .poster-footer {
+            text-align: center;
+            border-top: 1px dashed #cbd5e1;
+            padding-top: 20px;
+            margin-top: 20px;
+            font-size: 0.88rem;
+            color: #64748b;
+        }
+
+        /* Print media overrides */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: #ffffff !important;
+            }
+            .print-page {
+                margin: 0 !important;
+                padding: 10mm !important;
+                border: none !important;
+                box-shadow: none !important;
+                width: 100% !important;
+                min-height: auto !important;
+            }
+            .poster-border {
+                border-width: 3px !important;
+                padding: 10mm !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Toolbar -->
+    <div class="print-toolbar no-print">
+        <span>📄 <strong>列印預覽</strong>：本頁面已經過排版優化，您可以直接按右側列印按鈕，或使用瀏覽器列印功能輸出紙本/PDF。</span>
+        <button class="btn-print" onclick="window.print()">
+            🖨️ 開始列印
+        </button>
+    </div>
+
+    <!-- Print Page container -->
+    <div class="print-page">
+        <div class="poster-border">
+            
+            <div class="poster-header">
+                <span class="badge-announcement">課程公告</span>
+                <h1 class="poster-title">{{ course.subject }}</h1>
+                <p class="poster-subtitle">課程規劃代號: {{ course.code }}</p>
+            </div>
+
+            <!-- Key Info Grid -->
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">授課講師：</span>
+                    <span>{{ course.teachers }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">上課教室：</span>
+                    <span><strong>{{ course.classroom_name|default:"未指定" }}</strong></span>
+                </div>
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <span class="info-label">上課時間：</span>
+                    <span>{{ course.class_time }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">課程堂數：</span>
+                    <span>{{ course.total_classes }} 堂</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">每堂長度：</span>
+                    <span>{{ course.hours_per_class }} 分鐘</span>
+                </div>
+            </div>
+
+            <!-- Introduction -->
+            <div class="syllabus-title">課程簡介</div>
+            <div class="intro-box">{{ course.introduction|default:"本課程目前尚未填寫大綱簡介說明。" }}</div>
+
+            <!-- Syllabus Table -->
+            <div class="syllabus-title">大綱與排課時間表</div>
+            <table class="syllabus-table">
+                <thead>
+                    <tr>
+                        <th width="12%">堂次</th>
+                        <th width="23%">上課日期</th>
+                        <th width="42%">課堂主題</th>
+                        <th width="23%">授課老師</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c_class in classes %}
+                    <tr>
+                        <td class="text-center"><strong>第 {{ c_class.class_number }} 堂</strong></td>
+                        <td class="text-center">
+                            {% if c_class.date %}
+                                {{ c_class.date|date:"Y-m-d" }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>{{ c_class.subject }}</td>
+                        <td>{{ c_class.teacher }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center" style="color: #64748b;">目前無詳細排課大綱資料。</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="poster-footer">
+                <p>※ 歡迎踴躍報名參加！相關事宜請洽教育推廣組。 ※</p>
+                <p style="font-size: 0.75rem;">列印時間：{% now "Y-m-d H:i" %}</p>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>

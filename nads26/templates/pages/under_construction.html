@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .construction-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 400px;
+        text-align: center;
+        padding: 40px 20px;
+    }
+
+    .construction-icon-wrapper {
+        position: relative;
+        margin-bottom: 30px;
+    }
+
+    .construction-glow {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 120px;
+        height: 120px;
+        background: radial-gradient(circle, rgba(188, 220, 255, 0.25) 0%, rgba(188, 220, 255, 0) 70%);
+        border-radius: 50%;
+        animation: pulse-glow 2.5s infinite ease-in-out;
+        z-index: 1;
+    }
+
+    .construction-icon {
+        font-size: 5rem;
+        position: relative;
+        z-index: 2;
+        display: inline-block;
+        animation: float-icon 4s infinite ease-in-out;
+    }
+
+    .construction-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin: 0 0 15px 0;
+        background: linear-gradient(135deg, #ffffff 0%, var(--accent-color) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: -0.5px;
+    }
+
+    .construction-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(188, 220, 255, 0.1);
+        border: 1px solid rgba(188, 220, 255, 0.15);
+        color: var(--accent-color);
+        padding: 6px 14px;
+        border-radius: 30px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .construction-badge::before {
+        content: "";
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background-color: var(--accent-color);
+        border-radius: 50%;
+        animation: blink-dot 1.5s infinite;
+    }
+
+    .construction-text {
+        font-size: 1.1rem;
+        color: var(--text-secondary);
+        max-width: 480px;
+        line-height: 1.6;
+        margin: 0;
+    }
+
+    @keyframes pulse-glow {
+        0%, 100% {
+            transform: translate(-50%, -50%) scale(0.9);
+            opacity: 0.6;
+        }
+        50% {
+            transform: translate(-50%, -50%) scale(1.15);
+            opacity: 1;
+        }
+    }
+
+    @keyframes float-icon {
+        0%, 100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-8px);
+        }
+    }
+
+    @keyframes blink-dot {
+        0%, 100% { opacity: 0.3; }
+        50% { opacity: 1; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="construction-container">
+        <div class="construction-icon-wrapper">
+            <div class="construction-glow"></div>
+            <span class="construction-icon">🛠️</span>
+        </div>
+        <h2 class="construction-title">{{ title }}</h2>
+        <div class="construction-badge">建構中</div>
+        <p class="construction-text">本功能正在積極建置與規劃中，敬請期待後續更新！</p>
+    </div>
+</div>
+{% endblock %}

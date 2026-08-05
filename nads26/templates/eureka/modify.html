@@ -635,7 +635,10 @@
                 </h5>
                 <div class="d-flex gap-2">
                     <a href="{% url 'eureka:modify-download' %}" class="btn-download-excel">
-                        <i class="bi bi-file-earmark-excel-fill"></i> 下載 Excel
+                        <i class="bi bi-file-earmark-excel-fill"></i> 下載完整 Excel
+                    </a>
+                    <a href="{% url 'eureka:modify-download' %}?format=simple" class="btn-download-excel" style="background-color: #10b981; border-color: #10b981;">
+                        <i class="bi bi-file-earmark-excel-fill"></i> 匯出會員資料 (Excel)
                     </a>
                 </div>
             </div>

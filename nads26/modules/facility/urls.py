@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path('planned/', views.planned_page, name='planned-feature'),
+    path('booking/day/', views.booking_daily_overview, name='facility-booking-day'),
     path('booking/', views.booking_page, name='facility-booking'),
     path('rooms/', views.room_admin_page, name='facility-rooms'),
     path('maintenance/', views.maintenance_page, name='facility-maintenance'),
@@ -18,5 +19,17 @@ urlpatterns = [
     path('lan-hosts/ping/', views.network_lan_hosts_ping, name='facility-network-lan-hosts-ping'),
     path('wlan-aps/', views.network_wlan_aps_page, name='facility-network-wlan-aps'),
     path('wlan-aps/scan/', views.network_wlan_aps_scan, name='facility-network-wlan-aps-scan'),
+    path('classroom-inspection/', views.classroom_inspection_page, name='facility-classroom-inspection'),
+    path('classroom-inspection/room/<int:room_id>/inspect/', views.classroom_mobile_inspect_page, name='facility-classroom-mobile-inspect'),
+    path('classroom-inspection/room/<int:room_id>/qrcode/', views.classroom_qrcode_image, name='facility-classroom-qrcode'),
+    path('classroom-inspection/api/rooms/', views.classroom_inspection_api_rooms, name='facility-classroom-api-rooms'),
+    path('classroom-inspection/api/items/', views.classroom_inspection_api_items, name='facility-classroom-api-items'),
+    path('classroom-inspection/export-pdf/', views.classroom_inspection_pdf, name='facility-classroom-inspection-pdf'),
+    path('periodic-maintenance/', views.periodic_maintenance_page, name='facility-periodic-maintenance'),
+    path('periodic-maintenance/report/', views.periodic_maintenance_report_page, name='facility-periodic-maintenance-report'),
+    path('periodic-maintenance/report/<int:item_id>/', views.periodic_maintenance_report_page, name='facility-periodic-maintenance-report-item'),
+    path('periodic-maintenance/item/<int:item_id>/qrcode/', views.periodic_maintenance_qrcode_image, name='facility-periodic-maintenance-qrcode'),
+    path('periodic-maintenance/api/items/', views.periodic_maintenance_api_items, name='facility-periodic-maintenance-api-items'),
+    path('periodic-maintenance/api/records/', views.periodic_maintenance_api_records, name='facility-periodic-maintenance-api-records'),
     re_path(r'^(?P<unused_path>.+)/?$', views.planned_page, name='facility-planned-catchall'),
 ]

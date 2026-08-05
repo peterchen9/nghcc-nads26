@@ -6,19 +6,26 @@
 {% block extra_css %}
 <style>
     .budget-shell { display: flex; flex-direction: column; gap: 14px; }
-    .budget-head { position: sticky; top: 70px; z-index: 30; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 12px; margin: -18px -12px 0; background: #2f4156; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .budget-head { position: relative; top: auto !important; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 12px; margin: -18px -12px 0; background: #2f4156; border-bottom: 1px solid rgba(255,255,255,0.08); }
     .budget-title h2 { margin: 0 0 6px; font-size: 1.7rem; }
     .budget-title p { margin: 0; color: var(--text-secondary); font-size: 0.92rem; }
     .budget-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .budget-toolbar { position: relative; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; min-height: 38px; }
     .budget-search { display: inline-flex; flex-wrap: nowrap; align-items: center; gap: 8px; }
     .budget-btn, .budget-file-label { border: 0; border-radius: 7px; padding: 9px 13px; font-weight: 700; cursor: pointer; text-decoration: none; color: #17324d; background: var(--accent-color); font-family: inherit; font-size: 0.9rem; line-height: 1.1; }
     .budget-btn.secondary, .budget-file-label { background: rgba(255,255,255,0.12); color: var(--text-primary); border: 1px solid rgba(255,255,255,0.12); }
     .budget-btn.danger { background: rgba(248,113,113,0.18); color: #fecaca; border: 1px solid rgba(248,113,113,0.35); }
     .budget-file-label input { display: none; }
-    .budget-input, .budget-textarea { width: 100%; box-sizing: border-box; border-radius: 7px; border: 1px solid rgba(255,255,255,0.12); background: rgba(15,23,42,0.35); color: var(--text-primary); padding: 8px 9px; font-family: inherit; font-size: 0.88rem; }
+    .budget-input, .budget-textarea, .budget-select { width: 100%; box-sizing: border-box; border-radius: 7px; border: 1px solid rgba(255,255,255,0.12); background: rgba(15,23,42,0.35); color: var(--text-primary); padding: 8px 9px; font-family: inherit; font-size: 0.88rem; }
+    .budget-select option { background: #31465f; color: var(--text-primary); }
     .budget-textarea { min-height: 84px; resize: vertical; }
     .budget-search .budget-input { min-width: 300px; }
-    .budget-table-wrap { overflow: auto; max-height: calc(100vh - 245px); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; background: rgba(255,255,255,0.025); }
+    .budget-category-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: thin; }
+    .budget-category-tab { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 7px; border: 1px solid rgba(255,255,255,0.14); border-radius: 8px; padding: 9px 13px; color: #dbeafe; background: rgba(255,255,255,0.07); font-size: 0.9rem; font-weight: 800; text-decoration: none; white-space: nowrap; }
+    .budget-category-tab:hover { background: rgba(255,255,255,0.12); }
+    .budget-category-tab.active { color: #17324d; background: var(--accent-color); border-color: var(--accent-color); }
+    .budget-category-count { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: rgba(15,23,42,0.24); font-size: 0.76rem; }
+    .budget-table-wrap { overflow: auto; max-height: calc(100vh - 300px); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; background: rgba(255,255,255,0.025); }
     .budget-table { width: 100%; border-collapse: collapse; min-width: 1280px; }
     .budget-table th, .budget-table td { border-bottom: 1px solid rgba(255,255,255,0.07); padding: 9px 10px; vertical-align: top; text-align: left; font-size: 0.86rem; }
     .budget-table th { position: sticky; top: 0; background: #20344a; color: #e5f1ff; z-index: 3; white-space: nowrap; box-shadow: 0 1px 0 rgba(255,255,255,0.08); }
@@ -26,7 +33,6 @@
     .budget-table .money, .budget-table .ratio { text-align: right; white-space: nowrap; }
     .budget-code-link { color: #bcdcff; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; background: none; border: 0; padding: 0; cursor: pointer; font: inherit; }
     .budget-muted { color: var(--text-secondary); }
-    .budget-pagination { display: flex; gap: 8px; align-items: center; justify-content: flex-end; color: var(--text-secondary); }
     .over-yellow td { background: rgba(250, 204, 21, 0.18); color: #fff7d6; }
     .over-pink td { background: rgba(244, 114, 182, 0.22); color: #ffe8f3; }
     .budget-dialog { width: min(980px, calc(100vw - 34px)); max-height: 88vh; overflow: auto; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; background: #31465f; color: var(--text-primary); padding: 0; box-shadow: 0 24px 80px rgba(0,0,0,0.55); }
@@ -38,11 +44,13 @@
     .budget-field { display: flex; flex-direction: column; gap: 6px; }
     .budget-field label { color: #d8e8fb; font-size: 0.8rem; font-weight: 700; }
     .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 16px; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.08); }
+    .dialog-actions.split { justify-content: space-between; flex-wrap: wrap; }
+    .dialog-action-group { display: flex; gap: 8px; }
     .log-list { display: grid; gap: 10px; }
     .log-item { border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; background: rgba(15,23,42,0.22); }
     .log-meta { display: flex; flex-wrap: wrap; gap: 10px; color: #d8e8fb; font-size: 0.86rem; margin-bottom: 8px; }
     .log-pre { white-space: pre-wrap; word-break: break-word; font-size: 0.78rem; color: #eef6ff; background: rgba(0,0,0,0.18); border-radius: 6px; padding: 8px; margin: 6px 0 0; }
-    @media (max-width: 900px) { .budget-head { top: 0; } .budget-form-grid { grid-template-columns: 1fr; } .budget-search { width: 100%; } .budget-search .budget-input { min-width: 0; flex: 1; } .budget-search .budget-btn { flex: 0 0 auto; } .budget-table-wrap { max-height: calc(100vh - 310px); } }
+    @media (max-width: 900px) { .budget-form-grid { grid-template-columns: 1fr; } .budget-toolbar, .budget-search { width: 100%; } .budget-search .budget-input { min-width: 0; flex: 1; } .budget-search .budget-btn { flex: 0 0 auto; } .budget-table-wrap { max-height: calc(100vh - 355px); } }
 </style>
 {% endblock %}
 
@@ -51,7 +59,7 @@
     <div class="budget-head">
         <div class="budget-title">
             <h2>預算表維護</h2>
-            <p>共 {{ total_count }} 筆預算項目</p>
+            <p>全部共 {{ all_count }} 筆預算項目</p>
         </div>
         <div class="budget-actions">
             <a class="budget-btn secondary" href="{% url 'budget-export' %}">匯出</a>
@@ -66,13 +74,27 @@
         </div>
     </div>
 
-    <div class="budget-actions" style="justify-content: space-between;">
+    {% if page_groups %}
+    <nav class="budget-category-tabs" aria-label="預算分類">
+        {% for page in page_groups %}
+        <a class="budget-category-tab{% if page.slug == active_page.slug %} active{% endif %}"
+           href="?group={{ page.slug|urlencode }}{% if query %}&q={{ query|urlencode }}{% endif %}"
+           {% if page.slug == active_page.slug %}aria-current="page"{% endif %}>
+            <span>{{ page.name }}</span>
+            <span class="budget-category-count">{{ page.count }}</span>
+        </a>
+        {% endfor %}
+    </nav>
+    {% endif %}
+
+    <div class="budget-toolbar">
         <form class="budget-search" method="get">
-            <input class="budget-input" type="search" name="q" value="{{ query }}" placeholder="搜尋分類、代號、事工、牧者、會計科目">
+            <input type="hidden" name="group" value="{{ active_page.slug }}">
+            <input class="budget-input" type="search" name="q" value="{{ query }}" placeholder="搜尋目前頁面的分類、代號、事工、牧者、會計科目">
             <button class="budget-btn secondary" type="submit">搜尋</button>
-            {% if query %}<a class="budget-btn secondary" href="{% url 'budget-list' %}">清除</a>{% endif %}
+            {% if query %}<a class="budget-btn secondary" href="?group={{ active_page.slug|urlencode }}">清除</a>{% endif %}
         </form>
-        <div class="budget-muted">每頁 50 筆</div>
+        <div class="budget-muted">{{ active_page.name }}：共 {{ total_count }} 筆</div>
     </div>
 
     <div class="budget-table-wrap">
@@ -85,9 +107,9 @@
                 </tr>
             </thead>
             <tbody>
-                {% for item in page_obj.object_list %}
+                {% for item in items %}
                 <tr class="{{ item.row_status }}">
-                    <td>{{ item.category }}</td>
+                    <td>{{ item.category|linebreaksbr }}</td>
                     <td><button class="budget-code-link" type="button" onclick="document.getElementById('editDialog{{ item.id }}').showModal()">{{ item.budget_code|default:'未填代號' }}</button></td>
                     <td>{{ item.ministry }}</td>
                     <td>{{ item.annual_goal|linebreaksbr }}</td>
@@ -106,20 +128,24 @@
         </table>
     </div>
 
-    <div class="budget-pagination">
-        {% if page_obj.has_previous %}<a class="budget-btn secondary" href="?q={{ query }}&page={{ page_obj.previous_page_number }}">上一頁</a>{% endif %}
-        <span>第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 頁</span>
-        {% if page_obj.has_next %}<a class="budget-btn secondary" href="?q={{ query }}&page={{ page_obj.next_page_number }}">下一頁</a>{% endif %}
-    </div>
 </div>
 
 <dialog class="budget-dialog" id="createDialog">
     <form method="post">
         {% csrf_token %}
         <input type="hidden" name="action" value="create">
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
         <div class="dialog-head"><h3>新增預算項目</h3><button class="budget-btn secondary" type="button" onclick="this.closest('dialog').close()">關閉</button></div>
         <div class="dialog-body">
             <div class="budget-form-grid">
+                <div class="budget-field">
+                    <label for="new_page_group">所屬分頁</label>
+                    <select class="budget-select" id="new_page_group" name="page_group" required>
+                        {% for page in page_groups %}
+                        <option value="{{ page.slug }}"{% if page.slug == active_page.slug %} selected{% endif %}>{{ page.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 {% for field, label in form_fields %}
                 <div class="budget-field">
                     <label for="new_{{ field }}">{{ label }}</label>
@@ -138,7 +164,7 @@
     </form>
 </dialog>
 
-{% for item in page_obj.object_list %}
+{% for item in items %}
 <dialog class="budget-dialog" id="editDialog{{ item.id }}">
     <form method="post">
         {% csrf_token %}
@@ -148,6 +174,14 @@
         <div class="dialog-head"><h3>修改 {{ item.budget_code }} {{ item.ministry }}</h3><button class="budget-btn secondary" type="button" onclick="this.closest('dialog').close()">關閉</button></div>
         <div class="dialog-body">
             <div class="budget-form-grid">
+                <div class="budget-field">
+                    <label for="page_group_{{ item.id }}">所屬分頁</label>
+                    <select class="budget-select" id="page_group_{{ item.id }}" name="page_group" required>
+                        {% for page in page_groups %}
+                        <option value="{{ page.slug }}"{% if page.slug == item.page_group %} selected{% endif %}>{{ page.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 <div class="budget-field"><label>分類</label><input class="budget-input" name="category" value="{{ item.category }}"></div>
                 <div class="budget-field"><label>2026預算代號</label><input class="budget-input" name="budget_code" value="{{ item.budget_code }}"></div>
                 <div class="budget-field"><label>事工</label><input class="budget-input" name="ministry" value="{{ item.ministry }}"></div>
@@ -160,7 +194,15 @@
                 <div class="budget-field"><label>會計科目</label><input class="budget-input" name="accounting_subject" value="{{ item.accounting_subject }}"></div>
             </div>
         </div>
-        <div class="dialog-actions"><button class="budget-btn secondary" type="button" onclick="this.closest('dialog').close()">取消</button><button class="budget-btn" type="submit">儲存</button></div>
+        <div class="dialog-actions split">
+            <button class="budget-btn danger" type="submit"
+                    formaction="{% url 'budget-delete' item.id %}" formmethod="post" formnovalidate
+                    onclick="return confirm('確定要刪除此項預算？此動作無法復原。')">刪除此項預算</button>
+            <div class="dialog-action-group">
+                <button class="budget-btn secondary" type="button" onclick="this.closest('dialog').close()">取消</button>
+                <button class="budget-btn" type="submit">儲存</button>
+            </div>
+        </div>
     </form>
 </dialog>
 {% endfor %}

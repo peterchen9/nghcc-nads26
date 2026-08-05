@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}{{ course.code }} 討論版 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<style>
+    .edu-workspace-wrapper {
+        background-color: #0d1527;
+        color: #f8fafc;
+        padding: 24px;
+        border-radius: 16px;
+        min-height: 85vh;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    /* Breadcrumb */
+    .edu-breadcrumb {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-size: 0.88rem;
+        color: #94a3b8;
+        margin-bottom: 20px;
+    }
+
+    .edu-breadcrumb a {
+        color: #38bdf8;
+        text-decoration: none;
+    }
+
+    .edu-breadcrumb a:hover {
+        text-decoration: underline;
+    }
+
+    /* Layout Grid */
+    .board-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
+    }
+
+    /* Left: Posts List */
+    .posts-section {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .post-card {
+        background-color: #131c2e;
+        border: 1px solid #223049;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s;
+    }
+
+    .post-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .post-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #223049;
+        padding-bottom: 10px;
+        margin-bottom: 14px;
+    }
+
+    .post-title-area {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .post-title {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #ffffff;
+    }
+
+    .post-meta {
+        font-size: 0.78rem;
+        color: #94a3b8;
+        display: flex;
+        gap: 12px;
+    }
+
+    .post-meta span {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .post-author {
+        color: #38bdf8;
+        font-weight: 600;
+    }
+
+    .post-content {
+        font-size: 0.92rem;
+        color: #cbd5e1;
+        line-height: 1.6;
+        white-space: pre-wrap;
+    }
+
+    /* Right: New Post Form */
+    .form-panel {
+        background-color: #131c2e;
+        border: 1px solid #223049;
+        border-radius: 12px;
+        padding: 20px;
+        height: fit-content;
+        position: sticky;
+        top: 20px;
+    }
+
+    .form-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin-top: 0;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid #223049;
+        padding-bottom: 10px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 16px;
+    }
+
+    .form-label {
+        font-size: 0.8rem;
+        color: #94a3b8;
+        font-weight: 600;
+    }
+
+    .form-control {
+        background-color: #1e293b;
+        border: 1px solid #334155;
+        color: #f8fafc;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 0.88rem;
+        outline: none;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .form-control:focus {
+        border-color: #38bdf8;
+    }
+
+    .btn-post {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        color: #ffffff;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        cursor: pointer;
+        width: 100%;
+        transition: all 0.2s;
+    }
+
+    .btn-post:hover {
+        filter: brightness(1.1);
+    }
+
+    /* Alerts */
+    .alert-container {
+        margin-bottom: 20px;
+    }
+
+    .alert {
+        padding: 12px 16px;
+        border-radius: 6px;
+        font-size: 0.88rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .alert-success {
+        background-color: rgba(22, 163, 74, 0.2);
+        border: 1px solid rgba(22, 163, 74, 0.4);
+        color: #4ade80;
+    }
+
+    .alert-danger {
+        background-color: rgba(220, 38, 38, 0.2);
+        border: 1px solid rgba(220, 38, 38, 0.4);
+        color: #f87171;
+    }
+
+    @media (max-width: 1024px) {
+        .board-grid {
+            grid-template-columns: 1fr;
+        }
+        .form-panel {
+            position: relative;
+            top: 0;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edu-workspace-wrapper">
+    <!-- Breadcrumb -->
+    <div class="edu-breadcrumb">
+        <a href="{% url 'education:course-list' %}">課程規劃</a>
+        <i class="bi bi-chevron-right"></i>
+        <a href="{% url 'education:course-detail' course.pk %}">{{ course.code }} 詳情</a>
+        <i class="bi bi-chevron-right"></i>
+        <span>討論版</span>
+    </div>
+
+    {% if messages %}
+    <div class="alert-container">
+        {% for message in messages %}
+        <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}">
+            <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill{% else %}bi-exclamation-triangle-fill{% endif %}"></i>
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Main Grid -->
+    <div class="board-grid">
+        
+        <!-- Left: Announcements list -->
+        <div class="posts-section">
+            {% for post in posts %}
+            <div class="post-card">
+                <div class="post-header">
+                    <div class="post-title-area">
+                        <h4 class="post-title">{{ post.title }}</h4>
+                        <div class="post-meta">
+                            <span><i class="bi bi-person-fill"></i> 發佈人: <strong class="post-author">{{ post.author.username }}</strong></span>
+                            <span><i class="bi bi-clock-fill"></i> 發佈時間: {{ post.created_at|date:"Y-m-d H:i" }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="post-content">{{ post.content|linebreaksbr }}</div>
+            </div>
+            {% empty %}
+            <div class="post-card" style="text-align: center; padding: 40px; color: #94a3b8;">
+                <i class="bi bi-chat-left-dots" style="font-size: 2rem; display: block; margin-bottom: 12px; opacity: 0.5;"></i>
+                目前尚無任何公告或討論貼文。
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Right: Create Announcement Panel -->
+        <div class="form-panel">
+            <h5 class="form-title"><i class="bi bi-pencil-square text-info"></i> 發佈公告公告</h5>
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label class="form-label" for="id_title">公告標題</label>
+                    <input type="text" id="id_title" name="title" placeholder="請輸入標題" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="id_content">公告內容</label>
+                    <textarea id="id_content" name="content" rows="6" placeholder="請輸入詳細公告內容或課程進度..." class="form-control" required></textarea>
+                </div>
+                <button type="submit" class="btn-post">
+                    <i class="bi bi-send-fill"></i> 發佈公告
+                </button>
+            </form>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

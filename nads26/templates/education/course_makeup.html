@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}{{ course.code }} 學員補課 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<style>
+    .edu-workspace-wrapper {
+        background-color: #0d1527;
+        color: #f8fafc;
+        padding: 24px;
+        border-radius: 16px;
+        min-height: 85vh;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    /* Breadcrumb */
+    .edu-breadcrumb {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-size: 0.88rem;
+        color: #94a3b8;
+        margin-bottom: 20px;
+    }
+
+    .edu-breadcrumb a {
+        color: #38bdf8;
+        text-decoration: none;
+    }
+
+    .edu-breadcrumb a:hover {
+        text-decoration: underline;
+    }
+
+    /* Header styling */
+    .course-summary-card {
+        background-color: #131c2e;
+        border: 1px solid #223049;
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .course-title {
+        margin: 0;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #ffffff;
+    }
+
+    .course-meta-row {
+        display: flex;
+        gap: 20px;
+        font-size: 0.85rem;
+        color: #94a3b8;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+
+    .course-meta-row span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* Class Cards List */
+    .class-list-container {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .class-item-card {
+        background-color: #131c2e;
+        border: 1px solid #223049;
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 20px;
+        transition: border-color 0.2s;
+    }
+
+    .class-item-card:hover {
+        border-color: #22d3ee;
+    }
+
+    .class-info-block {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        min-width: 250px;
+    }
+
+    .class-number-circle {
+        width: 44px;
+        height: 44px;
+        background-color: #1e293b;
+        color: #38bdf8;
+        border: 1px solid #334155;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+
+    .class-details {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .class-subject {
+        font-weight: 700;
+        font-size: 1.05rem;
+        color: #ffffff;
+        margin: 0;
+    }
+
+    .class-meta-text {
+        font-size: 0.8rem;
+        color: #94a3b8;
+        display: flex;
+        gap: 12px;
+    }
+
+    /* Audio section */
+    .audio-player-block {
+        flex-grow: 1;
+        max-width: 400px;
+        min-width: 280px;
+    }
+
+    .custom-audio {
+        width: 100%;
+        height: 38px;
+        outline: none;
+    }
+
+    /* Action section */
+    .class-action-block {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 150px;
+        justify-content: flex-end;
+    }
+
+    .btn-makeup-complete {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        color: #ffffff;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.88rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 4px 6px rgba(2, 132, 199, 0.2);
+    }
+
+    .btn-makeup-complete:hover {
+        filter: brightness(1.1);
+        transform: translateY(-1px);
+    }
+
+    .completed-badge {
+        background-color: rgba(34, 197, 94, 0.15);
+        color: #4ade80;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .no-recording-text {
+        font-size: 0.85rem;
+        color: #64748b;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* Alerts */
+    .alert-container {
+        margin-bottom: 20px;
+    }
+
+    .alert {
+        padding: 12px 16px;
+        border-radius: 6px;
+        font-size: 0.88rem;
+        font-weight: 500;
+        background-color: rgba(34, 197, 94, 0.2);
+        border: 1px solid rgba(34, 197, 94, 0.4);
+        color: #4ade80;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    @media (max-width: 768px) {
+        .class-item-card {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 14px;
+        }
+        .audio-player-block {
+            max-width: 100%;
+        }
+        .class-action-block {
+            justify-content: flex-start;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edu-workspace-wrapper">
+    <!-- Breadcrumb -->
+    <div class="edu-breadcrumb">
+        <a href="{% url 'education:course-list' %}">課程規劃</a>
+        <i class="bi bi-chevron-right"></i>
+        <a href="{% url 'education:course-detail' course.pk %}">{{ course.code }} 詳情</a>
+        <i class="bi bi-chevron-right"></i>
+        <span>學員補課專區</span>
+    </div>
+
+    {% if messages %}
+    <div class="alert-container">
+        {% for message in messages %}
+        <div class="alert">
+            <i class="bi bi-check-circle-fill"></i>
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Course Summary -->
+    <div class="course-summary-card">
+        <h2 class="course-title">{{ course.subject }}</h2>
+        <div class="course-meta-row">
+            <span><i class="bi bi-person-fill"></i> 講師: {{ course.teachers }}</span>
+            <span><i class="bi bi-person-badge-fill"></i> 班長: {{ course.class_leader|default:"未設定" }}</span>
+            <span><i class="bi bi-clock-fill"></i> 上課時間: {{ course.class_time }}</span>
+            <span><i class="bi bi-card-checklist"></i> 總堂數: {{ course.total_classes }} 堂</span>
+        </div>
+    </div>
+
+    <!-- Class Cards list -->
+    <div class="class-list-container">
+        {% for item in class_list %}
+        <div class="class-item-card">
+            
+            <!-- Class details -->
+            <div class="class-info-block">
+                <div class="class-number-circle">{{ item.class.class_number }}</div>
+                <div class="class-details">
+                    <h4 class="class-subject">{{ item.class.subject }}</h4>
+                    <div class="class-meta-text">
+                        <span><i class="bi bi-calendar-event"></i> 日期: {% if item.class.date %}{{ item.class.date|date:"Y-m-d" }}{% else %}未設定{% endif %}</span>
+                        <span><i class="bi bi-person"></i> 授課: {{ item.class.teacher }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audio Player -->
+            <div class="audio-player-block">
+                {% if item.recording %}
+                <audio controls class="custom-audio" preload="metadata">
+                    <source src="{% url 'education:serve-recording-audio' item.recording.pk %}" type="audio/webm">
+                    您的瀏覽器不支援 HTML5 音訊播放。
+                </audio>
+                {% else %}
+                <span class="no-recording-text">
+                    <i class="bi bi-slash-circle"></i> 本堂課目前尚無錄音存檔。
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- Actions -->
+            <div class="class-action-block">
+                {% if item.is_completed %}
+                <span class="completed-badge">
+                    <i class="bi bi-check-circle-fill"></i> 已完成補課
+                </span>
+                {% elif item.recording %}
+                <form method="post" action="{% url 'education:class-makeup-complete' item.class.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-makeup-complete">
+                        <i class="bi bi-check-lg"></i> 登記補課完成
+                    </button>
+                </form>
+                {% else %}
+                <span style="color: #64748b; font-size: 0.85rem;">-</span>
+                {% endif %}
+            </div>
+
+        </div>
+        {% empty %}
+        <div class="class-item-card" style="justify-content: center; padding: 40px; color: #94a3b8;">
+            本課程目前尚無任何堂次規劃。
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

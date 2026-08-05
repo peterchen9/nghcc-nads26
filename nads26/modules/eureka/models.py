@@ -107,6 +107,36 @@ class DailyDutyNote(models.Model):
         return f"{self.date}: {self.note}"
 
 
+class StaffShift(models.Model):
+    """同工排班表"""
+    shift_code = models.CharField("班表代號", max_length=50, unique=True)
+    description = models.CharField("班表名稱/描述", max_length=100, blank=True, default="")
+    
+    # Monday to Sunday daily work times
+    mon_start = models.TimeField("週一上班時間", null=True, blank=True)
+    mon_end = models.TimeField("週一下班時間", null=True, blank=True)
+    tue_start = models.TimeField("週二上班時間", null=True, blank=True)
+    tue_end = models.TimeField("週二下班時間", null=True, blank=True)
+    wed_start = models.TimeField("週三上班時間", null=True, blank=True)
+    wed_end = models.TimeField("週三下班時間", null=True, blank=True)
+    thu_start = models.TimeField("週四上班時間", null=True, blank=True)
+    thu_end = models.TimeField("週四下班時間", null=True, blank=True)
+    fri_start = models.TimeField("週五上班時間", null=True, blank=True)
+    fri_end = models.TimeField("週五下班時間", null=True, blank=True)
+    sat_start = models.TimeField("週六上班時間", null=True, blank=True)
+    sat_end = models.TimeField("週六下班時間", null=True, blank=True)
+    sun_start = models.TimeField("週日上班時間", null=True, blank=True)
+    sun_end = models.TimeField("週日下班時間", null=True, blank=True)
+
+    class Meta:
+        db_table = 'staff_shifts'
+        verbose_name = "同工班表"
+        verbose_name_plural = "同工班表"
+
+    def __str__(self):
+        return f"{self.shift_code} ({self.description or '無描述'})"
+
+
 class StaffInfo(models.Model):
     """同工基本資料與特休額度"""
     staff_id = models.IntegerField("同工編號", primary_key=True)
@@ -125,6 +155,7 @@ class StaffInfo(models.Model):
     bank_branch = models.CharField("??(??)", max_length=120, blank=True, default="")
     bank_account = models.CharField("????", max_length=120, blank=True, default="")
     user = models.ForeignKey(User, verbose_name="user", null=True, blank=True, on_delete=models.SET_NULL, related_name="staff_infos")
+    shift = models.ForeignKey(StaffShift, on_delete=models.SET_NULL, null=True, blank=True, related_name='staff_infos', verbose_name='班表')
     annual_leave_quota = models.FloatField("年度特休", default=0.0)
 
     leave_quotas = models.JSONField("歷年休假額度", default=dict, blank=True)
@@ -152,6 +183,121 @@ class SeatMap(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.updated_at.strftime('%Y-%m-%d %H:%M')})"
+
+
+class YearlyAttendance(models.Model):
+    year = models.IntegerField("年", primary_key=True)
+    attendance = models.IntegerField("聚會人數", default=0)
+    baptized = models.IntegerField("受洗", default=0)
+    remark = models.TextField("備註", blank=True, default="")
+
+    class Meta:
+        db_table = 'yearly_attendance'
+        verbose_name = "歷年人數統計"
+        verbose_name_plural = "歷年人數統計"
+        ordering = ['year']
+
+    def __str__(self):
+        return f"{self.year}: {self.attendance}人"
+
+
+class WeeklyAttendance(models.Model):
+    date = models.DateField("週(主日日期)", primary_key=True)
+    first_service = models.IntegerField("第一堂", null=True, blank=True)
+    second_service = models.IntegerField("第二堂", null=True, blank=True)
+    evening_service = models.IntegerField("晚堂", null=True, blank=True)
+    online = models.IntegerField("線上", null=True, blank=True)
+    children = models.IntegerField("兒主", null=True, blank=True)
+    youth = models.IntegerField("青少", null=True, blank=True)
+    total = models.IntegerField("總計", null=True, blank=True)
+    new_friends = models.IntegerField("主日新朋友", null=True, blank=True)
+    remark = models.TextField("註記(不含新朋友)", blank=True, default="")
+
+    class Meta:
+        db_table = 'weekly_attendance'
+        verbose_name = "每週聚會人數"
+        verbose_name_plural = "每週聚會人數"
+        ordering = ['-date']
+
+    def save(self, *args, **kwargs):
+        # Recalculate total if individual counts are present
+        if (self.first_service is not None or 
+            self.second_service is not None or 
+            self.evening_service is not None or 
+            self.online is not None):
+            self.total = (self.first_service or 0) + (self.second_service or 0) + (self.evening_service or 0) + (self.online or 0)
+        
+        # Ensure total is saved when update_fields is specified
+        if 'update_fields' in kwargs and kwargs['update_fields'] is not None:
+            update_fields = set(kwargs['update_fields'])
+            update_fields.add('total')
+            kwargs['update_fields'] = update_fields
+
+        super().save(*args, **kwargs)
+
+
+    def __str__(self):
+        return f"{self.date} - 總計: {self.total or 0}人"
+
+
+class PrayerMeetingAttendance(models.Model):
+    date = models.DateField("週(週四日期)", primary_key=True)
+    attendance = models.IntegerField("人數", default=0)
+
+    class Meta:
+        db_table = 'prayer_meeting_attendance'
+        verbose_name = "禱告會人數"
+        verbose_name_plural = "禱告會人數"
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"{self.date} - 禱告會: {self.attendance}人"
+
+
+class PastoralOverseer(models.Model):
+    name = models.CharField("區牧名字", max_length=255, unique=True)
+
+    class Meta:
+        db_table = 'pastoral_overseers'
+        verbose_name = "區牧"
+        verbose_name_plural = "區牧"
+
+    def __str__(self):
+        return self.name
+
+
+class PastoralSection(models.Model):
+    name = models.CharField("牧區名稱", max_length=255, unique=True)
+    overseer = models.ForeignKey(PastoralOverseer, on_delete=models.CASCADE, related_name='sections')
+    counselor = models.CharField("輔導", max_length=255, blank=True, default='')
+    leader = models.CharField("區長", max_length=255, blank=True, default='')
+
+    class Meta:
+        db_table = 'pastoral_sections'
+        verbose_name = "牧區"
+        verbose_name_plural = "牧區"
+
+    def __str__(self):
+        return self.name
+
+
+class PastoralGroup(models.Model):
+    name = models.CharField("小組名稱", max_length=255, unique=True)
+    section = models.ForeignKey(PastoralSection, on_delete=models.CASCADE, related_name='groups')
+    meeting_time = models.CharField("聚會時間", max_length=255, blank=True, default='')
+    location = models.CharField("地點", max_length=255, blank=True, default='')
+    target = models.CharField("對象", max_length=255, blank=True, default='')
+    topic = models.CharField("近期聚會主題", max_length=255, blank=True, default='')
+    photo = models.ImageField("小組照片", upload_to='groups/', blank=True, null=True)
+
+    class Meta:
+        db_table = 'pastoral_groups'
+        verbose_name = "小組"
+        verbose_name_plural = "小組"
+
+    def __str__(self):
+        return self.name
+
 
 
 

@@ -2,6 +2,8 @@ import csv
 import hashlib
 import json
 import re
+import subprocess
+
 from decimal import Decimal, InvalidOperation
 from io import BytesIO, StringIO
 from datetime import datetime, date, time, timedelta
@@ -15,7 +17,8 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.mail import EmailMessage
 from django.db import connection
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, Http404, JsonResponse
+from django.urls import reverse
 from django.shortcuts import redirect, render
 from django.utils.html import format_html
 from modules.network.views import lan_hosts_note as network_lan_hosts_note
@@ -29,7 +32,7 @@ TZ = ZoneInfo('Asia/Taipei')
 MRBS_DB = 'mrbsdb'
 BOOKING_TYPE = 'I'
 
-FLOOR_ORDER = ['6F', '5F', '4F', '3F', '2F', '1F', 'B1F', '其他']
+FLOOR_ORDER = ['1F', '2F', '3F', '4F', '5F', '6F', 'B1F', '其他']
 FLOOR_RANK = {name: index for index, name in enumerate(FLOOR_ORDER)}
 SLOT_START_HOUR = 6
 SLOT_END_HOUR = 22
@@ -212,6 +215,32 @@ def _build_floor_sections(rooms, entries, day):
             rows.append({'slot': slot, 'cells': cells})
         section['rows'] = rows
     return sections
+
+
+def _build_daily_overview(rooms, entries, day):
+    floor_sections = _build_floor_sections(rooms, entries, day)
+    overview_rooms = []
+    floor_groups = []
+    for section in floor_sections:
+        overview_rooms.extend(section['rooms'])
+        floor_groups.append({
+            'label': section['label'],
+            'room_count': len(section['rooms']),
+        })
+
+    overview_rows = []
+    if floor_sections:
+        row_count = len(floor_sections[0]['rows'])
+        for row_index in range(row_count):
+            cells = []
+            for section in floor_sections:
+                cells.extend(section['rows'][row_index]['cells'])
+            overview_rows.append({
+                'slot': floor_sections[0]['rows'][row_index]['slot'],
+                'cells': cells,
+            })
+
+    return overview_rooms, floor_groups, overview_rows
 
 
 
@@ -1632,50 +1661,60 @@ def room_admin_page(request):
 
 
 def booking_page(request):
+    selected_date = _parse_date(request.GET.get('date'))
+
+    if request.method != 'POST':
+        return render(
+            request,
+            'facility/booking_daily_overview.html',
+            _daily_overview_context(request, selected_date),
+        )
+
     rooms = _rooms()
     rooms_by_id = {room['id']: room for room in rooms}
-    selected_date = _parse_date(request.GET.get('date'))
-    selected_room = request.GET.get('room')
-    try:
-        selected_room_id = int(selected_room) if selected_room else None
-    except ValueError:
-        selected_room_id = None
-
-    if request.method == 'POST':
-        action = request.POST.get('action')
-        if action == 'create':
-            selected_date, selected_room_id = _create_entry(request, rooms_by_id)
-        elif action == 'update':
-            selected_date, selected_room_id = _update_entry(request, rooms_by_id)
-        elif action == 'delete':
-            result = _delete_entry(request)
-            if result is not None:
-                return result
-        else:
-            return HttpResponseBadRequest('Unknown action')
-        query = f'?date={selected_date.isoformat()}'
-        return redirect('/facility/booking/' + query)
-
     selected_room_id = None
-    current_username = _current_username(request)
-    entries = _entries(selected_date, None, current_username)
-    prev_day = selected_date - timedelta(days=1)
-    next_day = selected_date + timedelta(days=1)
-    selected_room_obj = rooms_by_id.get(selected_room_id)
-    floor_sections = _build_floor_sections(rooms, entries, selected_date)
 
-    return render(request, 'facility/booking.html', {
-        'rooms': rooms,
+    action = request.POST.get('action')
+    if action == 'create':
+        selected_date, selected_room_id = _create_entry(request, rooms_by_id)
+    elif action == 'update':
+        selected_date, selected_room_id = _update_entry(request, rooms_by_id)
+    elif action == 'delete':
+        result = _delete_entry(request)
+        if result is not None:
+            return result
+    else:
+        return HttpResponseBadRequest('Unknown action')
+    query = f'?date={selected_date.isoformat()}'
+    return redirect('/facility/booking/' + query)
+
+
+def _daily_overview_context(request, selected_date):
+    current_username = _current_username(request)
+    rooms = _rooms()
+    entries = _entries(selected_date, None, current_username)
+    overview_rooms, floor_groups, overview_rows = _build_daily_overview(
+        rooms,
+        entries,
+        selected_date,
+    )
+
+    return {
+        'rooms': overview_rooms,
+        'floor_groups': floor_groups,
+        'rows': overview_rows,
         'entries': entries,
-        'floor_sections': floor_sections,
         'selected_date': selected_date,
         'selected_weekday': WEEKDAY_NAMES[selected_date.weekday()],
-        'selected_room_id': selected_room_id,
-        'selected_room': selected_room_obj,
-        'prev_day': prev_day,
-        'next_day': next_day,
+        'prev_day': selected_date - timedelta(days=1),
+        'next_day': selected_date + timedelta(days=1),
         'default_creator': current_username,
-    })
+    }
+
+
+def booking_daily_overview(request):
+    selected_date = _parse_date(request.GET.get('date'))
+    return redirect(f'/facility/booking/?date={selected_date.isoformat()}')
 
 
 
@@ -1983,16 +2022,20 @@ def _expense_register_pdf_font():
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.cidfonts import UnicodeCIDFont
     from reportlab.pdfbase.ttfonts import TTFont
+    from django.conf import settings
+    import os
 
     candidates = [
+        os.path.join(settings.BASE_DIR, 'static', 'fonts', 'wqy-zenhei.ttc'),
+        '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+        '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
         'C:/Windows/Fonts/msjh.ttc',
         'C:/Windows/Fonts/msjh.ttf',
         'C:/Windows/Fonts/mingliu.ttc',
-        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
-        '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
     ]
     for font_path in candidates:
-        if Path(font_path).exists():
+        if font_path and Path(font_path).exists():
             try:
                 pdfmetrics.registerFont(TTFont('ExpenseCJK', font_path))
                 return 'ExpenseCJK'
@@ -2134,3 +2177,1181 @@ def expense_claim_voucher_pdf(request, claim_no):
     response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="{claim_no}.pdf"'
     return response
+
+
+# ==============================================================================
+# 教室檢查 (Classroom Inspection) Feature Implementation
+# ==============================================================================
+
+INSPECTION_ROOM_TABLE = 'facility_inspection_room'
+INSPECTION_ITEM_TABLE = 'facility_inspection_item'
+INSPECTION_RECORD_TABLE = 'facility_inspection_record'
+_INSPECTION_TABLES_READY = False
+
+DEFAULT_INSPECTION_ROOMS = [
+    'B01', 'B00', '101', '203', '204', '205',
+    '301', '302', '303', '400', '401', '402',
+    '403', '501', '502', '503', '504'
+]
+
+DEFAULT_INSPECTION_ITEMS = [
+    '冷氣電源關閉',
+    '門窗鎖緊',
+    '桌椅整齊歸位',
+    '電燈與設備電源關閉',
+    '環境整潔與垃圾清空'
+]
+
+
+def _get_client_ip(request):
+    forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', '')
+
+
+def _get_client_mac(ip_address):
+    if not ip_address:
+        return ''
+    commands = [
+        ['ip', 'neigh', 'show', ip_address],
+        ['arp', '-n', ip_address],
+    ]
+    for command in commands:
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, timeout=2)
+            match = re.search(r'([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5})', result.stdout)
+            if match:
+                return match.group(1).lower()
+        except Exception:
+            continue
+
+    try:
+        if Path('/proc/net/arp').exists():
+            with open('/proc/net/arp', 'r') as f:
+                for line in f:
+                    parts = line.split()
+                    if len(parts) >= 4 and parts[0] == ip_address:
+                        mac = parts[3]
+                        if mac != '00:00:00:00:00:00':
+                            return mac.lower()
+    except Exception:
+        pass
+
+    return f"IP: {ip_address}" if ip_address else ""
+
+
+def _resolve_ssid(client_ip, mac_address):
+    """根據 client_ip 與 mac_address 尋找手機連線的 SSID"""
+    if not client_ip:
+        return '未知'
+
+    # Check local subnets in the church
+    parts = client_ip.split('.')
+    if len(parts) != 4:
+        return '非教會內部網路'
+
+    # Check if this is a private local IP or a public IP
+    try:
+        first = int(parts[0])
+        second = int(parts[1])
+    except ValueError:
+        return '未知格式'
+        
+    is_private = (
+        (first == 10) or
+        (first == 172 and 16 <= second <= 31) or
+        (first == 192 and second == 168) or
+        (client_ip == '127.0.0.1')
+    )
+    if not is_private:
+        return '行動數據/外部網路'
+
+    # Check if there is an Access Point on the same subnet in the database
+    subnet = '.'.join(parts[:3])
+    try:
+        with connection.cursor() as cursor:
+            # Query active APs in this subnet
+            cursor.execute("""
+                SELECT hostname, note FROM network_lan_host
+                WHERE ip LIKE %s AND (hostname LIKE '%%ap%%' OR hostname LIKE '%%wifi%%' OR hostname LIKE '%%router%%' OR note LIKE '%%ap%%' OR note LIKE '%%wifi%%')
+                ORDER BY last_seen DESC LIMIT 1
+            """, [f"{subnet}.%"])
+            row = cursor.fetchone()
+            if row:
+                ap_name = row[0] or row[1] or ''
+                ap_name_lower = ap_name.lower()
+                if 'bkwifi' in ap_name_lower:
+                    return 'BKwifi'
+                if 'totolink' in ap_name_lower:
+                    return 'Totolink_AP'
+                if 'miwifi' in ap_name_lower:
+                    return 'MiWiFi'
+                return ap_name
+    except Exception:
+        pass
+
+    # Subnet fallback names
+    if subnet == '172.20.20':
+        return 'BKwifi'
+    elif subnet == '172.20.25':
+        return 'Totolink_AP'
+    elif first == 172 and second == 20:
+        return 'NGHCC-WiFi'
+    elif first == 192 and second == 168:
+        return 'Church-LAN'
+
+    return '未知內部網路'
+
+
+def _ensure_inspection_tables():
+
+    global _INSPECTION_TABLES_READY
+    if _INSPECTION_TABLES_READY:
+        return
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f'''
+            CREATE TABLE IF NOT EXISTS {INSPECTION_ROOM_TABLE} (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL UNIQUE,
+                order_num INT NOT NULL DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            '''
+        )
+        cursor.execute(
+            f'''
+            CREATE TABLE IF NOT EXISTS {INSPECTION_ITEM_TABLE} (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                room_id INT NOT NULL,
+                item_name VARCHAR(255) NOT NULL,
+                order_num INT NOT NULL DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_room_id (room_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            '''
+        )
+        cursor.execute(
+            f'''
+            CREATE TABLE IF NOT EXISTS {INSPECTION_RECORD_TABLE} (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                room_id INT NOT NULL,
+                year INT NOT NULL,
+                week_number INT NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'normal',
+                inspector_name VARCHAR(100) NOT NULL DEFAULT '',
+                mac_address VARCHAR(100) NOT NULL DEFAULT '',
+                inspection_time DATETIME NOT NULL,
+                anomaly_note TEXT,
+                items_json TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_room_year_week (room_id, year, week_number)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            '''
+        )
+        try:
+            cursor.execute(f'ALTER TABLE {INSPECTION_RECORD_TABLE} ADD COLUMN mac_address VARCHAR(100) NOT NULL DEFAULT "" AFTER inspector_name')
+        except Exception:
+            pass
+
+        cursor.execute(f'SELECT COUNT(*) FROM {INSPECTION_ROOM_TABLE}')
+        count = cursor.fetchone()[0]
+        if count == 0:
+            for idx, r_name in enumerate(DEFAULT_INSPECTION_ROOMS):
+                cursor.execute(
+                    f'INSERT INTO {INSPECTION_ROOM_TABLE} (name, order_num) VALUES (%s, %s)',
+                    [r_name, (idx + 1) * 10]
+                )
+                room_id = cursor.lastrowid
+                for i_idx, item_name in enumerate(DEFAULT_INSPECTION_ITEMS):
+                    cursor.execute(
+                        f'INSERT INTO {INSPECTION_ITEM_TABLE} (room_id, item_name, order_num) VALUES (%s, %s, %s)',
+                        [room_id, item_name, (i_idx + 1) * 10]
+                    )
+
+    try:
+        from modules.menu.models import MenuItem
+        parent = MenuItem.objects.filter(title='場地設施', parent=None).first()
+        if not parent:
+            parent = MenuItem.objects.filter(id=102).first()
+        if parent:
+            if not MenuItem.objects.filter(route='/facility/classroom-inspection/').exists():
+                MenuItem.objects.create(
+                    title='教室檢查',
+                    route='/facility/classroom-inspection/',
+                    parent=parent,
+                    order=50,
+                    roles='*',
+                    is_active=True
+                )
+    except Exception:
+        pass
+
+    _INSPECTION_TABLES_READY = True
+
+
+def classroom_inspection_page(request):
+    _ensure_inspection_tables()
+    now_tz = datetime.now(TZ)
+    current_year = now_tz.year
+    try:
+        selected_year = int(request.GET.get('year', current_year))
+    except (ValueError, TypeError):
+        selected_year = current_year
+
+    curr_isoyear, curr_isoweek, _ = now_tz.isocalendar()
+
+    last_day_of_year = date(selected_year, 12, 28)
+    total_weeks = last_day_of_year.isocalendar()[1]
+
+    weeks_info = []
+    prev_month = None
+
+    for w in range(1, total_weeks + 1):
+        monday_dt = date.fromisocalendar(selected_year, w, 1)
+        curr_month = monday_dt.month
+        day_num = monday_dt.day
+
+        show_month = (curr_month != prev_month)
+        month_label = f"{curr_month}月" if show_month else ""
+
+        weeks_info.append({
+            'week': w,
+            'monday_date': monday_dt.strftime('%Y-%m-%d'),
+            'month_label': month_label,
+            'day_label': str(day_num),
+            'show_month': show_month,
+            'is_current_week': (w == curr_isoweek and selected_year == curr_isoyear),
+        })
+
+        prev_month = curr_month
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f'SELECT id, name, order_num FROM {INSPECTION_ROOM_TABLE} ORDER BY order_num, id'
+        )
+        rooms = _dictfetchall(cursor)
+
+        cursor.execute(
+            f'''
+            SELECT r.id, r.room_id, r.year, r.week_number, r.status, r.inspector_name, r.mac_address, r.inspection_time, r.anomaly_note, r.items_json
+            FROM {INSPECTION_RECORD_TABLE} r
+            WHERE r.year = %s
+            ORDER BY r.inspection_time ASC
+            ''',
+            [selected_year]
+        )
+        records = _dictfetchall(cursor)
+
+    record_map = {}
+    for rec in records:
+        key = (rec['room_id'], rec['week_number'])
+        record_map[key] = rec
+
+    for room in rooms:
+        r_id = room['id']
+        weeks_data = []
+        for winfo in weeks_info:
+            w = winfo['week']
+            rec = record_map.get((r_id, w))
+            if rec:
+                time_str = ''
+                if isinstance(rec['inspection_time'], datetime):
+                    time_str = rec['inspection_time'].strftime('%Y-%m-%d %H:%M')
+                elif rec['inspection_time']:
+                    time_str = str(rec['inspection_time'])
+
+                status = rec['status']
+                client_ip = ''
+                client_ssid = ''
+                try:
+                    if rec.get('items_json'):
+                        items_data = json.loads(rec['items_json'])
+                        client_ip = items_data.get('ip', '')
+                        client_ssid = items_data.get('ssid', '')
+                except Exception:
+                    pass
+
+                weeks_data.append({
+                    'week': w,
+                    'monday_date': winfo['monday_date'],
+                    'has_record': True,
+                    'status': status,
+                    'time': time_str,
+                    'inspector': rec['inspector_name'] or '',
+                    'mac': rec.get('mac_address') or '',
+                    'ip': client_ip,
+                    'ssid': client_ssid,
+                    'note': rec['anomaly_note'] or ('無異常' if status == 'normal' else '有異常'),
+                    'show_month': winfo['show_month'],
+                })
+            else:
+                weeks_data.append({
+                    'week': w,
+                    'monday_date': winfo['monday_date'],
+                    'has_record': False,
+                    'status': 'none',
+                    'time': '',
+                    'inspector': '',
+                    'mac': '',
+                    'note': '未檢查',
+                    'show_month': winfo['show_month'],
+                })
+        room['weeks_data'] = weeks_data
+
+
+    years = list(range(current_year - 2, current_year + 3))
+
+    context = {
+        'rooms': rooms,
+        'weeks': weeks_info,
+        'selected_year': selected_year,
+        'current_year': current_year,
+        'curr_isoweek': curr_isoweek if selected_year == curr_isoyear else 0,
+        'years': years,
+    }
+    return render(request, 'facility/classroom_inspection.html', context)
+
+
+
+def classroom_inspection_api_rooms(request):
+    _ensure_inspection_tables()
+    if request.method == 'GET':
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f'''
+                SELECT r.id, r.name, r.order_num,
+                       (SELECT COUNT(*) FROM {INSPECTION_ITEM_TABLE} i WHERE i.room_id = r.id) as item_count
+                FROM {INSPECTION_ROOM_TABLE} r
+                ORDER BY r.order_num, r.id
+                '''
+            )
+            rooms = _dictfetchall(cursor)
+        return JsonResponse({'status': 'ok', 'rooms': rooms})
+
+    if request.method == 'POST':
+        action = request.POST.get('action', 'add')
+        if action == 'add':
+            name = request.POST.get('name', '').strip()
+            try:
+                order_num = int(request.POST.get('order_num', 0))
+            except (ValueError, TypeError):
+                order_num = 0
+            if not name:
+                return JsonResponse({'status': 'error', 'message': '教室名稱不可空白'}, status=400)
+            with connection.cursor() as cursor:
+                try:
+                    cursor.execute(
+                        f'INSERT INTO {INSPECTION_ROOM_TABLE} (name, order_num) VALUES (%s, %s)',
+                        [name, order_num]
+                    )
+                    room_id = cursor.lastrowid
+                    for i_idx, item_name in enumerate(DEFAULT_INSPECTION_ITEMS):
+                        cursor.execute(
+                            f'INSERT INTO {INSPECTION_ITEM_TABLE} (room_id, item_name, order_num) VALUES (%s, %s, %s)',
+                            [room_id, item_name, (i_idx + 1) * 10]
+                        )
+                except Exception as e:
+                    return JsonResponse({'status': 'error', 'message': f'新增失敗: {str(e)}'}, status=400)
+            return JsonResponse({'status': 'ok', 'message': '新增教室成功'})
+
+        elif action == 'edit':
+            room_id = request.POST.get('room_id')
+            name = request.POST.get('name', '').strip()
+            try:
+                order_num = int(request.POST.get('order_num', 0))
+            except (ValueError, TypeError):
+                order_num = 0
+            if not room_id or not name:
+                return JsonResponse({'status': 'error', 'message': '參數錯誤'}, status=400)
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    f'UPDATE {INSPECTION_ROOM_TABLE} SET name = %s, order_num = %s WHERE id = %s',
+                    [name, order_num, room_id]
+                )
+            return JsonResponse({'status': 'ok', 'message': '更新教室成功'})
+
+        elif action == 'delete':
+            room_id = request.POST.get('room_id')
+            if not room_id:
+                return JsonResponse({'status': 'error', 'message': '缺少 room_id'}, status=400)
+            with connection.cursor() as cursor:
+                cursor.execute(f'DELETE FROM {INSPECTION_ITEM_TABLE} WHERE room_id = %s', [room_id])
+                cursor.execute(f'DELETE FROM {INSPECTION_RECORD_TABLE} WHERE room_id = %s', [room_id])
+                cursor.execute(f'DELETE FROM {INSPECTION_ROOM_TABLE} WHERE id = %s', [room_id])
+            return JsonResponse({'status': 'ok', 'message': '刪除教室成功'})
+
+    return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+
+def classroom_inspection_api_items(request):
+    _ensure_inspection_tables()
+    if request.method == 'GET':
+        room_id = request.GET.get('room_id')
+        if not room_id:
+            return JsonResponse({'status': 'error', 'message': '缺少 room_id'}, status=400)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f'SELECT id, name FROM {INSPECTION_ROOM_TABLE} WHERE id = %s',
+                [room_id]
+            )
+            room_row = cursor.fetchone()
+            if not room_row:
+                return JsonResponse({'status': 'error', 'message': '找不到該教室'}, status=404)
+            room_info = {'id': room_row[0], 'name': room_row[1]}
+
+            cursor.execute(
+                f'SELECT id, room_id, item_name, order_num FROM {INSPECTION_ITEM_TABLE} WHERE room_id = %s ORDER BY order_num, id',
+                [room_id]
+            )
+            items = _dictfetchall(cursor)
+        return JsonResponse({'status': 'ok', 'room': room_info, 'items': items})
+
+    if request.method == 'POST':
+        action = request.POST.get('action', 'add')
+        if action == 'add':
+            room_id = request.POST.get('room_id')
+            item_name = request.POST.get('item_name', '').strip()
+            try:
+                order_num = int(request.POST.get('order_num', 0))
+            except (ValueError, TypeError):
+                order_num = 0
+            if not room_id or not item_name:
+                return JsonResponse({'status': 'error', 'message': '項目名稱不可空白'}, status=400)
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    f'INSERT INTO {INSPECTION_ITEM_TABLE} (room_id, item_name, order_num) VALUES (%s, %s, %s)',
+                    [room_id, item_name, order_num]
+                )
+            return JsonResponse({'status': 'ok', 'message': '新增項目成功'})
+
+        elif action == 'edit':
+            item_id = request.POST.get('item_id')
+            item_name = request.POST.get('item_name', '').strip()
+            try:
+                order_num = int(request.POST.get('order_num', 0))
+            except (ValueError, TypeError):
+                order_num = 0
+            if not item_id or not item_name:
+                return JsonResponse({'status': 'error', 'message': '項目名稱不可空白'}, status=400)
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    f'UPDATE {INSPECTION_ITEM_TABLE} SET item_name = %s, order_num = %s WHERE id = %s',
+                    [item_name, order_num, item_id]
+                )
+            return JsonResponse({'status': 'ok', 'message': '更新項目成功'})
+
+        elif action == 'delete':
+            item_id = request.POST.get('item_id')
+            if not item_id:
+                return JsonResponse({'status': 'error', 'message': '缺少 item_id'}, status=400)
+            with connection.cursor() as cursor:
+                cursor.execute(f'DELETE FROM {INSPECTION_ITEM_TABLE} WHERE id = %s', [item_id])
+            return JsonResponse({'status': 'ok', 'message': '刪除項目成功'})
+
+    return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+
+def classroom_mobile_inspect_page(request, room_id):
+    _ensure_inspection_tables()
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f'SELECT id, name FROM {INSPECTION_ROOM_TABLE} WHERE id = %s',
+            [room_id]
+        )
+        room_row = cursor.fetchone()
+        if not room_row:
+            raise Http404("找不到該教室")
+        room = {'id': room_row[0], 'name': room_row[1]}
+
+        cursor.execute(
+            f'SELECT id, item_name, order_num FROM {INSPECTION_ITEM_TABLE} WHERE room_id = %s ORDER BY order_num, id',
+            [room_id]
+        )
+        items = _dictfetchall(cursor)
+
+    now_tz = datetime.now(TZ)
+
+    if request.method == 'POST':
+        status_input = request.POST.get('status', 'normal')
+        inspector_name = request.POST.get('inspector_name', '').strip()
+        anomaly_note = request.POST.get('anomaly_note', '').strip()
+
+        client_ip = _get_client_ip(request)
+        mac_addr = _get_client_mac(client_ip)
+        ssid = _resolve_ssid(client_ip, mac_addr)
+
+        overall_status = 'abnormal' if (status_input == 'abnormal' or (anomaly_note and '異' in anomaly_note)) else 'normal'
+        year, week_num, _ = now_tz.isocalendar()
+
+        items_detail = []
+        for item in items:
+            items_detail.append({
+                'item_id': item['id'],
+                'item_name': item['item_name'],
+                'status': 'fail' if overall_status == 'abnormal' else 'ok',
+            })
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f'''
+                INSERT INTO {INSPECTION_RECORD_TABLE}
+                (room_id, year, week_number, status, inspector_name, mac_address, inspection_time, anomaly_note, items_json)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ''',
+                [
+                    room['id'],
+                    year,
+                    week_num,
+                    overall_status,
+                    inspector_name,
+                    mac_addr,
+                    now_tz.strftime('%Y-%m-%d %H:%M:%S'),
+                    anomaly_note,
+                    json.dumps({'status': overall_status, 'mac': mac_addr, 'ip': client_ip, 'ssid': ssid, 'items': items_detail}, ensure_ascii=False),
+                ]
+            )
+
+        messages.success(request, f"{room['name']} 教室檢查結果已順利登記！")
+        return render(request, 'facility/classroom_mobile_inspect.html', {
+            'room': room,
+            'items': items,
+            'now_str': now_tz.strftime('%Y-%m-%d %H:%M'),
+            'submitted': True,
+            'overall_status': overall_status,
+            'inspector_name': inspector_name,
+            'mac_address': mac_addr,
+        })
+
+
+    return render(request, 'facility/classroom_mobile_inspect.html', {
+        'room': room,
+        'items': items,
+        'now_str': now_tz.strftime('%Y-%m-%d %H:%M'),
+        'submitted': False,
+    })
+
+
+def classroom_qrcode_image(request, room_id):
+    _ensure_inspection_tables()
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f'SELECT id, name FROM {INSPECTION_ROOM_TABLE} WHERE id = %s',
+            [room_id]
+        )
+        room_row = cursor.fetchone()
+        if not room_row:
+            raise Http404("找不到該教室")
+
+    target_url = request.build_absolute_uri(
+        reverse('facility-classroom-mobile-inspect', kwargs={'room_id': room_id})
+    )
+
+    try:
+        import qrcode
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=8,
+            border=2,
+        )
+        qr.add_data(target_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buf = BytesIO()
+        img.save(buf)
+        return HttpResponse(buf.getvalue(), content_type='image/png')
+    except Exception as e:
+        return HttpResponse(f"<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><text x='10' y='100'>{target_url}</text></svg>", content_type="image/svg+xml")
+
+
+def classroom_inspection_pdf(request):
+    _ensure_inspection_tables()
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f'SELECT id, name FROM {INSPECTION_ROOM_TABLE} ORDER BY order_num, id'
+        )
+        rooms = _dictfetchall(cursor)
+
+    import qrcode
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib.utils import ImageReader
+    from reportlab.pdfgen import canvas
+
+    font_name = _expense_register_pdf_font()
+
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=A4)
+    page_w, page_h = A4
+
+    cols = 2
+    rows_per_page = 3
+    cards_per_page = cols * rows_per_page
+
+    margin_x = 12 * mm
+    margin_y = 12 * mm
+    gap_x = 8 * mm
+    gap_y = 8 * mm
+
+    card_w = (page_w - (margin_x * 2) - gap_x) / 2
+    card_h = (page_h - (margin_y * 2) - (gap_y * (rows_per_page - 1))) / rows_per_page
+
+    for idx, room in enumerate(rooms):
+        page_idx = idx % cards_per_page
+        if idx > 0 and page_idx == 0:
+            pdf.showPage()
+
+        col = page_idx % cols
+        row = page_idx // cols
+
+        card_x = margin_x + col * (card_w + gap_x)
+        card_y = page_h - margin_y - (row + 1) * card_h - row * gap_y
+
+        pdf.setStrokeColor(colors.HexColor('#94a3b8'))
+        pdf.setLineWidth(0.8)
+        pdf.setDash(4, 4)
+        pdf.rect(card_x, card_y, card_w, card_h)
+
+        pdf.setDash()
+        pdf.setFillColor(colors.HexColor('#1e293b'))
+        pdf.rect(card_x + 1 * mm, card_y + card_h - 14 * mm, card_w - 2 * mm, 13 * mm, fill=1, stroke=0)
+
+        pdf.setFillColor(colors.white)
+        pdf.setFont(font_name, 14)
+        pdf.drawCentredString(card_x + card_w / 2, card_y + card_h - 9.5 * mm, "教室檢查紀錄")
+
+        pdf.setFillColor(colors.HexColor('#0f172a'))
+        pdf.setFont(font_name, 18)
+        pdf.drawCentredString(card_x + card_w / 2, card_y + card_h - 23 * mm, f"{room['name']} 教室")
+
+        target_url = request.build_absolute_uri(
+            reverse('facility-classroom-mobile-inspect', kwargs={'room_id': room['id']})
+        )
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=6,
+            border=1,
+        )
+        qr.add_data(target_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        qr_buf = BytesIO()
+        img.save(qr_buf)
+        qr_buf.seek(0)
+        qr_img = ImageReader(qr_buf)
+
+        qr_size = 40 * mm
+        qr_x = card_x + (card_w - qr_size) / 2
+        qr_y = card_y + 11 * mm
+        pdf.drawImage(qr_img, qr_x, qr_y, width=qr_size, height=qr_size)
+
+        pdf.setFillColor(colors.HexColor('#475569'))
+        pdf.setFont("Helvetica", 6.5)
+        pdf.drawCentredString(card_x + card_w / 2, card_y + 4 * mm, target_url)
+
+    pdf.showPage()
+    pdf.save()
+
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = 'inline; filename="classroom_qrcodes.pdf"'
+    return response
+
+
+# ===================================
+# 定期維護 (PERIODIC MAINTENANCE)
+# ===================================
+
+DEFAULT_PERIODIC_ITEMS = [
+    {
+        "category": "消防設施",
+        "name": "消防設備與火警自動警報定期檢測",
+        "cycle": "每季",
+        "description": "測試火警發信機、火警受信總機、排煙設備及滅火器壓力",
+        "owner": "總務同工",
+        "vendor": "永安消防器材股份有限公司",
+        "scheduled_weeks": "[1, 14, 27, 40]",
+        "order_num": 1,
+    },
+    {
+        "category": "消防設施",
+        "name": "消防水泵及警報逆止閥測試保養",
+        "cycle": "每半年",
+        "description": "測試消防泵浦自動啟動運作與水壓測試",
+        "owner": "機電同工",
+        "vendor": "永安消防器材股份有限公司",
+        "scheduled_weeks": "[1, 27]",
+        "order_num": 2,
+    },
+    {
+        "category": "消防設施",
+        "name": "全館滅火器檢測與藥劑藥品更換",
+        "cycle": "每年",
+        "description": "全館各樓層滅火器外觀、藥劑有效期限與指針壓力檢查",
+        "owner": "總務同工",
+        "vendor": "永安消防器材股份有限公司",
+        "scheduled_weeks": "[1]",
+        "order_num": 3,
+    },
+    {
+        "category": "機電與發電機",
+        "name": "緊急發電機試運轉與柴油油量檢查",
+        "cycle": "每月",
+        "description": "無載試運轉 15 分鐘、檢查冷卻水、引擎機油與柴油儲量",
+        "owner": "機電同工",
+        "vendor": "鼎新發電機工程有限公司",
+        "scheduled_weeks": "[1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49]",
+        "order_num": 4,
+    },
+    {
+        "category": "機電與發電機",
+        "name": "高低壓變電設備年度停電保養檢測",
+        "cycle": "每年",
+        "description": "變壓器絕緣油與高壓保護電驛跳脫安全測試",
+        "owner": "機電同工",
+        "vendor": "大漢電機技師事務所",
+        "scheduled_weeks": "[26]",
+        "order_num": 5,
+    },
+    {
+        "category": "機電與發電機",
+        "name": "大樓避雷針與接地電阻量測",
+        "cycle": "每年",
+        "description": "檢測大樓避雷針避雷效能與接地線電阻 (需小於 10 歐姆)",
+        "owner": "總務同工",
+        "vendor": "大漢電機技師事務所",
+        "scheduled_weeks": "[20]",
+        "order_num": 6,
+    },
+    {
+        "category": "空調與通風",
+        "name": "主堂與各教室冷氣濾網定期清洗",
+        "cycle": "雙月",
+        "description": "拆洗冷氣濾網、擦拭出風口及冷氣外殼",
+        "owner": "場地同工",
+        "vendor": "自理",
+        "scheduled_weeks": "[1, 9, 17, 25, 33, 41, 49]",
+        "order_num": 7,
+    },
+    {
+        "category": "空調與通風",
+        "name": "冰水主機與冷卻水塔藥洗保養",
+        "cycle": "每半年",
+        "description": "冷卻水塔清洗、水質投藥消毒與熱交換管路除垢",
+        "owner": "總務同工",
+        "vendor": "華新冷凍空調服務社",
+        "scheduled_weeks": "[14, 40]",
+        "order_num": 8,
+    },
+    {
+        "category": "給排水與水質",
+        "name": "水塔與蓄水池清洗消毒及水質檢驗",
+        "cycle": "每半年",
+        "description": "地下蓄水池及頂樓水塔清洗消毒、送驗水質合格證明",
+        "owner": "總務同工",
+        "vendor": "潔美水塔清潔服務社",
+        "scheduled_weeks": "[13, 39]",
+        "order_num": 9,
+    },
+    {
+        "category": "給排水與水質",
+        "name": "全館飲水機濾心更換與高溫殺菌",
+        "cycle": "每季",
+        "description": "更換 PP 濾心、活性碳濾心及水質檢測",
+        "owner": "總務同工",
+        "vendor": "賀眾牌生飲水設備公司",
+        "scheduled_weeks": "[1, 13, 26, 39]",
+        "order_num": 10,
+    },
+    {
+        "category": "電梯與升降設備",
+        "name": "客用電梯每月定期安全檢修保養",
+        "cycle": "每月",
+        "description": "鋼索、煞車、控制盤及車門開關安全潤滑保養",
+        "owner": "總務同工",
+        "vendor": "崇友實業電梯股份有限公司",
+        "scheduled_weeks": "[1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49]",
+        "order_num": 11,
+    },
+    {
+        "category": "資訊與影音",
+        "name": "主堂與副堂影音控制主機清塵保養",
+        "cycle": "每季",
+        "description": "擴大機混音器內部除塵、投影機鏡頭清潔與燈泡時數核查",
+        "owner": "資訊同工",
+        "vendor": "聲光影音科技有限公司",
+        "scheduled_weeks": "[1, 14, 27, 40]",
+        "order_num": 12,
+    },
+]
+
+
+def ensure_default_periodic_items():
+    from .models import PeriodicMaintenanceItem
+    if not PeriodicMaintenanceItem.objects.exists():
+        for item_data in DEFAULT_PERIODIC_ITEMS:
+            PeriodicMaintenanceItem.objects.create(**item_data)
+
+
+@login_required
+def periodic_maintenance_page(request):
+    import json
+    from datetime import datetime, date
+    from django.core.serializers.json import DjangoJSONEncoder
+    from .models import PeriodicMaintenanceItem, PeriodicMaintenanceRecord
+
+    ensure_default_periodic_items()
+
+    now_tz = datetime.now()
+    current_year = now_tz.year
+    try:
+        selected_year = int(request.GET.get('year', current_year))
+    except (ValueError, TypeError):
+        selected_year = current_year
+
+    curr_isoyear, curr_isoweek, _ = now_tz.isocalendar()
+
+    last_day_of_year = date(selected_year, 12, 28)
+    total_weeks = last_day_of_year.isocalendar()[1]
+
+    weeks_info = []
+    prev_month = None
+
+    for w in range(1, total_weeks + 1):
+        monday_dt = date.fromisocalendar(selected_year, w, 1)
+        curr_month = monday_dt.month
+        day_num = monday_dt.day
+
+        show_month = (curr_month != prev_month)
+        month_label = f"{curr_month}月" if show_month else ""
+
+        weeks_info.append({
+            'week': w,
+            'monday_date': monday_dt.strftime('%Y-%m-%d'),
+            'month_label': month_label,
+            'day_label': str(day_num),
+            'show_month': show_month,
+            'is_current_week': (w == curr_isoweek and selected_year == curr_isoyear),
+        })
+
+        prev_month = curr_month
+
+    items_qs = PeriodicMaintenanceItem.objects.filter(is_active=True).order_by('order_num', 'id')
+    items_data = []
+    for item in items_qs:
+        try:
+            weeks_list = json.loads(item.scheduled_weeks)
+            if not isinstance(weeks_list, list):
+                weeks_list = []
+        except Exception:
+            weeks_list = []
+
+        items_data.append({
+            'id': item.id,
+            'category': item.category,
+            'name': item.name,
+            'cycle': item.cycle,
+            'description': item.description,
+            'owner': item.owner,
+            'vendor': item.vendor,
+            'scheduled_weeks': weeks_list,
+            'order_num': item.order_num,
+        })
+
+    records_qs = PeriodicMaintenanceRecord.objects.filter(year=selected_year).select_related('item')
+    records_dict = {}
+    for r in records_qs:
+        key = f"{r.item_id}_{r.week_number}"
+        records_dict[key] = {
+            'id': r.id,
+            'item_id': r.item_id,
+            'year': r.year,
+            'week_number': r.week_number,
+            'maintenance_date': r.maintenance_date.strftime('%Y-%m-%d') if r.maintenance_date else '',
+            'status': r.status,
+            'status_display': r.get_status_display(),
+            'anomaly_note': r.anomaly_note,
+            'operator_name': r.operator_name,
+            'ip_address': r.ip_address,
+            'mac_address': r.mac_address,
+            'gps_location': r.gps_location,
+            'device_name': r.device_name,
+            'ssid': r.ssid,
+            'completed_at': r.completed_at.strftime('%Y-%m-%d %H:%M'),
+        }
+
+    available_years = list(range(current_year - 2, current_year + 3))
+
+    context = {
+        'title': '定期維護',
+        'selected_year': selected_year,
+        'available_years': available_years,
+        'total_weeks': total_weeks,
+        'weeks_info_json': json.dumps(weeks_info, cls=DjangoJSONEncoder),
+        'items_data_json': json.dumps(items_data, cls=DjangoJSONEncoder),
+        'records_dict_json': json.dumps(records_dict, cls=DjangoJSONEncoder),
+    }
+    return render(request, 'facility/periodic_maintenance.html', context)
+
+
+@login_required
+def periodic_maintenance_report_page(request, item_id=None):
+    from datetime import datetime
+    from .models import PeriodicMaintenanceItem, PeriodicMaintenanceRecord
+
+    user = request.user
+    display_name = ''
+    if hasattr(user, 'profile') and user.profile.display_name:
+        display_name = user.profile.display_name.strip()
+    
+    full_name = user.get_full_name().strip()
+    username = user.username.strip()
+
+    user_aliases = [n for n in [display_name, full_name, username, user.first_name.strip(), user.last_name.strip()] if n]
+
+    is_admin = user.is_superuser or user.is_staff or user.groups.filter(name__in=['系統管理員', 'Admin', '管理員']).exists()
+
+    items = PeriodicMaintenanceItem.objects.filter(is_active=True).order_by('order_num', 'id')
+    items_with_permission = []
+
+    for item in items:
+        owner = (item.owner or '').strip()
+        can_select = is_admin or not owner or any(alias in owner or owner in alias for alias in user_aliases)
+        items_with_permission.append({
+            'item': item,
+            'can_select': can_select,
+            'owner': owner,
+        })
+
+    selected_item = None
+    selected_can_select = True
+    if item_id:
+        selected_item = PeriodicMaintenanceItem.objects.filter(pk=item_id, is_active=True).first()
+        if selected_item:
+            owner = (selected_item.owner or '').strip()
+            selected_can_select = is_admin or not owner or any(alias in owner or owner in alias for alias in user_aliases)
+
+    today_str = datetime.now().strftime('%Y-%m-%d')
+
+    context = {
+        'title': '定期維護回報',
+        'items_with_permission': items_with_permission,
+        'selected_item': selected_item,
+        'selected_can_select': selected_can_select,
+        'user_display_name': display_name or full_name or username,
+        'is_admin': is_admin,
+        'today_str': today_str,
+    }
+    return render(request, 'facility/periodic_maintenance_report.html', context)
+
+
+@login_required
+def periodic_maintenance_qrcode_image(request, item_id):
+    import qrcode
+    from io import BytesIO
+    from django.http import HttpResponse, Http404
+    from .models import PeriodicMaintenanceItem
+
+    try:
+        item = PeriodicMaintenanceItem.objects.get(pk=item_id)
+    except PeriodicMaintenanceItem.DoesNotExist:
+        raise Http404("維護項目不存在")
+
+    target_url = request.build_absolute_uri(
+        f"/facility/periodic-maintenance/report/{item.id}/"
+    )
+
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=8,
+        border=2,
+    )
+    qr.add_data(target_url)
+    qr.make(fit=True)
+
+    img = qr.make_image(fill_color="black", back_color="white")
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    return HttpResponse(buf.getvalue(), content_type="image/png")
+
+
+@login_required
+def periodic_maintenance_api_items(request):
+    import json
+    from django.http import JsonResponse
+    from .models import PeriodicMaintenanceItem
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+            item_id = body.get('id')
+            category = str(body.get('category', '')).strip()
+            name = str(body.get('name', '')).strip()
+            cycle = str(body.get('cycle', '')).strip()
+            description = str(body.get('description', '')).strip()
+            owner = str(body.get('owner', '')).strip()
+            vendor = str(body.get('vendor', '')).strip()
+            scheduled_weeks = body.get('scheduled_weeks', [])
+
+            if not isinstance(scheduled_weeks, list):
+                scheduled_weeks = []
+
+            weeks_json = json.dumps(scheduled_weeks)
+
+            if not category or not name:
+                return JsonResponse({'success': False, 'error': '分類與設施名稱為必填欄位。'})
+
+            if item_id:
+                item = PeriodicMaintenanceItem.objects.get(pk=item_id)
+                item.category = category
+                item.name = name
+                item.cycle = cycle
+                item.description = description
+                item.owner = owner
+                item.vendor = vendor
+                item.scheduled_weeks = weeks_json
+                item.save()
+            else:
+                max_order = PeriodicMaintenanceItem.objects.all().count() + 1
+                item = PeriodicMaintenanceItem.objects.create(
+                    category=category,
+                    name=name,
+                    cycle=cycle,
+                    description=description,
+                    owner=owner,
+                    vendor=vendor,
+                    scheduled_weeks=weeks_json,
+                    order_num=max_order,
+                )
+
+            return JsonResponse({
+                'success': True,
+                'item': {
+                    'id': item.id,
+                    'category': item.category,
+                    'name': item.name,
+                    'cycle': item.cycle,
+                    'description': item.description,
+                    'owner': item.owner,
+                    'vendor': item.vendor,
+                    'scheduled_weeks': json.loads(item.scheduled_weeks),
+                    'order_num': item.order_num,
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    elif request.method == 'DELETE':
+        try:
+            body = json.loads(request.body)
+            item_id = body.get('id')
+            if item_id:
+                PeriodicMaintenanceItem.objects.filter(pk=item_id).delete()
+                return JsonResponse({'success': True})
+            return JsonResponse({'success': False, 'error': '缺少項目 ID'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    return JsonResponse({'success': False, 'error': '不支援的請求方法'})
+
+
+@login_required
+def periodic_maintenance_api_records(request):
+    import json
+    from datetime import date, datetime
+    from django.http import JsonResponse
+    from .models import PeriodicMaintenanceItem, PeriodicMaintenanceRecord
+
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+            item_id = int(body.get('item_id', 0))
+            m_date_str = str(body.get('maintenance_date', '')).strip()
+
+            if m_date_str:
+                try:
+                    m_date = date.fromisoformat(m_date_str)
+                except ValueError:
+                    m_date = date.today()
+            else:
+                m_date = date.today()
+
+            isoyear, isoweek, _ = m_date.isocalendar()
+            year = int(body.get('year', isoyear))
+            week_number = int(body.get('week_number', isoweek))
+
+            status = str(body.get('status', 'completed')).strip() # completed / abnormal
+            anomaly_note = str(body.get('anomaly_note', '')).strip()
+            gps_location = str(body.get('gps_location', '')).strip()
+            mac_info = str(body.get('mac_address', '')).strip()
+            device_name = str(body.get('device_name', '')).strip()
+            ssid = str(body.get('ssid', '')).strip()
+
+            if not item_id:
+                return JsonResponse({'success': False, 'error': '缺少維護項目 ID。'})
+
+            item = PeriodicMaintenanceItem.objects.get(pk=item_id)
+
+            # Get Client IP address
+            x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded:
+                ip_address = x_forwarded.split(',')[0].strip()
+            else:
+                ip_address = request.META.get('REMOTE_ADDR', '').strip()
+
+            ua_info = request.META.get('HTTP_USER_AGENT', '')
+            if not mac_info:
+                mac_info = ua_info[:200]
+
+            operator_name = request.user.username
+            if hasattr(request.user, 'profile') and request.user.profile.display_name:
+                operator_name = request.user.profile.display_name
+
+            record, created = PeriodicMaintenanceRecord.objects.update_or_create(
+                item=item,
+                year=year,
+                week_number=week_number,
+                defaults={
+                    'maintenance_date': m_date,
+                    'status': status,
+                    'anomaly_note': anomaly_note,
+                    'operator_name': operator_name,
+                    'ip_address': ip_address,
+                    'mac_address': mac_info,
+                    'gps_location': gps_location,
+                    'device_name': device_name,
+                    'ssid': ssid,
+                }
+            )
+
+            return JsonResponse({
+                'success': True,
+                'record': {
+                    'id': record.id,
+                    'item_id': record.item_id,
+                    'year': record.year,
+                    'week_number': record.week_number,
+                    'maintenance_date': record.maintenance_date.strftime('%Y-%m-%d'),
+                    'status': record.status,
+                    'status_display': record.get_status_display(),
+                    'anomaly_note': record.anomaly_note,
+                    'operator_name': record.operator_name,
+                    'ip_address': record.ip_address,
+                    'mac_address': record.mac_address,
+                    'gps_location': record.gps_location,
+                    'device_name': record.device_name,
+                    'ssid': record.ssid,
+                    'completed_at': record.completed_at.strftime('%Y-%m-%d %H:%M'),
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    return JsonResponse({'success': False, 'error': '不支援的請求方法'})
+
+
+

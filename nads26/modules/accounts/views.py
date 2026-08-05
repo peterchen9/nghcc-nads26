@@ -7,7 +7,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from modules.menu.models import MenuItem
-from modules.menu.permissions import expand_menu_ids, user_can_access_route
+from modules.menu.permissions import (
+    expand_menu_ids,
+    standard_user_menu_items,
+    user_can_access_route,
+)
 
 def has_user_mgmt_permission(user):
     if not user.is_authenticated:
@@ -29,7 +33,9 @@ def admin_required(view_func):
 @login_required
 @admin_required
 def user_list(request):
-    users = User.objects.all().select_related('profile').prefetch_related('profile__allowed_menu_items').order_by('id')
+    users = User.objects.all().select_related('profile').prefetch_related(
+        'profile__allowed_menu_items', 'staff_infos'
+    ).order_by('id')
     return render(request, 'accounts/user_list.html', {'users': users})
 
 @api_view(['GET'])
@@ -37,7 +43,7 @@ def user_list(request):
 def app_routes(request):
     if not has_user_mgmt_permission(request.user):
         return Response({'detail': 'Permission denied.'}, status=403)
-        
+
     roots = MenuItem.objects.filter(parent=None, is_active=True).prefetch_related('children').order_by('order', 'id')
     data = []
     for r in roots:
@@ -61,7 +67,7 @@ def app_routes(request):
 def user_create(request):
     if not has_user_mgmt_permission(request.user):
         return Response({'detail': 'Permission denied.'}, status=403)
-        
+
     username = request.data.get('username', '').strip()
     password = request.data.get('password', '').strip()
     display_name = request.data.get('display_name', '').strip()
@@ -83,12 +89,13 @@ def user_create(request):
         is_active=is_active,
         is_staff=True
     )
-    
+
     profile = user.profile
     profile.display_name = display_name
     profile.department = department
     profile.role = role
     profile.save()
+    profile.allowed_menu_items.set(standard_user_menu_items())
 
     return Response({'status': 'success', 'user_id': user.id})
 
@@ -97,9 +104,9 @@ def user_create(request):
 def user_update(request, pk):
     if not has_user_mgmt_permission(request.user):
         return Response({'detail': 'Permission denied.'}, status=403)
-        
+
     user = get_object_or_404(User, pk=pk)
-    
+
     username = request.data.get('username', '').strip()
     password = request.data.get('password', '').strip()
     display_name = request.data.get('display_name', '').strip()
@@ -134,10 +141,10 @@ def user_update(request, pk):
 def user_set_permissions(request, pk):
     if not has_user_mgmt_permission(request.user):
         return Response({'detail': 'Permission denied.'}, status=403)
-        
+
     user = get_object_or_404(User, pk=pk)
     menu_ids = request.data.get('menu_ids', [])
-    
+
     profile = user.profile
     valid_menu_items = MenuItem.objects.filter(id__in=expand_menu_ids(menu_ids), is_active=True)
     profile.allowed_menu_items.set(valid_menu_items)
@@ -153,11 +160,11 @@ def user_set_permissions(request, pk):
 def user_delete(request, pk):
     if not has_user_mgmt_permission(request.user):
         return Response({'detail': 'Permission denied.'}, status=403)
-        
+
     user = get_object_or_404(User, pk=pk)
     if user == request.user:
         return Response({'error': '您不能刪除自己！'}, status=400)
-        
+
     user.delete()
     return Response({'status': 'success'})
 
@@ -173,15 +180,15 @@ from django.shortcuts import redirect
 def custom_login(request):
     if request.user.is_authenticated:
         return redirect('/')
-        
+
     next_url = request.GET.get('next', '/')
     error_msg = None
-    
+
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
         password = request.POST.get('password', '')
         remember_me = request.POST.get('remember_me') == 'on'
-        
+
         user = authenticate(request, username=username, password=password)
         if user is not None:
             if user.is_active:
@@ -195,7 +202,7 @@ def custom_login(request):
                 error_msg = "此帳號已被停用。"
         else:
             error_msg = "帳號或密碼錯誤。"
-            
+
     return render(request, 'accounts/login.html', {
         'error_msg': error_msg,
         'next': next_url,
@@ -203,7 +210,7 @@ def custom_login(request):
 
 def custom_logout(request):
     logout(request)
-    return render(request, 'accounts/logged_out.html')
+    return redirect('/accounts/login/')
 
 class CustomPasswordResetView(PasswordResetView):
     template_name = 'accounts/password_reset_form.html'
@@ -218,3 +225,82 @@ class CustomPasswordResetConfirmView(PasswordResetConfirmView):
 
 class CustomPasswordResetCompleteView(PasswordResetCompleteView):
     template_name = 'accounts/password_reset_complete.html'
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def identity_list(request):
+    if not has_user_mgmt_permission(request.user):
+        return Response({'detail': 'Permission denied.'}, status=403)
+
+    from modules.eureka.models import StaffInfo
+    identity_codes = sorted(list(set(
+        code.strip() for code in StaffInfo.objects.exclude(identity_code='').values_list('identity_code', flat=True)
+        if code.strip()
+    )))
+    return Response(identity_codes)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def identity_permissions_detail(request, identity_code):
+    if not has_user_mgmt_permission(request.user):
+        return Response({'detail': 'Permission denied.'}, status=403)
+
+    from modules.accounts.models import SystemSetting
+    from modules.menu.models import MenuItem
+    import json
+
+    key = f"identity_perm_{identity_code}"
+
+    if request.method == 'GET':
+        setting = SystemSetting.objects.filter(key=key).first()
+        allowed_ids = []
+        if setting and setting.value:
+            try:
+                allowed_ids = json.loads(setting.value)
+            except Exception:
+                allowed_ids = []
+        return Response({'identity_code': identity_code, 'menu_ids': allowed_ids})
+
+    elif request.method == 'POST':
+        menu_ids = request.data.get('menu_ids', [])
+        setting, created = SystemSetting.objects.get_or_create(
+            key=key,
+            defaults={'description': f'身分 {identity_code} 的功能權限'}
+        )
+        old_ids = []
+        if not created and setting.value:
+            try:
+                old_ids = json.loads(setting.value)
+            except Exception:
+                old_ids = []
+
+        valid_menu_items = MenuItem.objects.filter(id__in=expand_menu_ids(menu_ids), is_active=True)
+        valid_ids = list(valid_menu_items.values_list('id', flat=True))
+        setting.value = json.dumps(valid_ids)
+        setting.save()
+
+        # Compute added and removed menu items
+        old_set = set(old_ids)
+        new_set = set(valid_ids)
+        added_items = [item for item in valid_menu_items if item.id not in old_set]
+        removed_items = list(MenuItem.objects.filter(id__in=(old_set - new_set)))
+
+        from modules.eureka.models import StaffInfo
+        staffs = StaffInfo.objects.filter(identity_code=identity_code, user__isnull=False)
+        updated_count = 0
+        for staff in staffs:
+            profile = staff.user.profile
+            if added_items:
+                profile.allowed_menu_items.add(*added_items)
+            if removed_items:
+                profile.allowed_menu_items.remove(*removed_items)
+            profile.save()
+            updated_count += 1
+
+        return Response({
+            'status': 'success',
+            'menu_ids': valid_ids,
+            'updated_users_count': updated_count
+        })

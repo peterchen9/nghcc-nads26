@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>課堂點名簽到表 - {{ course.subject }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif;
+            color: #0f172a;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Printable Area */
+        .print-page {
+            background-color: #ffffff;
+            width: 297mm; /* Landscape orientation is much better for multi-column attendance tables! */
+            min-height: 210mm;
+            box-sizing: border-box;
+            margin: 20px auto;
+            padding: 15mm;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Floating toolbar */
+        .print-toolbar {
+            background-color: #1e293b;
+            color: #ffffff;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .btn-print {
+            background-color: #38bdf8;
+            color: #0f172a;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .btn-print:hover {
+            background-color: #0ea5e9;
+        }
+
+        /* Header styling */
+        .attendance-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+
+        .attendance-title-area {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .attendance-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin: 0;
+            color: #0f172a;
+            letter-spacing: 2px;
+        }
+
+        .attendance-subtitle {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #0284c7;
+            margin: 0;
+        }
+
+        .attendance-info-meta {
+            font-size: 0.85rem;
+            color: #475569;
+            white-space: nowrap;
+            text-align: right;
+            line-height: 1.6;
+        }
+
+        /* Table grid */
+        .attendance-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        .attendance-table th {
+            background-color: #f8fafc;
+            color: #0f172a;
+            font-weight: 800;
+            border: 1px solid #64748b;
+            padding: 6px 4px;
+            text-align: center;
+        }
+
+        .attendance-table td {
+            border: 1px solid #64748b;
+            padding: 6px 4px;
+            height: 25px; /* height to write names */
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        /* Attendance Checkboxes placeholder */
+        .sign-cell {
+            color: #e2e8f0;
+            text-align: center;
+            font-size: 0.7rem;
+        }
+
+        /* Print media overrides */
+        @media print {
+            @page {
+                size: A4 landscape; /* force landscape print output */
+                margin: 8mm;
+            }
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: #ffffff !important;
+            }
+            .print-page {
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                width: 100% !important;
+                min-height: auto !important;
+            }
+            .attendance-table th {
+                background-color: #f1f5f9 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Toolbar -->
+    <div class="print-toolbar no-print">
+        <span>📋 <strong>點名簽到表列印預覽 (橫式 A4 版)</strong>：此點名表已自動帶入各堂次之日期與主題，並提供 25 位空白欄供學員點名簽到。</span>
+        <button class="btn-print" onclick="window.print()">
+            🖨️ 開始列印
+        </button>
+    </div>
+
+    <!-- Print Page container -->
+    <div class="print-page">
+        <div class="attendance-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 15px;">
+            
+            <!-- Left Side: QR Code -->
+            <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0; margin-right: 15px;">
+                <img src="{% url 'education:course-qrcode' course.pk %}" alt="QR Code" style="width: 58px; height: 58px; border: 1px solid #cbd5e1; padding: 1px; display: block;">
+                <div style="font-size: 0.65rem; line-height: 1.3; color: #475569;">
+                    <strong style="color: #0f172a;">教師手機錄音網頁</strong><br>
+                    請掃描上方 QR 碼登入<br>
+                    <span style="font-family: monospace; font-size: 0.6rem; color: #64748b;">{{ record_url }}</span>
+                </div>
+            </div>
+
+            <!-- Middle/Title Area -->
+            <div class="attendance-title-area" style="flex-grow: 1;">
+                <h1 class="attendance-title" style="margin: 0; font-size: 1.5rem; font-weight: 800; color: #0f172a; letter-spacing: 2px;">課 堂 點 名 簽 到 表</h1>
+                <h2 class="attendance-subtitle" style="margin: 4px 0 0 0; font-size: 1.05rem; font-weight: 700; color: #0284c7;">{{ course.subject }}</h2>
+            </div>
+
+            <!-- Right Side: Meta Info -->
+            <div class="attendance-info-meta" style="font-size: 0.82rem; color: #475569; white-space: nowrap; text-align: right; line-height: 1.5;">
+                <div>課程代號：<strong>{{ course.code }}</strong> | 授課講師：<strong>{{ course.teachers }}</strong></div>
+                <div>固定時間：<strong>{{ course.class_time }}</strong> | 教室：<strong>{{ course.classroom_name|default:"未指定" }}</strong></div>
+            </div>
+        </div>
+
+        <!-- Attendance Grid Table -->
+        <table class="attendance-table">
+            <thead>
+                <tr>
+                    <th width="4%" rowspan="2">序</th>
+                    <th width="12%" rowspan="2">學員姓名</th>
+                    <th colspan="{{ classes.count|default:1 }}" style="letter-spacing: 1px;">上課堂次 / 日期簽到欄</th>
+                    <th width="10%" rowspan="2">備註</th>
+                </tr>
+                <tr>
+                    {% for c in classes %}
+                    <th style="font-size: 0.72rem; font-weight: 700; line-height: 1.3;">
+                        第 {{ c.class_number }} 堂<br>
+                        <span style="font-weight: 500; font-size: 0.65rem; color: #475569;">
+                            {% if c.date %}{{ c.date|date:"m/d" }}{% else %}未定{% endif %}
+                        </span>
+                    </th>
+                    {% empty %}
+                    <th>未定</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in blank_rows %}
+                <tr>
+                    <td class="text-center" style="font-weight: 700; color: #64748b;">{{ r }}</td>
+                    <td></td>
+                    {% for c in classes %}
+                    <td class="sign-cell"></td>
+                    {% empty %}
+                    <td></td>
+                    {% endfor %}
+                    <td></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div style="margin-top: 15px; display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 600; color: #475569;">
+            <span>應到人數：__________ 人 &nbsp;&nbsp;&nbsp;&nbsp; 實到人數：__________ 人</span>
+            <span>授課老師 / 點名班長簽名：____________________</span>
+        </div>
+    </div>
+
+</body>
+</html>

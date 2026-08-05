@@ -1,6 +1,21 @@
 from .models import MenuItem
 
 
+STANDARD_USER_MENU_ROUTES = (
+    '/hymns/',
+    '/eureka/',
+    '/eureka/pastoral/',
+    '/eureka/add/',
+    '/eureka/modify/',
+    '/staff/leaves/',
+    '/eureka/seats/',
+    '/staff/expense-claims/',
+    '/staff/calendar/',
+    '/webav/',
+    '/file-center/staff-reference/',
+)
+
+
 def normalize_route(route):
     route = (route or '').strip()
     if not route:
@@ -50,11 +65,7 @@ def user_can_access_menu_item(user, menu_item):
         return True
 
     allowed_ids = allowed_menu_ids_for_user(user)
-    if menu_item.id in allowed_ids:
-        return True
-    if menu_item.parent_id and menu_item.parent_id in allowed_ids:
-        return True
-    return False
+    return menu_item.id in allowed_ids
 
 
 def user_can_access_route(user, route):
@@ -86,5 +97,11 @@ def expand_menu_ids(menu_ids):
             ).values_list('id', flat=True)
         )
 
-    expanded_ids.update(item.parent_id for item in selected_items if item.parent_id)
     return expanded_ids
+
+
+def standard_user_menu_items():
+    return MenuItem.objects.filter(
+        route__in=STANDARD_USER_MENU_ROUTES,
+        is_active=True,
+    )

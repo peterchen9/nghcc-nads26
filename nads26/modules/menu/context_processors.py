@@ -1,4 +1,4 @@
-from django.db.models import Prefetch, Q
+from django.db.models import Prefetch
 from .models import MenuItem
 from .permissions import allowed_menu_ids_for_user
 
@@ -17,7 +17,7 @@ def menu_processor(request):
     allowed_ids = allowed_menu_ids_for_user(request.user)
 
     allowed_children_qs = MenuItem.objects.filter(
-        Q(id__in=allowed_ids) | Q(parent_id__in=allowed_ids),
+        id__in=allowed_ids,
         is_active=True,
     )
     roots = MenuItem.objects.filter(parent=None, is_active=True).prefetch_related(

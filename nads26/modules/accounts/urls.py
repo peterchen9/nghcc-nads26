@@ -8,4 +8,6 @@ urlpatterns = [
     path('<int:pk>/', views.user_update, name='user-update'),
     path('<int:pk>/permissions/', views.user_set_permissions, name='user-permissions'),
     path('<int:pk>/delete/', views.user_delete, name='user-delete'),
+    path('identity-list/', views.identity_list, name='identity-list'),
+    path('identity-permissions/<str:identity_code>/', views.identity_permissions_detail, name='identity-permissions-detail'),
 ]

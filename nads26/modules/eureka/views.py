@@ -9,7 +9,7 @@ from django.conf import settings
 from django.db.models import Q, Max, Count
 from django.contrib import messages
 from openpyxl import Workbook
-from .models import Member
+from .models import Member, PastoralOverseer, PastoralSection, PastoralGroup
 
 # 照片目錄路徑
 PHOTO_FOLDER = os.path.join(settings.MEDIA_ROOT, 'eureka', 'photo')
@@ -159,6 +159,7 @@ def melos_view(request, church_id):
         member.address = request.POST.get('address', '').strip()
         member.note = request.POST.get('note', '').strip()
         member.section = request.POST.get('section', '').strip()
+        member.family1 = request.POST.get('family1', '').strip()
         fid = request.POST.get('family_id', '').strip()
         member.family_id = int(fid) if fid else None
         member.save()
@@ -267,54 +268,28 @@ def pastoral_view(request):
     sections_count = Member.objects.exclude(section='').values('section').distinct().count()
     groups_count = Member.objects.exclude(family1='').values('family1').distinct().count()
     
-    # 區牧結構與靜態資訊
-    pastoral_structure = [
-        {
-            'overseer': '董牧',
-            'sections': [
-                {'name': '加樂牧區', 'leader1': '', 'leader2': '', 'date': '', 'status': ''},
-                {'name': '百合A區', 'leader1': '', 'leader2': '', 'date': '', 'status': ''},
-                {'name': '百合B區', 'leader1': '正傑', 'leader2': '', 'date': '', 'status': ''},
-                {'name': '百合牧區', 'leader1': '', 'leader2': '', 'date': '', 'status': '暫停'},
-                {'name': '百合C區', 'leader1': '日勇', 'leader2': '', 'date': '', 'status': ''},
-            ]
-        },
-        {
-            'overseer': 'X',
-            'sections': [
-                {'name': '摩利亞牧區', 'leader1': '', 'leader2': '', 'date': '', 'status': '解散'},
-                {'name': '青少年團契', 'leader1': '', 'leader2': '', 'date': '', 'status': '解散'},
-                {'name': '香柏樹牧區', 'leader1': '', 'leader2': '', 'date': '', 'status': '解散'},
-            ]
-        },
-        {
-            'overseer': '主蒞',
-            'sections': [
-                {'name': '31婦女牧區', 'leader1': '淑如', 'leader2': '', 'date': '', 'status': ''},
-                {'name': '敬愛團契', 'leader1': '', 'leader2': '', 'date': '', 'status': '解散'},
-                {'name': '北門Young牧區', 'leader1': '', 'leader2': '', 'date': '', 'status': ''},
-            ]
-        },
-        {
-            'overseer': '明珠',
-            'sections': [
-                {'name': '湧二牧區', 'leader1': '堯尹', 'leader2': '明玲', 'date': '', 'status': ''},
-                {'name': '幸福牧區', 'leader1': '', 'leader2': '', 'date': '', 'status': ''},
-            ]
-        },
-        {
-            'overseer': 'A',
-            'sections': [
-                {'name': '二魚牧區', 'leader1': '', 'leader2': '', 'date': '', 'status': ''},
-                {'name': '青橄欖牧區', 'leader1': '', 'leader2': '', 'date': '', 'status': ''},
-                {'name': '青草地牧區', 'leader1': '', 'leader2': '', 'date': '', 'status': ''},
-                {'name': '清心一區', 'leader1': '', 'leader2': '', 'date': '', 'status': ''},
-                {'name': '清心二區', 'leader1': '', 'leader2': '', 'date': '', 'status': ''},
-                {'name': '兒童牧區', 'leader1': '', 'leader2': '', 'date': '', 'status': ''},
-                {'name': '新朋友牧區', 'leader1': '', 'leader2': '', 'date': '', 'status': ''},
-            ]
-        }
-    ]
+    # 區牧結構與資料庫動態資訊
+    pastoral_structure = []
+    overseers = PastoralOverseer.objects.all().order_by('id')
+    for o in overseers:
+        sections_list = []
+        for s in o.sections.all().order_by('id'):
+            sections_list.append({
+                'id': s.id,
+                'name': s.name,
+                'leader1': s.leader,
+                'leader2': s.counselor,
+                'date': '',
+                'status': '',
+                'groups': [g.name for g in s.groups.all().order_by('id')]
+            })
+        pastoral_structure.append({
+            'id': o.id,
+            'overseer': o.name,
+            'sections': sections_list,
+            'section_count': len(sections_list),
+            'group_count': sum(len(s['groups']) for s in sections_list)
+        })
     
     # 1. 預先載入所有家族成員的對照表 (僅執行 1 次 DB 查詢)
     family_map = {}
@@ -351,6 +326,9 @@ def pastoral_view(request):
         else:
             m.att_percent_display = "無紀錄"
             
+    # 獲取所有小組的資料庫屬性
+    all_groups_dict = {g.name: g for g in PastoralGroup.objects.all()}
+            
     # 4. 組裝結構資料
     for category in pastoral_structure:
         cat_member_count = 0
@@ -364,7 +342,7 @@ def pastoral_view(request):
             cat_member_count += sec['member_count']
             
             # 分組 (小組)
-            groups_dict = {}
+            groups_dict = {g: [] for g in sec.get('groups', [])}
             for m in sec_members:
                 g_name = m.family1
                 if not g_name:
@@ -380,10 +358,17 @@ def pastoral_view(request):
             sorted_groups = sorted(groups_dict.keys())
             sec['groups_data'] = []
             for g_name in sorted_groups:
+                g_obj = all_groups_dict.get(g_name)
                 sec['groups_data'].append({
+                    'id': g_obj.id if g_obj else None,
                     'name': g_name,
                     'member_count': len(groups_dict[g_name]),
-                    'members': groups_dict[g_name]
+                    'members': groups_dict[g_name],
+                    'meeting_time': g_obj.meeting_time if g_obj else '',
+                    'location': g_obj.location if g_obj else '',
+                    'target': g_obj.target if g_obj else '',
+                    'topic': g_obj.topic if g_obj else '',
+                    'photo_url': g_obj.photo.url if g_obj and g_obj.photo else ''
                 })
                 
         category['member_count'] = cat_member_count
@@ -395,7 +380,233 @@ def pastoral_view(request):
         'sections_count': sections_count,
         'groups_count': groups_count,
         'pastoral_structure': pastoral_structure,
+        'all_overseers': PastoralOverseer.objects.all().order_by('id')
     })
+
+
+from django.views.decorators.csrf import csrf_protect
+from django.http import JsonResponse
+
+@login_required
+@csrf_protect
+def edit_overseer_view(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+    
+    overseer = get_object_or_404(PastoralOverseer, pk=pk)
+    name = request.POST.get('name', '').strip()
+    if not name:
+        return JsonResponse({'success': False, 'message': '名字不能為空'}, status=400)
+    
+    overseer.name = name
+    overseer.save()
+    return JsonResponse({'success': True, 'message': '區牧修改成功'})
+
+
+@login_required
+@csrf_protect
+def add_section_view(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+    
+    name = request.POST.get('name', '').strip()
+    overseer_id = request.POST.get('overseer', '').strip()
+    counselor = request.POST.get('counselor', '').strip()
+    leader = request.POST.get('leader', '').strip()
+    
+    if not name:
+        return JsonResponse({'success': False, 'message': '牧區名稱不能為空'}, status=400)
+    if not overseer_id:
+        return JsonResponse({'success': False, 'message': '請選擇區牧'}, status=400)
+        
+    try:
+        overseer = PastoralOverseer.objects.get(pk=int(overseer_id))
+    except (ValueError, PastoralOverseer.DoesNotExist):
+        return JsonResponse({'success': False, 'message': '無效的區牧'}, status=400)
+        
+    if PastoralSection.objects.filter(name=name).exists():
+        return JsonResponse({'success': False, 'message': '該牧區名稱已存在'}, status=400)
+        
+    section = PastoralSection.objects.create(
+        name=name,
+        overseer=overseer,
+        counselor=counselor,
+        leader=leader
+    )
+    
+    return JsonResponse({'success': True, 'message': '牧區新增成功', 'id': section.id})
+
+
+@login_required
+@csrf_protect
+def edit_section_view(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+    
+    section = get_object_or_404(PastoralSection, pk=pk)
+    name = request.POST.get('name', '').strip()
+    overseer_id = request.POST.get('overseer', '').strip()
+    counselor = request.POST.get('counselor', '').strip()
+    leader = request.POST.get('leader', '').strip()
+    
+    if not name:
+        return JsonResponse({'success': False, 'message': '牧區名稱不能為空'}, status=400)
+        
+    old_name = section.name
+    
+    section.name = name
+    if overseer_id:
+        section.overseer_id = int(overseer_id)
+    section.counselor = counselor
+    section.leader = leader
+    section.save()
+    
+    # Keep member section assignments in sync
+    if old_name != name:
+        Member.objects.filter(section=old_name).update(section=name)
+        
+    return JsonResponse({'success': True, 'message': '牧區修改成功'})
+
+
+@login_required
+@csrf_protect
+def edit_group_view(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+        
+    group = get_object_or_404(PastoralGroup, pk=pk)
+    name = request.POST.get('name', '').strip()
+    meeting_time = request.POST.get('meeting_time', '').strip()
+    location = request.POST.get('location', '').strip()
+    target = request.POST.get('target', '').strip()
+    topic = request.POST.get('topic', '').strip()
+    
+    if not name:
+        return JsonResponse({'success': False, 'message': '小組名稱不能為空'}, status=400)
+        
+    old_name = group.name
+    
+    group.name = name
+    group.meeting_time = meeting_time
+    group.location = location
+    group.target = target
+    group.topic = topic
+    
+    if 'photo' in request.FILES:
+        photo_file = request.FILES['photo']
+        group.photo = photo_file
+        
+    group.save()
+    
+    # Keep member group assignments in sync
+    if old_name != name:
+        Member.objects.filter(family1=old_name).update(family1=name)
+        
+    return JsonResponse({'success': True, 'message': '小組修改成功'})
+
+
+@login_required
+@csrf_protect
+def add_group_view(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+        
+    name = request.POST.get('name', '').strip()
+    section_id = request.POST.get('section', '').strip()
+    meeting_time = request.POST.get('meeting_time', '').strip()
+    location = request.POST.get('location', '').strip()
+    target = request.POST.get('target', '').strip()
+    topic = request.POST.get('topic', '').strip()
+    
+    if not name:
+        return JsonResponse({'success': False, 'message': '小組名稱不能為空'}, status=400)
+    if not section_id:
+        return JsonResponse({'success': False, 'message': '請選擇所屬牧區'}, status=400)
+        
+    try:
+        section = PastoralSection.objects.get(pk=int(section_id))
+    except (ValueError, PastoralSection.DoesNotExist):
+        return JsonResponse({'success': False, 'message': '無效的牧區'}, status=400)
+        
+    if PastoralGroup.objects.filter(name=name).exists():
+        return JsonResponse({'success': False, 'message': '該小組名稱已存在'}, status=400)
+        
+    photo_file = None
+    if 'photo' in request.FILES:
+        photo_file = request.FILES['photo']
+        
+    group = PastoralGroup.objects.create(
+        name=name,
+        section=section,
+        meeting_time=meeting_time,
+        location=location,
+        target=target,
+        topic=topic,
+        photo=photo_file
+    )
+    
+    return JsonResponse({'success': True, 'message': '小組新增成功', 'id': group.id})
+
+
+@login_required
+def group_members_api(request, pk):
+    group = get_object_or_404(PastoralGroup, pk=pk)
+    members = Member.objects.filter(family1=group.name).order_by('name').values('church_id', 'name')
+    return JsonResponse({'success': True, 'members': list(members)})
+
+
+@login_required
+@csrf_protect
+def add_group_member_api(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+        
+    group = get_object_or_404(PastoralGroup, pk=pk)
+    church_id = request.POST.get('church_id', '').strip()
+    if not church_id:
+        return JsonResponse({'success': False, 'message': 'Church ID cannot be empty'}, status=400)
+        
+    member = get_object_or_404(Member, church_id=int(church_id))
+    
+    member.family1 = group.name
+    member.section = group.section.name
+    member.save()
+    
+    return JsonResponse({'success': True, 'message': f'成功新增 {member.name} 到 {group.name}'})
+
+
+@login_required
+@csrf_protect
+def remove_group_member_api(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed'}, status=405)
+        
+    group = get_object_or_404(PastoralGroup, pk=pk)
+    church_id = request.POST.get('church_id', '').strip()
+    if not church_id:
+        return JsonResponse({'success': False, 'message': 'Church ID cannot be empty'}, status=400)
+        
+    member = get_object_or_404(Member, church_id=int(church_id))
+    
+    if member.family1 != group.name:
+        return JsonResponse({'success': False, 'message': 'Member is not in this group'}, status=400)
+        
+    member.section = "未加入牧區"
+    member.family1 = "未加入小組"
+    member.save()
+    
+    return JsonResponse({'success': True, 'message': f'已將 {member.name} 移出小組，並歸入未加入牧區/未加入小組'})
+
+
+@login_required
+def unassigned_members_api(request):
+    query = request.GET.get('q', '').strip()
+    unassigned = Member.objects.filter(family1="未加入小組")
+    if query:
+        unassigned = unassigned.filter(name__icontains=query)
+    
+    results = unassigned.order_by('name')[:50].values('church_id', 'name')
+    return JsonResponse({'success': True, 'members': list(results)})
 
 
 @login_required
@@ -635,32 +846,48 @@ def download_all_view(request):
     
     wb = Workbook()
     ws = wb.active
-    ws.title = "北門聖教會通訊錄"
     
-    headers = ["姓名", "Email", "手機號碼", "室內電話", "住址", "牧區", "小組", "生日"]
-    ws.append(headers)
-    
-    for m in members:
-        birthday_str = m.birthday.strftime('%Y-%m-%d') if m.birthday else ''
-        ws.append([
-            m.name,
-            m.email1,
-            m.mobile1,
-            m.phone_h,
-            m.address,
-            m.section,
-            m.family1,
-            birthday_str
-        ])
+    export_format = request.GET.get('format', '').strip()
+    if export_format == 'simple':
+        ws.title = "會員資料"
+        headers = ["church_id", "name", "section", "family1"]
+        ws.append(headers)
+        
+        for m in members:
+            ws.append([
+                m.church_id,
+                m.name,
+                m.section,
+                m.family1
+            ])
+        filename = 'members_export_simple.xlsx'
+    else:
+        ws.title = "北門聖教會通訊錄"
+        headers = ["姓名", "Email", "手機號碼", "室內電話", "住址", "牧區", "小組", "生日"]
+        ws.append(headers)
+        
+        for m in members:
+            birthday_str = m.birthday.strftime('%Y-%m-%d') if m.birthday else ''
+            ws.append([
+                m.name,
+                m.email1,
+                m.mobile1,
+                m.phone_h,
+                m.address,
+                m.section,
+                m.family1,
+                birthday_str
+            ])
+        filename = 'church_address_book.xlsx'
         
     response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    response['Content-Disposition'] = 'attachment; filename=church_address_book.xlsx'
+    response['Content-Disposition'] = f'attachment; filename={filename}'
     wb.save(response)
     return response
 
 
 from django.utils import timezone
-from .models import StaffAttendance
+from .models import StaffAttendance, StaffInfo, StaffShift
 from django.core.management import call_command
 
 @login_required
@@ -738,11 +965,126 @@ def attendance_view(request):
         'latest_clockin': latest_time.strftime('%H:%M:%S') if latest_time else '--:--:--',
     }
 
+    # 近30天出勤統計計算
+    import json
+    start_date = selected_date - datetime.timedelta(days=29)
+    start_dt_30 = timezone.make_aware(datetime.datetime.combine(start_date, datetime.time.min), tz)
+    
+    records_30 = StaffAttendance.objects.filter(timestamp__range=(start_dt_30, end_dt)).order_by('timestamp')
+
+    # 按姓名與日期將打卡記錄分組，抓取每天最早的打卡時間 (只計 11:00 以前的打卡紀錄)
+    earliest_records = {}
+    for r in records_30:
+        local_ts = r.timestamp.astimezone(tz)
+        if local_ts.time() <= datetime.time(11, 0, 0):
+            r_date = local_ts.date()
+            key = (r.name, r_date)
+            if key not in earliest_records:
+                earliest_records[key] = local_ts
+
+    # 取得所有在職同工，並只篩選身份為 P1, P2, W1, W2 的人，並 preload 班表關係以加速
+    active_staff = StaffInfo.objects.select_related('shift').filter(
+        is_active=True, 
+        identity_code__in=['P1', 'P2', 'W1', 'W2']
+    ).order_by('staff_id')
+    
+    # 取得 30 天內所有請假紀錄
+    from django.db import connection
+    leaves_map = {}
+    with connection.cursor() as cursor:
+        cursor.execute('''
+            SELECT staff_name, staff_user, leave_date, day_part
+            FROM staff_leave_entry
+            WHERE leave_date >= %s AND leave_date <= %s
+        ''', [start_date, selected_date])
+        for row in cursor.fetchall():
+            s_name, s_user, l_date, d_part = row
+            leaves_map[(s_name, l_date, d_part)] = True
+            if s_user:
+                leaves_map[(s_user, l_date, d_part)] = True
+
+    date_list = [start_date + datetime.timedelta(days=i) for i in range(30)]
+
+    stats_30_days = []
+    for staff in active_staff:
+        ontime_count = 0
+        late_count = 0
+        nodata_count = 0
+        
+        daily_details = []
+        for d in date_list:
+            key = (staff.name, d)
+            weekday_str = "週" + "一二三四五六日"[d.weekday()]
+            
+            # 檢查當天上午是否請假
+            has_am_leave = leaves_map.get((staff.name, d, 'am')) or (staff.user and leaves_map.get((staff.user.username, d, 'am')))
+            
+            # 從班表判定是否為工作日及上班時間
+            shift = staff.shift
+            shift_start_time = None
+            is_scheduled_workday = True
+            
+            if shift:
+                day_attrs = ['mon_start', 'tue_start', 'wed_start', 'thu_start', 'fri_start', 'sat_start', 'sun_start']
+                shift_start_time = getattr(shift, day_attrs[d.weekday()])
+                if shift_start_time is None:
+                    is_scheduled_workday = False
+            else:
+                # 預設排班規則：週日及週一至六皆為 08:30 (P1/P2 週五為 10:00)
+                is_scheduled_workday = True
+                if staff.identity_code in ['P1', 'P2'] and d.weekday() == 4:
+                    shift_start_time = datetime.time(10, 0, 0)
+                else:
+                    shift_start_time = datetime.time(8, 30, 0)
+            
+            if key in earliest_records:
+                local_ts = earliest_records[key]
+                time_str = local_ts.strftime('%H:%M:%S')
+                limit_time = shift_start_time or datetime.time(8, 30, 0)
+                
+                if local_ts.time() <= limit_time:
+                    ontime_count += 1
+                    status = '準時'
+                    status_class = 'badge-success'
+                else:
+                    late_count += 1
+                    status = '遲到'
+                    status_class = 'badge-warning'
+            else:
+                time_str = '--:--:--'
+                # 無打卡紀錄時，若是上午請假或班表休假日則為「休假」，否則為「未打卡」
+                if has_am_leave or not is_scheduled_workday:
+                    status = '休假'
+                    status_class = 'badge-secondary'
+                else:
+                    nodata_count += 1
+                    status = '未打卡'
+                    status_class = 'badge-danger'
+                
+            daily_details.append({
+                'date': d.strftime('%Y-%m-%d'),
+                'weekday': weekday_str,
+                'time': time_str,
+                'status': status,
+                'status_class': status_class,
+            })
+                
+        stats_30_days.append({
+            'employee_no': staff.employee_no or '--',
+            'name': staff.name,
+            'ontime_count': ontime_count,
+            'late_count': late_count,
+            'nodata_count': nodata_count,
+            'daily_details_json': json.dumps(daily_details),
+        })
+
     return render(request, 'eureka/attendance.html', {
         'selected_date': selected_date.strftime('%Y-%m-%d'),
         'attendance_list': attendance_list,
         'stats': stats,
         'raw_records': records,
+        'start_date': start_date.strftime('%Y-%m-%d'),
+        'stats_30_days': stats_30_days,
     })
 
 
@@ -917,7 +1259,7 @@ def staff_list_view(request):
         return redirect('home')
 
     query = request.GET.get('q', '').strip()
-    staff_list = StaffInfo.objects.select_related('user').all()
+    staff_list = StaffInfo.objects.select_related('user', 'shift').all()
 
     if query:
         staff_list = staff_list.filter(
@@ -934,11 +1276,13 @@ def staff_list_view(request):
         )
 
     users = User.objects.filter(is_active=True).order_by('username')
+    shifts = StaffShift.objects.all().order_by('shift_code')
 
     return render(request, 'eureka/staff_list.html', {
         'staff_list': staff_list,
         'query': query,
         'users': users,
+        'shifts': shifts,
         'can_edit_staff': can_edit_staff,
     })
 
@@ -972,6 +1316,8 @@ def edit_staff_view(request, staff_id):
             staff.bank_account = request.POST.get('bank_account', '').strip()
             user_id = request.POST.get('user_id', '').strip()
             staff.user_id = int(user_id) if user_id else None
+            shift_id = request.POST.get('shift_id', '').strip()
+            staff.shift_id = int(shift_id) if shift_id else None
             
             try:
                 staff.annual_leave_quota = float(request.POST.get('annual_leave_quota', '0') or 0.0)
@@ -985,6 +1331,24 @@ def edit_staff_view(request, staff_id):
         except Exception as e:
             messages.error(request, f"更新同工資料失敗: {e}")
             
+    return redirect('eureka:staff-list')
+
+
+@login_required
+def delete_staff_view(request, staff_id):
+    """刪除同工資料"""
+    if not (request.user.is_superuser or request.user.has_perm('eureka.delete_staffinfo')):
+        messages.error(request, "只有管理員可以刪除同工資料。")
+        return redirect('eureka:staff-list')
+
+    staff = get_object_or_404(StaffInfo, pk=staff_id)
+    name = staff.name
+    try:
+        staff.delete()
+        messages.success(request, f"已成功刪除同工 {name} 的資料。")
+    except Exception as e:
+        messages.error(request, f"刪除同工資料失敗: {e}")
+
     return redirect('eureka:staff-list')
 
 
@@ -1123,6 +1487,278 @@ def save_seat_map_view(request):
             return JsonResponse({"success": False, "error": str(e)}, status=500)
             
     return JsonResponse({"success": False, "error": "僅支援 POST 請求。"}, status=405)
+
+
+@login_required
+def meeting_attendance_view(request):
+    from .models import YearlyAttendance, WeeklyAttendance, PrayerMeetingAttendance
+    from django.contrib import messages
+    from django.utils import timezone
+    import datetime
+
+    # Get local current date
+    today = timezone.localdate()
+
+    # Calculate default Sunday (most recent past Sunday: Sunday on or before today)
+    default_sunday = today - datetime.timedelta(days=(today.weekday() + 1) % 7)
+    # Calculate default Thursday (most recent past Thursday: Thursday on or before today)
+    default_thursday = today - datetime.timedelta(days=(today.weekday() - 3) % 7)
+
+    if request.method == 'POST':
+        action = request.POST.get('action', '').strip()
+        
+        try:
+            if action == 'adult':
+                date_str = request.POST.get('date', '').strip()
+                first = request.POST.get('first_service', '').strip()
+                second = request.POST.get('second_service', '').strip()
+                evening = request.POST.get('evening_service', '').strip()
+                
+                # Validation
+                date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+                first_val = int(first) if first != '' else None
+                second_val = int(second) if second != '' else None
+                evening_val = int(evening) if evening != '' else None
+                
+                if first_val is not None and first_val < 0: raise ValueError("第一堂人數不能為負數")
+                if second_val is not None and second_val < 0: raise ValueError("第二堂人數不能為負數")
+                if evening_val is not None and evening_val < 0: raise ValueError("晚堂人數不能為負數")
+                
+                WeeklyAttendance.objects.update_or_create(
+                    date=date_obj,
+                    defaults={
+                        'first_service': first_val,
+                        'second_service': second_val,
+                        'evening_service': evening_val,
+                    }
+                )
+                messages.success(request, f"成功更新 {date_str} 的成人主日聚會人數！")
+                
+            elif action == 'prayer':
+                date_str = request.POST.get('date', '').strip()
+                att = request.POST.get('attendance', '').strip()
+                
+                # Validation
+                date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+                att_val = int(att)
+                if att_val < 0: raise ValueError("人數不能為負數")
+                
+                PrayerMeetingAttendance.objects.update_or_create(
+                    date=date_obj,
+                    defaults={
+                        'attendance': att_val,
+                    }
+                )
+                messages.success(request, f"成功更新 {date_str} 的禱告會人數！")
+                
+            elif action == 'children':
+                date_str = request.POST.get('date', '').strip()
+                att = request.POST.get('attendance', '').strip()
+                
+                # Validation
+                date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+                att_val = int(att)
+                if att_val < 0: raise ValueError("人數不能為負數")
+                
+                WeeklyAttendance.objects.update_or_create(
+                    date=date_obj,
+                    defaults={
+                        'children': att_val,
+                    }
+                )
+                messages.success(request, f"成功更新 {date_str} 的兒主聚會人數！")
+                
+            elif action == 'youth':
+                date_str = request.POST.get('date', '').strip()
+                att = request.POST.get('attendance', '').strip()
+                
+                # Validation
+                date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+                att_val = int(att)
+                if att_val < 0: raise ValueError("人數不能為負數")
+                
+                WeeklyAttendance.objects.update_or_create(
+                    date=date_obj,
+                    defaults={
+                        'youth': att_val,
+                    }
+                )
+                messages.success(request, f"成功更新 {date_str} 的青少聚會人數！")
+            
+            else:
+                messages.error(request, "未知的操作行為。")
+                
+        except ValueError as ve:
+            messages.error(request, f"輸入資料有誤: {ve}")
+        except Exception as e:
+            messages.error(request, f"更新失敗: {e}")
+            
+        return redirect('eureka:meeting-attendance')
+
+    # GET Request: Fetch stats
+    # 1. Yearly Statistics for Chart.js
+    yearly_qs = YearlyAttendance.objects.all().order_by('year')
+    yearly_years = [y.year for y in yearly_qs]
+    yearly_attendance = [y.attendance for y in yearly_qs]
+    yearly_baptized = [y.baptized for y in yearly_qs]
+    
+    # 2. Weekly Attendance (last 52 weeks)
+    weekly_list = WeeklyAttendance.objects.all().order_by('-date')[:52]
+    
+    # 3. Prayer Meeting Attendance
+    prayer_list = PrayerMeetingAttendance.objects.all().order_by('-date')[:52]
+
+    # Generate dropdown choices for Sundays (last 52 and next 12)
+    sunday_choices = []
+    for i in range(12, -53, -1):
+        sun = default_sunday + datetime.timedelta(days=i*7)
+        sunday_choices.append(sun)
+        
+    # Generate dropdown choices for Thursdays (last 52 and next 12)
+    thursday_choices = []
+    for i in range(12, -53, -1):
+        thu = default_thursday + datetime.timedelta(days=i*7)
+        thursday_choices.append(thu)
+
+    context = {
+        'yearly_years': yearly_years,
+        'yearly_attendance': yearly_attendance,
+        'yearly_baptized': yearly_baptized,
+        'weekly_list': weekly_list,
+        'prayer_list': prayer_list,
+        'sunday_choices': sunday_choices,
+        'thursday_choices': thursday_choices,
+        'default_sunday': default_sunday,
+        'default_thursday': default_thursday,
+    }
+    return render(request, 'eureka/meeting_attendance.html', context)
+
+
+# ==================== SHIFT CRUD VIEWS ====================
+from django.utils.dateparse import parse_time
+
+def _get_time_val(val):
+    if not val or not val.strip():
+        return None
+    return parse_time(val.strip())
+
+@login_required
+def shift_list_view(request):
+    """同工班表列表及管理"""
+    can_edit_shifts = request.user.is_superuser or request.user.has_perm('eureka.change_staffshift')
+    shifts = StaffShift.objects.all().order_by('shift_code')
+    return render(request, 'eureka/shift_list.html', {
+        'shifts': shifts,
+        'can_edit_shifts': can_edit_shifts,
+    })
+
+@login_required
+def shift_create_view(request):
+    """新增班表"""
+    if not (request.user.is_superuser or request.user.has_perm('eureka.add_staffshift')):
+        messages.error(request, "權限不足，無法新增班表。")
+        return redirect('eureka:shift-list')
+
+    if request.method == 'POST':
+        shift_code = request.POST.get('shift_code', '').strip()
+        description = request.POST.get('description', '').strip()
+        
+        if not shift_code:
+            messages.error(request, "班表代號為必填欄位。")
+            return redirect('eureka:shift-list')
+            
+        if StaffShift.objects.filter(shift_code=shift_code).exists():
+            messages.error(request, f"班表代號 {shift_code} 已存在。")
+            return redirect('eureka:shift-list')
+
+        try:
+            StaffShift.objects.create(
+                shift_code=shift_code,
+                description=description,
+                mon_start=_get_time_val(request.POST.get('mon_start')),
+                mon_end=_get_time_val(request.POST.get('mon_end')),
+                tue_start=_get_time_val(request.POST.get('tue_start')),
+                tue_end=_get_time_val(request.POST.get('tue_end')),
+                wed_start=_get_time_val(request.POST.get('wed_start')),
+                wed_end=_get_time_val(request.POST.get('wed_end')),
+                thu_start=_get_time_val(request.POST.get('thu_start')),
+                thu_end=_get_time_val(request.POST.get('thu_end')),
+                fri_start=_get_time_val(request.POST.get('fri_start')),
+                fri_end=_get_time_val(request.POST.get('fri_end')),
+                sat_start=_get_time_val(request.POST.get('sat_start')),
+                sat_end=_get_time_val(request.POST.get('sat_end')),
+                sun_start=_get_time_val(request.POST.get('sun_start')),
+                sun_end=_get_time_val(request.POST.get('sun_end')),
+            )
+            messages.success(request, f"班表 {shift_code} 新增成功。")
+        except Exception as e:
+            messages.error(request, f"新增班表失敗: {e}")
+            
+    return redirect('eureka:shift-list')
+
+@login_required
+def shift_edit_view(request, shift_id):
+    """編輯班表"""
+    if not (request.user.is_superuser or request.user.has_perm('eureka.change_staffshift')):
+        messages.error(request, "權限不足，無法修改班表。")
+        return redirect('eureka:shift-list')
+        
+    shift = get_object_or_404(StaffShift, pk=shift_id)
+
+    if request.method == 'POST':
+        shift_code = request.POST.get('shift_code', '').strip()
+        description = request.POST.get('description', '').strip()
+        
+        if not shift_code:
+            messages.error(request, "班表代號為必填欄位。")
+            return redirect('eureka:shift-list')
+            
+        if StaffShift.objects.filter(shift_code=shift_code).exclude(pk=shift_id).exists():
+            messages.error(request, f"班表代號 {shift_code} 已存在。")
+            return redirect('eureka:shift-list')
+
+        try:
+            shift.shift_code = shift_code
+            shift.description = description
+            shift.mon_start = _get_time_val(request.POST.get('mon_start'))
+            shift.mon_end = _get_time_val(request.POST.get('mon_end'))
+            shift.tue_start = _get_time_val(request.POST.get('tue_start'))
+            shift.tue_end = _get_time_val(request.POST.get('tue_end'))
+            shift.wed_start = _get_time_val(request.POST.get('wed_start'))
+            shift.wed_end = _get_time_val(request.POST.get('wed_end'))
+            shift.thu_start = _get_time_val(request.POST.get('thu_start'))
+            shift.thu_end = _get_time_val(request.POST.get('thu_end'))
+            shift.fri_start = _get_time_val(request.POST.get('fri_start'))
+            shift.fri_end = _get_time_val(request.POST.get('fri_end'))
+            shift.sat_start = _get_time_val(request.POST.get('sat_start'))
+            shift.sat_end = _get_time_val(request.POST.get('sat_end'))
+            shift.sun_start = _get_time_val(request.POST.get('sun_start'))
+            shift.sun_end = _get_time_val(request.POST.get('sun_end'))
+            shift.save()
+            messages.success(request, f"班表 {shift_code} 修改成功。")
+        except Exception as e:
+            messages.error(request, f"修改班表失敗: {e}")
+            
+    return redirect('eureka:shift-list')
+
+@login_required
+def shift_delete_view(request, shift_id):
+    """刪除班表"""
+    if not (request.user.is_superuser or request.user.has_perm('eureka.delete_staffshift')):
+        messages.error(request, "權限不足，無法刪除班表。")
+        return redirect('eureka:shift-list')
+        
+    shift = get_object_or_404(StaffShift, pk=shift_id)
+    shift_code = shift.shift_code
+    
+    try:
+        shift.delete()
+        messages.success(request, f"班表 {shift_code} 已被刪除。")
+    except Exception as e:
+        messages.error(request, f"刪除班表失敗: {e}")
+        
+    return redirect('eureka:shift-list')
+
 
 
 

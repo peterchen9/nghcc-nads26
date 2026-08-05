@@ -27,10 +27,11 @@ class MenuPermissionMiddleware:
                 return redirect('/')
             return self.get_response(request)
 
-        # 2. Skip home page, accounts auth paths, and user management (handled inside views)
+        # 2. Skip home page, accounts auth paths, user management, and mobile QR room inspect pages
         if (path == '/' or 
             path.startswith('/users/') or 
-            path.startswith('/accounts/')):
+            path.startswith('/accounts/') or
+            '/classroom-inspection/room/' in path):
             return self.get_response(request)
 
         # 3. Restrict other app paths for authenticated, non-superuser users

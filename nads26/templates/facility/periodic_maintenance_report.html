@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+
+{% block title %}定期維護回報 - {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-container {
+        max-width: 640px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .report-card {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 18px;
+        padding: 24px;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+    }
+
+    .report-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding-bottom: 14px;
+    }
+
+    .report-title h2 {
+        margin: 0;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #fff;
+    }
+
+    .user-badge {
+        font-size: 0.84rem;
+        background: rgba(59, 130, 246, 0.15);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        color: #60a5fa;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+
+    .form-group {
+        margin-bottom: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .form-group label {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
+
+    .form-control {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 10px;
+        padding: 12px 14px;
+        color: #ffffff;
+        font-size: 0.95rem;
+        box-sizing: border-box;
+        width: 100%;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #60a5fa;
+        background: rgba(15, 23, 42, 0.8);
+    }
+
+    .form-control option:disabled {
+        color: #64748b !important;
+        background: #1e293b !important;
+    }
+
+    /* Status Option Cards */
+    .status-cards {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-top: 4px;
+    }
+
+    .status-card {
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        padding: 14px;
+        text-align: center;
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.2s ease;
+    }
+
+    .status-card.selected-completed {
+        border-color: #facc15;
+        background: rgba(250, 204, 21, 0.15);
+        box-shadow: 0 0 15px rgba(250, 204, 21, 0.3);
+    }
+
+    .status-card.selected-abnormal {
+        border-color: #ef4444;
+        background: rgba(239, 68, 68, 0.15);
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+    }
+
+    .status-icon {
+        font-size: 1.6rem;
+        margin-bottom: 4px;
+    }
+
+    .status-title {
+        font-weight: 700;
+        font-size: 0.95rem;
+    }
+
+    /* Auto Sensor Metadata Box */
+    .meta-box {
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px dashed rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        padding: 14px;
+        font-size: 0.84rem;
+        color: #94a3b8;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .meta-title {
+        font-weight: 700;
+        color: #60a5fa;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-submit {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        padding: 14px;
+        font-size: 1.05rem;
+        font-weight: 700;
+        cursor: pointer;
+        width: 100%;
+        margin-top: 10px;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        transition: all 0.2s ease;
+    }
+
+    .btn-submit:hover {
+        opacity: 0.95;
+        transform: translateY(-2px);
+    }
+
+    .permission-notice {
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin-bottom: 16px;
+        color: #fca5a5;
+        font-size: 0.88rem;
+        line-height: 1.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="report-container">
+
+    <div class="report-card">
+        <div class="report-title">
+            <h2>📱 定期維護回報</h2>
+            <div class="user-badge">
+                👤 同工：{{ user_display_name }} {% if is_admin %}(管理員){% endif %}
+            </div>
+        </div>
+
+        {% if selected_item and not selected_can_select %}
+        <div class="permission-notice">
+            ⚠️ 提示：您目前的登入身份為「<b>{{ user_display_name }}</b>」，非此設施項目之主責同工（本項主責同工為：<b>{{ selected_item.owner }}</b>），無權限提交此項目之維護回報。
+        </div>
+        {% endif %}
+
+        <form id="reportForm" onsubmit="submitReport(event)">
+            
+            <!-- Item Selector -->
+            <div class="form-group">
+                <label for="itemId">選擇維護項目 (限主責同工與管理員可選) *</label>
+                <select id="itemId" class="form-control" onchange="onItemChange(this.value)" required>
+                    <option value="">-- 請選擇設施或維護項目 --</option>
+                    {% for entry in items_with_permission %}
+                    {% with it=entry.item %}
+                    <option value="{{ it.id }}"
+                            {% if selected_item and selected_item.id == it.id %}selected{% endif %}
+                            {% if not entry.can_select %}disabled{% endif %}>
+                        [{{ it.category }}] {{ it.name }} (主責: {{ entry.owner|default:"無" }}){% if not entry.can_select %} — [灰色不可選 (非主責同工)]{% endif %}
+                    </option>
+                    {% endwith %}
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Maintenance Date (Auto filled, editable) -->
+            <div class="form-group">
+                <label for="maintenanceDate">維護日期 (自動帶出) *</label>
+                <input type="date" id="maintenanceDate" class="form-control" value="{{ today_str }}" required>
+            </div>
+
+            <!-- Status Choice Cards -->
+            <div class="form-group">
+                <label>維護結果 *</label>
+                <input type="hidden" id="reportStatus" value="completed">
+                <div class="status-cards">
+                    <div class="status-card selected-completed" id="cardCompleted" onclick="selectStatus('completed')">
+                        <div class="status-icon" style="color: #facc15;">●</div>
+                        <div class="status-title" style="color: #facc15;">維護完成</div>
+                        <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 2px;">設施無異常 (黃圈圈)</div>
+                    </div>
+                    <div class="status-card" id="cardAbnormal" onclick="selectStatus('abnormal')">
+                        <div class="status-icon" style="color: #ef4444;">●</div>
+                        <div class="status-title" style="color: #ef4444;">發現異常</div>
+                        <div style="font-size: 0.78rem; color: #94a3b8; margin-top: 2px;">需報修/處置 (紅圈圈)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Anomaly / Maintenance Description -->
+            <div class="form-group">
+                <label for="anomalyNote">狀況說明 / 維護紀錄</label>
+                <textarea id="anomalyNote" class="form-control" rows="3" placeholder="如有發現異常、耗材更換、測試數據或處置說明請在此填寫..."></textarea>
+            </div>
+
+            <!-- Device Name & SSID fields -->
+            <div class="form-row" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 14px;">
+                <div class="form-group" style="margin: 0;">
+                    <label for="deviceName">設備名稱 (自動偵測)</label>
+                    <input type="text" id="deviceName" class="form-control" placeholder="例如: iPhone 15 Pro">
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <label for="ssidName">SSID / 網路名稱</label>
+                    <input type="text" id="ssidName" class="form-control" placeholder="例如: Church-WiFi">
+                </div>
+            </div>
+
+            <!-- Auto-captured Sensor Metadata -->
+            <div class="meta-box">
+                <div class="meta-title">
+                    📡 系統自動捕捉之安全記錄資訊：
+                </div>
+                <div>• IP 位置：<span id="displayIp" style="color: #fff;">伺服器將自動捕捉</span></div>
+                <div>• MAC / 裝置指紋：<span id="displayMac" style="color: #fff;">載入中...</span></div>
+                <div>• GPS 座標：<span id="displayGps" style="color: #fbbf24;">正在取得 GPS 定位...</span></div>
+            </div>
+
+            <button type="submit" class="btn-submit" id="btnSubmit">
+                🚀 確認登記維護回報
+            </button>
+        </form>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentGpsLocation = '';
+
+    function selectStatus(status) {
+        document.getElementById('reportStatus').value = status;
+        const cardC = document.getElementById('cardCompleted');
+        const cardA = document.getElementById('cardAbnormal');
+
+        if (status === 'completed') {
+            cardC.className = 'status-card selected-completed';
+            cardA.className = 'status-card';
+        } else {
+            cardC.className = 'status-card';
+            cardA.className = 'status-card selected-abnormal';
+        }
+    }
+
+    function onItemChange(itemId) {
+        if (!itemId) return;
+        const select = document.getElementById('itemId');
+        const selectedOpt = select.options[select.selectedIndex];
+        if (selectedOpt && selectedOpt.disabled) {
+            alert('您非此維護項目之主責同工，無權限選取與回報。');
+            select.value = '';
+        }
+    }
+
+    // Auto-detect Device Name & SSID
+    function detectDeviceInfo() {
+        const ua = navigator.userAgent;
+        let deviceName = '桌上型電腦';
+
+        if (/iPhone/i.test(ua)) deviceName = 'iPhone (iOS)';
+        else if (/iPad/i.test(ua)) deviceName = 'iPad (iPadOS)';
+        else if (/Android/i.test(ua)) deviceName = 'Android 行動裝置';
+        else if (/Macintosh/i.test(ua)) deviceName = 'Mac 電腦';
+        else if (/Windows/i.test(ua)) deviceName = 'Windows 電腦';
+
+        document.getElementById('deviceName').value = deviceName;
+
+        // Display MAC/UA fingerprint
+        document.getElementById('displayMac').textContent = ua.substring(0, 80) + '...';
+
+        // Connection Network Type / SSID fallback
+        let ssid = 'WiFi / 局域網路';
+        if (navigator.connection) {
+            const conn = navigator.connection;
+            if (conn.type) ssid = conn.type.toUpperCase();
+            if (conn.effectiveType) ssid += ` (${conn.effectiveType})`;
+        }
+        document.getElementById('ssidName').value = ssid;
+
+        // Fetch Geolocation
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    currentGpsLocation = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;
+                    document.getElementById('displayGps').textContent = currentGpsLocation + ' (精確度: ' + Math.round(pos.coords.accuracy) + 'm)';
+                },
+                (err) => {
+                    currentGpsLocation = '未授權GPS定位';
+                    document.getElementById('displayGps').textContent = currentGpsLocation;
+                },
+                { timeout: 10000, enableHighAccuracy: true }
+            );
+        } else {
+            document.getElementById('displayGps').textContent = '不支援GPS定位';
+        }
+    }
+
+    function submitReport(e) {
+        e.preventDefault();
+        const select = document.getElementById('itemId');
+        const itemId = select.value;
+        const selectedOpt = select.options[select.selectedIndex];
+
+        if (!itemId || (selectedOpt && selectedOpt.disabled)) {
+            alert('請選擇您有權限回報之維護項目。');
+            return;
+        }
+
+        const mDate = document.getElementById('maintenanceDate').value;
+        const status = document.getElementById('reportStatus').value;
+        const anomalyNote = document.getElementById('anomalyNote').value.trim();
+        const deviceName = document.getElementById('deviceName').value.trim();
+        const ssid = document.getElementById('ssidName').value.trim();
+
+        const btn = document.getElementById('btnSubmit');
+        btn.disabled = true;
+        btn.innerText = '正在送出回報...';
+
+        const payload = {
+            item_id: parseInt(itemId),
+            maintenance_date: mDate,
+            status: status,
+            anomaly_note: anomalyNote,
+            gps_location: currentGpsLocation,
+            mac_address: navigator.userAgent.substring(0, 200),
+            device_name: deviceName,
+            ssid: ssid
+        };
+
+        fetch("{% url 'facility-periodic-maintenance-api-records' %}", {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(res => res.json())
+        .then(res => {
+            btn.disabled = false;
+            btn.innerText = '🚀 確認登記維護回報';
+            if (res.success) {
+                alert('✅ 定期維護回報成功！已登記回報數據。');
+                window.location.href = "{% url 'facility-periodic-maintenance' %}";
+            } else {
+                alert('回報失敗: ' + res.error);
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerText = '🚀 確認登記維護回報';
+            alert('連線錯誤: ' + err);
+        });
+    }
+
+    detectDeviceInfo();
+</script>
+{% endblock %}
