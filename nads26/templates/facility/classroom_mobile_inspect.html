@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}{{ room.name }} 教室檢查登記 - {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .mobile-inspect-card {
+        max-width: 500px;
+        margin: 15px auto 30px auto;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+    }
+
+    .card-header-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+
+    .room-title {
+        margin: 0 0 4px 0;
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #ffffff;
+    }
+
+    .sub-title {
+        color: #94a3b8;
+        font-size: 0.86rem;
+        margin-bottom: 24px;
+    }
+
+    /* Overall Status Choice Grid */
+    .status-choice-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-bottom: 20px;
+    }
+
+    .status-choice-option {
+        position: relative;
+    }
+
+    .status-choice-option input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .status-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 18px 12px;
+        border-radius: 12px;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        background: rgba(15, 23, 42, 0.6);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: center;
+    }
+
+    .status-card-icon {
+        font-size: 2.2rem;
+        margin-bottom: 6px;
+    }
+
+    .status-card-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #e2e8f0;
+    }
+
+    /* Normal Checked State */
+    .status-choice-option input[value="normal"]:checked + .status-card {
+        border-color: #22c55e;
+        background: rgba(34, 197, 94, 0.15);
+        box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+    }
+    .status-choice-option input[value="normal"]:checked + .status-card .status-card-title {
+        color: #4ade80;
+    }
+
+    /* Abnormal Checked State */
+    .status-choice-option input[value="abnormal"]:checked + .status-card {
+        border-color: #ef4444;
+        background: rgba(239, 68, 68, 0.15);
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+    }
+    .status-choice-option input[value="abnormal"]:checked + .status-card .status-card-title {
+        color: #f87171;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        display: block;
+        color: #e2e8f0;
+        font-size: 0.88rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+
+    .form-input, .form-textarea {
+        width: 100%;
+        box-sizing: border-box;
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 8px;
+        padding: 10px 14px;
+        color: #ffffff;
+        font-size: 0.95rem;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    .form-input:focus, .form-textarea:focus {
+        border-color: #3b82f6;
+    }
+
+    .btn-submit {
+        width: 100%;
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        color: #ffffff;
+        border: none;
+        border-radius: 10px;
+        padding: 14px;
+        font-size: 1.05rem;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+        transition: all 0.2s;
+    }
+    .btn-submit:hover {
+        opacity: 0.95;
+        transform: translateY(-1px);
+    }
+
+    .success-box {
+        text-align: center;
+        padding: 20px 10px;
+    }
+    .success-icon {
+        font-size: 3.5rem;
+        margin-bottom: 10px;
+    }
+    .success-title {
+        font-size: 1.4rem;
+        color: #4ade80;
+        font-weight: 700;
+        margin-bottom: 12px;
+    }
+    .record-details {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 16px;
+        text-align: left;
+        margin-bottom: 24px;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: #cbd5e1;
+    }
+    .record-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 6px;
+    }
+    .record-item:last-child {
+        margin-bottom: 0;
+    }
+    .record-key {
+        color: #94a3b8;
+    }
+    .record-val {
+        color: #f8fafc;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mobile-inspect-card">
+    {% if submitted %}
+        <div class="success-box">
+            <div class="success-icon">✅</div>
+            <div class="success-title">登記完成！</div>
+
+            <div class="record-details">
+                <div class="record-item">
+                    <span class="record-key">🏢 檢查教室：</span>
+                    <span class="record-val">{{ room.name }} 教室</span>
+                </div>
+                <div class="record-item">
+                    <span class="record-key">📌 檢查結果：</span>
+                    <span class="record-val">
+                        {% if overall_status == 'normal' %}
+                            <span style="color: #4ade80;">🟢 正常</span>
+                        {% else %}
+                            <span style="color: #f87171;">🔴 異常</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="record-item">
+                    <span class="record-key">🕒 登記時間：</span>
+                    <span class="record-val">{{ now_str }}</span>
+                </div>
+                <div class="record-item">
+                    <span class="record-key">📱 裝置 MAC / IP：</span>
+                    <span class="record-val" style="font-family: monospace; font-size: 0.85rem;">{{ mac_address|default:"無/未知" }}</span>
+                </div>
+                {% if inspector_name %}
+                <div class="record-item">
+                    <span class="record-key">👤 檢查人員：</span>
+                    <span class="record-val">{{ inspector_name }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <a href="{% url 'facility-classroom-mobile-inspect' room.id %}" class="btn-submit" style="display: block; text-decoration: none; box-sizing: border-box; text-align: center;">
+                再次登記 / 重新檢查
+            </a>
+            <a href="{% url 'facility-classroom-inspection' %}" style="display: inline-block; margin-top: 15px; color: #60a5fa; text-decoration: none; font-size: 0.88rem;">
+                ← 返回教室檢查總表
+            </a>
+        </div>
+    {% else %}
+        <div class="card-header-badge">
+            📱 手機掃碼現場檢查
+        </div>
+        <h1 class="room-title">{{ room.name }} 教室</h1>
+        <div class="sub-title">檢查時間：{{ now_str }}</div>
+
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label class="form-label">請選擇檢查結果 <span style="color: #ef4444;">*</span></label>
+                <div class="status-choice-grid">
+                    <label class="status-choice-option">
+                        <input type="radio" name="status" value="normal" checked onclick="toggleAnomalyBox(false)" />
+                        <div class="status-card">
+                            <div class="status-card-icon">🟢</div>
+                            <div class="status-card-title">正常</div>
+                        </div>
+                    </label>
+                    
+                    <label class="status-choice-option">
+                        <input type="radio" name="status" value="abnormal" onclick="toggleAnomalyBox(true)" />
+                        <div class="status-card">
+                            <div class="status-card-icon">🔴</div>
+                            <div class="status-card-title">異常</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group" id="anomalyGroup" style="display: none;">
+                <label class="form-label">異常狀況說明</label>
+                <textarea name="anomaly_note" class="form-textarea" rows="3" placeholder="請簡述異常問題（如：冷氣不亮、門鎖壞掉...）"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">檢查人員姓名（選填）</label>
+                <input type="text" name="inspector_name" class="form-input" placeholder="請輸入姓名" />
+            </div>
+
+            <button type="submit" class="btn-submit">🚀 提交檢查結果</button>
+        </form>
+
+        <script>
+            function toggleAnomalyBox(show) {
+                const box = document.getElementById('anomalyGroup');
+                box.style.display = show ? 'block' : 'none';
+            }
+        </script>
+    {% endif %}
+</div>
+{% endblock %}
+

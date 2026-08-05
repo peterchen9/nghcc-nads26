@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>課程學習回應單 - {{ course.subject }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif;
+            color: #0f172a;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Printable Area */
+        .print-page {
+            background-color: #ffffff;
+            width: 210mm;
+            min-height: 297mm;
+            box-sizing: border-box;
+            margin: 20px auto;
+            padding: 20mm;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Floating toolbar */
+        .print-toolbar {
+            background-color: #1e293b;
+            color: #ffffff;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .btn-print {
+            background-color: #38bdf8;
+            color: #0f172a;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .btn-print:hover {
+            background-color: #0ea5e9;
+        }
+
+        /* Header styling */
+        .form-header {
+            text-align: center;
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+
+        .form-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin: 0;
+            color: #0f172a;
+            letter-spacing: 2px;
+        }
+
+        .form-desc {
+            font-size: 0.85rem;
+            color: #475569;
+            margin: 6px 0 0 0;
+        }
+
+        /* Meta block */
+        .meta-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            margin-bottom: 24px;
+        }
+
+        .meta-table td {
+            border: 1px solid #cbd5e1;
+            padding: 8px 12px;
+        }
+
+        .meta-label {
+            background-color: #f8fafc;
+            font-weight: 800;
+            color: #475569;
+            width: 15%;
+            white-space: nowrap;
+        }
+
+        /* Question Section */
+        .question-block {
+            margin-bottom: 20px;
+        }
+
+        .question-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+
+        .options-list {
+            display: flex;
+            gap: 16px;
+            font-size: 0.9rem;
+            margin-left: 10px;
+            flex-wrap: wrap;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .checkbox-box {
+            width: 14px;
+            height: 14px;
+            border: 1.5px solid #0f172a;
+            display: inline-block;
+            box-sizing: border-box;
+            background-color: #ffffff;
+        }
+
+        /* Essay lines */
+        .essay-box {
+            border: 1.5px solid #cbd5e1;
+            border-radius: 4px;
+            height: 90px;
+            margin-top: 6px;
+            margin-left: 10px;
+            position: relative;
+        }
+
+        .essay-line {
+            border-bottom: 1px dashed #e2e8f0;
+            height: 30px;
+            width: 100%;
+        }
+
+        /* Footer */
+        .form-footer {
+            text-align: center;
+            border-top: 1px solid #cbd5e1;
+            padding-top: 20px;
+            margin-top: 40px;
+            font-size: 0.88rem;
+            color: #475569;
+            font-weight: 600;
+        }
+
+        /* Print media overrides */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: #ffffff !important;
+            }
+            .print-page {
+                margin: 0 !important;
+                padding: 10mm !important;
+                border: none !important;
+                box-shadow: none !important;
+                width: 100% !important;
+                min-height: auto !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Toolbar -->
+    <div class="print-toolbar no-print">
+        <span>📝 <strong>學習回應單列印預覽</strong>：您可以列印並分發此滿意度與建議問卷給學員，收集課後意見。</span>
+        <button class="btn-print" onclick="window.print()">
+            🖨️ 開始列印
+        </button>
+    </div>
+
+    <!-- Print Page container -->
+    <div class="print-page">
+        <div class="form-header">
+            <h1 class="form-title">學習成效回應單</h1>
+            <p class="form-desc">親愛的學員您好：本回應單旨在瞭解您對本課程的真實心得與建議，做為未來開課規劃之參考，請踴躍填寫，謝謝！</p>
+        </div>
+
+        <!-- Course Meta Table -->
+        <table class="meta-table">
+            <tr>
+                <td class="meta-label">課程主題</td>
+                <td width="35%"><strong>{{ course.subject }}</strong></td>
+                <td class="meta-label">課程代號</td>
+                <td width="35%">{{ course.code }}</td>
+            </tr>
+            <tr>
+                <td class="meta-label">授課講師</td>
+                <td>{{ course.teachers }}</td>
+                <td class="meta-label">上課教室</td>
+                <td>{{ course.classroom_name|default:"-" }}</td>
+            </tr>
+            <tr>
+                <td class="meta-label">填寫日期</td>
+                <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;年&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;月&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;日</td>
+                <td class="meta-label">學員姓名</td>
+                <td>（可不填寫，採匿名制）</td>
+            </tr>
+        </table>
+
+        <!-- Questionnaire Questions -->
+        <div class="question-block">
+            <div class="question-title">1. 您對本課程的「單元主題設計與實用度」滿意度為？</div>
+            <div class="options-list">
+                <div class="option-item"><span class="checkbox-box"></span> 非常滿意</div>
+                <div class="option-item"><span class="checkbox-box"></span> 滿意</div>
+                <div class="option-item"><span class="checkbox-box"></span> 普通</div>
+                <div class="option-item"><span class="checkbox-box"></span> 不滿意</div>
+                <div class="option-item"><span class="checkbox-box"></span> 非常不滿意</div>
+            </div>
+        </div>
+
+        <div class="question-block">
+            <div class="question-title">2. 您對本課程「講師之教學內容、方式與互動」滿意度為？</div>
+            <div class="options-list">
+                <div class="option-item"><span class="checkbox-box"></span> 非常滿意</div>
+                <div class="option-item"><span class="checkbox-box"></span> 滿意</div>
+                <div class="option-item"><span class="checkbox-box"></span> 普通</div>
+                <div class="option-item"><span class="checkbox-box"></span> 不滿意</div>
+                <div class="option-item"><span class="checkbox-box"></span> 非常不滿意</div>
+            </div>
+        </div>
+
+        <div class="question-block">
+            <div class="question-title">3. 您對本次課程「上課教室環境、燈光、座位與音響設備」滿意度為？</div>
+            <div class="options-list">
+                <div class="option-item"><span class="checkbox-box"></span> 非常滿意</div>
+                <div class="option-item"><span class="checkbox-box"></span> 滿意</div>
+                <div class="option-item"><span class="checkbox-box"></span> 普通</div>
+                <div class="option-item"><span class="checkbox-box"></span> 不滿意</div>
+                <div class="option-item"><span class="checkbox-box"></span> 非常不滿意</div>
+            </div>
+        </div>
+
+        <div class="question-block">
+            <div class="question-title">4. 本課程之「上課時間長短與總堂數安排」是否適當？</div>
+            <div class="options-list">
+                <div class="option-item"><span class="checkbox-box"></span> 安排適當</div>
+                <div class="option-item"><span class="checkbox-box"></span> 課程時間太長</div>
+                <div class="option-item"><span class="checkbox-box"></span> 堂數太少，希望增加</div>
+                <div class="option-item"><span class="checkbox-box"></span> 其他</div>
+            </div>
+        </div>
+
+        <div class="question-block">
+            <div class="question-title">5. 您認為本課程對您最有幫助的部分是什麼？（或有哪幾堂課令您特別有收穫？）</div>
+            <div class="essay-box">
+                <div class="essay-line"></div>
+                <div class="essay-line"></div>
+                <div class="essay-line"></div>
+            </div>
+        </div>
+
+        <div class="question-block" style="margin-bottom: 0;">
+            <div class="question-title">6. 請填寫您對本課程、授課老師或本機構其他未來開課規劃之建議回饋：</div>
+            <div class="essay-box">
+                <div class="essay-line"></div>
+                <div class="essay-line"></div>
+                <div class="essay-line"></div>
+            </div>
+        </div>
+
+        <div class="form-footer">
+            ~ 感謝您的配合與支持，祝您平安喜樂，學習豐盛！ ~
+        </div>
+    </div>
+
+</body>
+</html>

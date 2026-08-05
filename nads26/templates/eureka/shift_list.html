@@ -1,0 +1,579 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}同工班表管理 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Premium Shift Management Styling */
+    .shift-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .shift-title {
+        margin: 0;
+        font-family: 'Outfit', sans-serif;
+        font-size: 2.2rem;
+        background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    /* Premium Button Styles */
+    .btn-premium {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        box-shadow: 0 4px 15px rgba(29, 78, 216, 0.3);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        font-size: 0.9rem;
+    }
+
+    .btn-premium:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(29, 78, 216, 0.4);
+        filter: brightness(1.1);
+    }
+
+    /* Table Card Styling */
+    .table-card {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(20px);
+        overflow: hidden;
+        margin-bottom: 30px;
+    }
+
+    .card-header {
+        padding: 20px 25px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.01);
+    }
+
+    .card-title {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #fff;
+        font-family: 'Outfit', sans-serif;
+    }
+
+    .shift-table-container {
+        overflow-x: auto;
+        padding: 0;
+    }
+
+    .shift-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+
+    .shift-table th {
+        background: rgba(255, 255, 255, 0.01);
+        padding: 15px 20px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .shift-table td {
+        padding: 15px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        font-size: 0.92rem;
+        color: var(--text-primary);
+        vertical-align: middle;
+    }
+
+    .shift-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.01);
+    }
+
+    .shift-time-summary {
+        font-family: 'Outfit', sans-serif;
+        font-size: 0.85rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 12px;
+        max-width: 600px;
+    }
+
+    .time-badge {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 2px 8px;
+        border-radius: 6px;
+        color: var(--text-secondary);
+    }
+
+    .time-badge.work-day {
+        background: rgba(59, 130, 246, 0.08);
+        border-color: rgba(59, 130, 246, 0.2);
+        color: #60a5fa;
+    }
+
+    /* Actions buttons */
+    .btn-action-edit, .btn-action-delete {
+        border: none;
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-primary);
+        padding: 6px 14px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .btn-action-edit:hover {
+        background: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+    }
+
+    .btn-action-delete:hover {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+    }
+
+    /* Premium Modal Styling */
+    .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 16, 24, 0.7);
+        backdrop-filter: blur(10px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 20px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .modal-backdrop.show {
+        display: flex;
+        opacity: 1;
+    }
+
+    .shift-modal {
+        background: #1e293b;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        width: 100%;
+        max-width: 600px;
+        border-radius: 20px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        overflow: hidden;
+        transform: translateY(30px);
+        transition: transform 0.3s ease;
+    }
+
+    .modal-backdrop.show .shift-modal {
+        transform: translateY(0);
+    }
+
+    .modal-header {
+        padding: 20px 25px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.01);
+    }
+
+    .modal-title {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #fff;
+        font-family: 'Outfit', sans-serif;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .modal-close:hover {
+        color: #fff;
+    }
+
+    .modal-body {
+        padding: 25px;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .form-group.span-2 {
+        grid-column: span 2;
+    }
+
+    .form-group label {
+        font-size: 0.88rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    .form-group input, .form-group select {
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        padding: 10px 14px;
+        color: #fff;
+        font-size: 0.95rem;
+        outline: none;
+        transition: all 0.2s;
+    }
+
+    .form-group input:focus, .form-group select:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 10px rgba(188, 220, 255, 0.15);
+    }
+
+    /* Custom work hours grid */
+    .time-config-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 10px;
+        background: rgba(0, 0, 0, 0.1);
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.03);
+    }
+
+    .time-config-header {
+        display: grid;
+        grid-template-columns: 60px 1fr 1fr;
+        gap: 10px;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .time-config-row {
+        display: grid;
+        grid-template-columns: 60px 1fr 1fr;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .time-config-row span {
+        font-size: 0.88rem;
+        color: var(--text-primary);
+        font-weight: 500;
+    }
+
+    .time-config-row input[type="time"] {
+        padding: 6px 10px;
+        font-size: 0.88rem;
+    }
+
+    .modal-footer {
+        padding: 20px 25px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        background: rgba(255, 255, 255, 0.01);
+    }
+
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-primary);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 10px 20px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="shift-header">
+    <div>
+        <h2 class="shift-title">同工班表設定</h2>
+    </div>
+    <div class="shift-actions">
+        <a href="{% url 'eureka:staff-list' %}" class="btn-premium" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.08); box-shadow: none; color: var(--text-primary); margin-right: 10px;">
+            👤 同工資料
+        </a>
+        {% if can_edit_shifts %}
+            <button class="btn-premium" onclick="openCreateModal()">
+                <span>➕</span> 新增班表
+            </button>
+        {% endif %}
+    </div>
+</div>
+
+{% if messages %}
+    <div style="margin-bottom: 20px;">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" style="padding: 12px 20px; border-radius: 10px; margin-bottom: 10px; font-size: 0.95rem; {% if message.tags == 'success' %}background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(74,222,128,0.2);{% else %}background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.2);{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<div class="table-card">
+    <div class="card-header">
+        <h3 class="card-title">班表清單</h3>
+        <span style="font-size: 0.88rem; color: var(--text-secondary);">共 {{ shifts|length }} 組班表</span>
+    </div>
+
+    <div class="shift-table-container">
+        {% if shifts %}
+            <table class="shift-table">
+                <thead>
+                    <tr>
+                        <th style="width: 100px;">班表代號</th>
+                        <th style="width: 150px;">班表描述</th>
+                        <th>週一至週日上班時間設定</th>
+                        {% if can_edit_shifts %}
+                            <th style="width: 180px; text-align: center;">操作</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for shift in shifts %}
+                        <tr id="shift-row-{{ shift.id }}">
+                            <td style="font-weight: 600; color: var(--accent-color); font-family: 'Outfit', sans-serif;">
+                                <span class="td-code">{{ shift.shift_code }}</span>
+                            </td>
+                            <td>
+                                <span class="td-desc">{{ shift.description|default:"-" }}</span>
+                            </td>
+                            <td>
+                                <div class="shift-time-summary">
+                                    <span class="time-badge {% if shift.mon_start %}work-day{% endif %}" data-start="{{ shift.mon_start|time:'H:i' }}" data-end="{{ shift.mon_end|time:'H:i' }}">
+                                        一: {% if shift.mon_start %}{{ shift.mon_start|time:"H:i" }}-{{ shift.mon_end|time:"H:i" }}{% else %}休息{% endif %}
+                                    </span>
+                                    <span class="time-badge {% if shift.tue_start %}work-day{% endif %}" data-start="{{ shift.tue_start|time:'H:i' }}" data-end="{{ shift.tue_end|time:'H:i' }}">
+                                        二: {% if shift.tue_start %}{{ shift.tue_start|time:"H:i" }}-{{ shift.tue_end|time:"H:i" }}{% else %}休息{% endif %}
+                                    </span>
+                                    <span class="time-badge {% if shift.wed_start %}work-day{% endif %}" data-start="{{ shift.wed_start|time:'H:i' }}" data-end="{{ shift.wed_end|time:'H:i' }}">
+                                        三: {% if shift.wed_start %}{{ shift.wed_start|time:"H:i" }}-{{ shift.wed_end|time:"H:i" }}{% else %}休息{% endif %}
+                                    </span>
+                                    <span class="time-badge {% if shift.thu_start %}work-day{% endif %}" data-start="{{ shift.thu_start|time:'H:i' }}" data-end="{{ shift.thu_end|time:'H:i' }}">
+                                        四: {% if shift.thu_start %}{{ shift.thu_start|time:"H:i" }}-{{ shift.thu_end|time:"H:i" }}{% else %}休息{% endif %}
+                                    </span>
+                                    <span class="time-badge {% if shift.fri_start %}work-day{% endif %}" data-start="{{ shift.fri_start|time:'H:i' }}" data-end="{{ shift.fri_end|time:'H:i' }}">
+                                        五: {% if shift.fri_start %}{{ shift.fri_start|time:"H:i" }}-{{ shift.fri_end|time:"H:i" }}{% else %}休息{% endif %}
+                                    </span>
+                                    <span class="time-badge {% if shift.sat_start %}work-day{% endif %}" data-start="{{ shift.sat_start|time:'H:i' }}" data-end="{{ shift.sat_end|time:'H:i' }}">
+                                        六: {% if shift.sat_start %}{{ shift.sat_start|time:"H:i" }}-{{ shift.sat_end|time:"H:i" }}{% else %}休息{% endif %}
+                                    </span>
+                                    <span class="time-badge {% if shift.sun_start %}work-day{% endif %}" data-start="{{ shift.sun_start|time:'H:i' }}" data-end="{{ shift.sun_end|time:'H:i' }}">
+                                        日: {% if shift.sun_start %}{{ shift.sun_start|time:"H:i" }}-{{ shift.sun_end|time:"H:i" }}{% else %}休息{% endif %}
+                                    </span>
+                                </div>
+                            </td>
+                            {% if can_edit_shifts %}
+                                <td style="text-align: center; white-space: nowrap;">
+                                    <button class="btn-action-edit" onclick="openEditModal({{ shift.id }})">
+                                        ✏️ 編輯
+                                    </button>
+                                    <a class="btn-action-delete" href="{% url 'eureka:shift-delete' shift.id %}" onclick="return confirm('確定要刪除此班表？')">
+                                        🗑️ 刪除
+                                    </a>
+                                </td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div style="padding: 40px; text-align: center; color: var(--text-secondary);">
+                目前沒有設定任何同工班表，請點擊上方按鈕新增。
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ==================== CREATE / EDIT MODAL ==================== -->
+<div class="modal-backdrop" id="shiftModal">
+    <div class="shift-modal">
+        <div class="modal-header">
+            <h3 class="modal-title" id="modalTitle">新增同工班表</h3>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <form id="shiftForm" method="POST" action="{% url 'eureka:shift-create' %}">
+            {% csrf_token %}
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="shift_code">班表代號 (必填)</label>
+                        <input type="text" id="shift_code" name="shift_code" required placeholder="例如: A, B, W">
+                    </div>
+                    <div class="form-group">
+                        <label for="description">班表描述</label>
+                        <input type="text" id="description" name="description" placeholder="例如: 上午班, 週五晚班">
+                    </div>
+                </div>
+
+                <div class="time-config-grid">
+                    <div class="time-config-header">
+                        <span>星期</span>
+                        <span>上班時間</span>
+                        <span>下班時間</span>
+                    </div>
+                    
+                    <div class="time-config-row">
+                        <span>週一</span>
+                        <input type="time" name="mon_start" id="edit-mon-start">
+                        <input type="time" name="mon_end" id="edit-mon-end">
+                    </div>
+                    <div class="time-config-row">
+                        <span>週二</span>
+                        <input type="time" name="tue_start" id="edit-tue-start">
+                        <input type="time" name="tue_end" id="edit-tue-end">
+                    </div>
+                    <div class="time-config-row">
+                        <span>週三</span>
+                        <input type="time" name="wed_start" id="edit-wed-start">
+                        <input type="time" name="wed_end" id="edit-wed-end">
+                    </div>
+                    <div class="time-config-row">
+                        <span>週四</span>
+                        <input type="time" name="thu_start" id="edit-thu-start">
+                        <input type="time" name="thu_end" id="edit-thu-end">
+                    </div>
+                    <div class="time-config-row">
+                        <span>週五</span>
+                        <input type="time" name="fri_start" id="edit-fri-start">
+                        <input type="time" name="fri_end" id="edit-fri-end">
+                    </div>
+                    <div class="time-config-row">
+                        <span>週六</span>
+                        <input type="time" name="sat_start" id="edit-sat-start">
+                        <input type="time" name="sat_end" id="edit-sat-end">
+                    </div>
+                    <div class="time-config-row">
+                        <span>週日</span>
+                        <input type="time" name="sun_start" id="edit-sun-start">
+                        <input type="time" name="sun_end" id="edit-sun-end">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeModal()">取消</button>
+                <button type="submit" class="btn-premium" id="btnSubmit">確認新增</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const dayIds = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+    function openModal() {
+        document.getElementById('shiftModal').classList.add('show');
+    }
+
+    function closeModal() {
+        document.getElementById('shiftModal').classList.remove('show');
+    }
+
+    function openCreateModal() {
+        document.getElementById('shiftForm').reset();
+        document.getElementById('shiftForm').action = "{% url 'eureka:shift-create' %}";
+        document.getElementById('modalTitle').textContent = "新增同工班表";
+        document.getElementById('btnSubmit').textContent = "確認新增";
+        openModal();
+    }
+
+    function openEditModal(shiftId) {
+        document.getElementById('shiftForm').reset();
+        document.getElementById('shiftForm').action = "/eureka/shifts/edit/" + shiftId + "/";
+        document.getElementById('modalTitle').textContent = "編輯同工班表";
+        document.getElementById('btnSubmit').textContent = "儲存修改";
+
+        const row = document.getElementById('shift-row-' + shiftId);
+        if (!row) return;
+
+        const code = row.querySelector('.td-code').textContent.trim();
+        const desc = row.querySelector('.td-desc').textContent.trim();
+
+        document.getElementById('shift_code').value = code;
+        document.getElementById('description').value = desc === '-' ? '' : desc;
+
+        // Populate times
+        dayIds.forEach((day, idx) => {
+            const badge = row.querySelectorAll('.time-badge')[idx];
+            if (badge) {
+                const start = badge.getAttribute('data-start');
+                const end = badge.getAttribute('data-end');
+                document.getElementById(`edit-${day}-start`).value = (!start || start === 'None') ? '' : start;
+                document.getElementById(`edit-${day}-end`).value = (!end || end === 'None') ? '' : end;
+            }
+        });
+
+        openModal();
+    }
+
+    // Close modal when clicking backdrop
+    document.getElementById('shiftModal').addEventListener('click', function(event) {
+        if (event.target === this) {
+            closeModal();
+        }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeModal();
+        }
+    });
+</script>
+{% endblock %}

@@ -5,14 +5,13 @@ import re
 import subprocess
 
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from openpyxl import Workbook, load_workbook
 
-from .models import BudgetChangeLog, BudgetItem
+from .models import BUDGET_PAGE_CHOICES, BudgetChangeLog, BudgetItem
 
 FIELDS = [
     ('category', '分類'),
@@ -41,9 +40,47 @@ HEADER_ALIASES = {
     '已使用金額': 'used_amount',
     '使用金額': 'used_amount',
     '美美紀錄': 'used_amount',
+    '所屬分頁': 'page_group',
 }
 
-TRACKED_FIELDS = [field for field, _label in FORM_FIELDS]
+TRACKED_FIELDS = ['page_group'] + [field for field, _label in FORM_FIELDS]
+
+BUDGET_PAGE_GROUPS = [
+    {
+        'slug': 'staff-special-reserve',
+        'name': '同工-特別-預備',
+        'categories': ('人事薪資', '全職同工', '董執團隊', '特別計畫', '預備金', '國度基金'),
+    },
+    {'slug': 'administration', 'name': '行政', 'categories': ('行政部',)},
+    {'slug': 'worship', 'name': '崇拜', 'categories': ('崇拜部',)},
+    {'slug': 'education', 'name': '教育', 'categories': ('教育部',)},
+    {'slug': 'mission', 'name': '宣教', 'categories': ('宣教部',)},
+    {'slug': 'care', 'name': '關懷', 'categories': ('關懷部',)},
+    {'slug': 'counseling', 'name': '輔導', 'categories': ('輔導部',)},
+    {'slug': 'technology', 'name': '科技', 'categories': ('科技服務部',)},
+    {
+        'slug': 'gospel',
+        'name': '福音',
+        'categories': ('重修舊好志工團', '伯利恆糧食之家\n(BLH)'),
+    },
+    {
+        'slug': 'pastoral-one',
+        'name': '牧區一',
+        'categories': (
+            '牧區處\nPA', '二魚', '多多牧區', '清一牧區', '清二牧區', '幸福牧區',
+            '百合A區', '百合B區', '百合C區', '橄欖樹牧區', '青草地牧區',
+            '青橄欖', '房角石牧區',
+        ),
+    },
+    {
+        'slug': 'pastoral-two',
+        'name': '牧區二',
+        'categories': (
+            'young牧區', '兒童牧區', '百基拉牧區', '三一牧區', '蒙愛查經團契',
+            '弟兄會', '加樂團契', '蒙恩團契',
+        ),
+    },
+]
 
 
 def _clean(value):
@@ -52,6 +89,26 @@ def _clean(value):
     if isinstance(value, str):
         return value.strip()
     return value
+
+
+def _page_group_for_category(category):
+    for page in BUDGET_PAGE_GROUPS:
+        if category in page['categories']:
+            return page['slug']
+    return BUDGET_PAGE_GROUPS[0]['slug']
+
+
+def _page_group_from_value(value, category=''):
+    cleaned_value = str(_clean(value) or '')
+    page_by_value = {
+        choice_value: choice_value
+        for choice_value, _choice_label in BUDGET_PAGE_CHOICES
+    }
+    page_by_value.update({
+        choice_label: choice_value
+        for choice_value, choice_label in BUDGET_PAGE_CHOICES
+    })
+    return page_by_value.get(cleaned_value, _page_group_for_category(category))
 
 
 def _decimal_or_none(value):
@@ -66,13 +123,17 @@ def _decimal_or_none(value):
         return None
 
 
-def _payload_from_post(post):
+def _payload_from_post(post, current_page_group=None):
     payload = {}
     for field, _label in FORM_FIELDS:
         if field in ('budget_2026', 'used_amount'):
             payload[field] = _decimal_or_none(post.get(field))
         else:
             payload[field] = (post.get(field) or '').strip()
+    posted_page_group = post.get('page_group')
+    if posted_page_group is None and current_page_group is not None:
+        posted_page_group = current_page_group
+    payload['page_group'] = _page_group_from_value(posted_page_group, payload.get('category', ''))
     return payload
 
 
@@ -159,7 +220,14 @@ def import_budget_items(file_obj, request=None):
             col = mapping.get(field)
             value = sheet.cell(row_idx, col).value if col else None
             row_data[field] = _decimal_or_none(value) if field in ('budget_2026', 'used_amount') else str(_clean(value) or '')
-        if not any(row_data[field] not in ('', None) for field in TRACKED_FIELDS if field not in ('budget_2026', 'used_amount')) and row_data['budget_2026'] is None and row_data['used_amount'] is None:
+        page_group_col = mapping.get('page_group')
+        page_group_value = sheet.cell(row_idx, page_group_col).value if page_group_col else None
+        row_data['page_group'] = _page_group_from_value(page_group_value, row_data['category'])
+        if not any(
+            row_data[field] not in ('', None)
+            for field, _label in FORM_FIELDS
+            if field not in ('budget_2026', 'used_amount')
+        ) and row_data['budget_2026'] is None and row_data['used_amount'] is None:
             continue
         items.append(BudgetItem(**row_data))
 
@@ -180,11 +248,11 @@ def budget_list(request):
         if action == 'create':
             item = BudgetItem.objects.create(**_payload_from_post(request.POST))
             _log_change(request, 'create', item, None, _snapshot(item))
-            return redirect('budget-list')
+            return redirect(request.POST.get('next') or 'budget-list')
         if action == 'update':
             item = get_object_or_404(BudgetItem, pk=request.POST.get('item_id'))
             before = _snapshot(item)
-            for field, value in _payload_from_post(request.POST).items():
+            for field, value in _payload_from_post(request.POST, item.page_group).items():
                 setattr(item, field, value)
             item.save()
             _log_change(request, 'update', item, before, _snapshot(item))
@@ -195,7 +263,36 @@ def budget_list(request):
         return redirect('budget-list')
 
     query = (request.GET.get('q') or '').strip()
-    items = BudgetItem.objects.all()
+    page_counts = dict(
+        BudgetItem.objects
+        .values_list('page_group')
+        .annotate(item_count=Count('id'))
+        .order_by()
+    )
+    valid_page_slugs = {page['slug'] for page in BUDGET_PAGE_GROUPS}
+    unassigned_count = sum(
+        count for slug, count in page_counts.items()
+        if slug not in valid_page_slugs
+    )
+    page_groups = []
+    for index, configured_page in enumerate(BUDGET_PAGE_GROUPS):
+        page_groups.append({
+            **configured_page,
+            'count': (
+                page_counts.get(configured_page['slug'], 0)
+                + (unassigned_count if index == 0 else 0)
+            ),
+        })
+
+    page_by_slug = {page['slug']: page for page in page_groups}
+    active_page = page_by_slug.get(request.GET.get('group'), page_groups[0])
+    if active_page['slug'] == BUDGET_PAGE_GROUPS[0]['slug']:
+        items = BudgetItem.objects.filter(
+            Q(page_group=active_page['slug']) |
+            ~Q(page_group__in=valid_page_slugs)
+        )
+    else:
+        items = BudgetItem.objects.filter(page_group=active_page['slug'])
     if query:
         items = items.filter(
             Q(budget_code__icontains=query) |
@@ -205,14 +302,16 @@ def budget_list(request):
             Q(accounting_subject__icontains=query)
         )
     items = items.order_by('id')
-    page_obj = Paginator(items, 50).get_page(request.GET.get('page'))
     logs = BudgetChangeLog.objects.select_related('changed_by', 'budget_item').order_by('-created_at', '-id')[:200]
     return render(request, 'budget/budget_list.html', {
         'fields': FIELDS,
         'form_fields': FORM_FIELDS,
-        'page_obj': page_obj,
+        'items': items,
+        'page_groups': page_groups,
+        'active_page': active_page,
         'query': query,
         'total_count': items.count(),
+        'all_count': BudgetItem.objects.count(),
         'logs': logs,
     })
 
@@ -222,7 +321,7 @@ def budget_edit(request, pk):
     item = get_object_or_404(BudgetItem, pk=pk)
     if request.method == 'POST':
         before = _snapshot(item)
-        for field, value in _payload_from_post(request.POST).items():
+        for field, value in _payload_from_post(request.POST, item.page_group).items():
             setattr(item, field, value)
         item.save()
         _log_change(request, 'update', item, before, _snapshot(item))
@@ -236,7 +335,7 @@ def budget_delete(request, pk):
         before = _snapshot(item)
         _log_change(request, 'delete', item, before, None)
         item.delete()
-    return redirect('budget-list')
+    return redirect(request.POST.get('next') or 'budget-list')
 
 
 @login_required
@@ -244,7 +343,7 @@ def budget_export(request):
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = '預算表維護'
-    sheet.append([label for _field, label in FORM_FIELDS] + ['使用比例', '餘額'])
+    sheet.append([label for _field, label in FORM_FIELDS] + ['所屬分頁', '使用比例', '餘額'])
     for item in BudgetItem.objects.order_by('id'):
         ratio = item.usage_ratio
         sheet.append([
@@ -258,6 +357,7 @@ def budget_export(request):
             float(item.budget_2026) if item.budget_2026 is not None else None,
             float(item.used_amount) if item.used_amount is not None else None,
             item.accounting_subject,
+            item.get_page_group_display(),
             float(ratio) / 100 if ratio is not None else None,
             float(item.balance),
         ])

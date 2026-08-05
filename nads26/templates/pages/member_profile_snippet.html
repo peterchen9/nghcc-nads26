@@ -1,0 +1,64 @@
+<div style="display: flex; flex-direction: column; gap: 15px;">
+    <div style="display: flex; align-items: center; gap: 20px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 15px;">
+        {% if has_photo %}
+        <img src="{{ photo_url }}" style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-color); flex-shrink: 0;" alt="{{ member.name }}">
+        {% else %}
+        <div style="width: 55px; height: 55px; border-radius: 50%; background: var(--accent-color); color: #2f4156; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: bold; flex-shrink: 0;">
+            {{ member.name|slice:":1" }}
+        </div>
+        {% endif %}
+        <div>
+            <h3 style="margin: 0 0 5px 0; color: #ffffff; font-size: 1.25rem;">{{ member.name }}</h3>
+            <span style="font-size: 0.85rem; color: var(--text-secondary);">會友編號: {{ member.church_id }}</span>
+        </div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 15px; font-size: 0.95rem;">
+        <div>
+            <strong style="color: var(--accent-color);">性別：</strong>
+            <span>{% if member.gender == 'M' %}男{% elif member.gender == 'F' %}女{% else %}{{ member.gender|default:"-" }}{% endif %}</span>
+        </div>
+        <div>
+            <strong style="color: var(--accent-color);">生日：</strong>
+            <span>{{ member.birthday|date:"Y-m-d"|default:"-" }}</span>
+        </div>
+        <div>
+            <strong style="color: var(--accent-color);">電話：</strong>
+            <span>{{ member.mobile1|default:"-" }}</span>
+        </div>
+        <div>
+            <strong style="color: var(--accent-color);">所屬牧區：</strong>
+            <span>{{ member.section|default:"-" }}</span>
+        </div>
+        <div>
+            <strong style="color: var(--accent-color);">所屬小組：</strong>
+            <span>{{ member.family1|default:"-" }}</span>
+        </div>
+        <div>
+            <strong style="color: var(--accent-color);">受洗狀態：</strong>
+            <span>{{ member.baptized|default:"未填" }}</span>
+        </div>
+        <div style="grid-column: span 2;">
+            <strong style="color: var(--accent-color);">Email：</strong>
+            <span style="word-break: break-all;">{{ member.email1|default:"-" }}</span>
+        </div>
+        <div style="grid-column: span 2;">
+            <strong style="color: var(--accent-color);">通訊地址：</strong>
+            <span>{{ member.address|default:"-" }}</span>
+        </div>
+        <div style="grid-column: span 2; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
+            <strong style="color: var(--accent-color); display: block; margin-bottom: 5px;">備註：</strong>
+            <p style="margin: 0; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; white-space: pre-line;">{{ member.note|default:"無備註" }}</p>
+        </div>
+    </div>
+    <!-- Link to open in Eureka search -->
+    <div style="margin-top: 15px; text-align: right;">
+        <a href="/eureka/?q={{ member.name }}" target="_blank" class="btn-action-primary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+            <span>在 Eureka!找人 中編輯</span>
+            <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+        </a>
+    </div>
+</div>

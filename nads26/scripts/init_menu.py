@@ -20,6 +20,10 @@ items = [
         'order': 10,
         'children': [
             {'title': '詩歌資料庫', 'route': '/hymns/', 'order': 1},
+            {'title': '洗禮', 'route': '/worship/baptism/', 'order': 2},
+            {'title': '聖餐禮', 'route': '/worship/communion/', 'order': 3},
+            {'title': '婚禮', 'route': '/worship/wedding/', 'order': 4},
+            {'title': '安息禮拜', 'route': '/worship/funeral/', 'order': 5},
         ]
     },
     {
@@ -55,6 +59,9 @@ items = [
             {'title': '場地登記', 'route': '/facility/booking/', 'order': 2},
             {'title': '場地資料維護', 'route': '/facility/rooms/', 'order': 3},
             {'title': '日常維護', 'route': '/facility/maintenance/', 'order': 4},
+            {'title': '定期維護', 'route': '/facility/periodic-maintenance/', 'order': 5},
+            {'title': '定期維護回報', 'route': '/facility/periodic-maintenance/report/', 'order': 6},
+            {'title': '教室檢查', 'route': '/facility/classroom-inspection/', 'order': 7},
         ],
     },
     {
@@ -63,6 +70,14 @@ items = [
         'order': 80,
         'children': [
             {'title': '網路影音下載', 'route': '/webav/', 'order': 1},
+        ]
+    },
+    {
+        'title': '檔案中心',
+        'icon': '📁',
+        'order': 85,
+        'children': [
+            {'title': '同工參考資料', 'route': '/file-center/staff-reference/', 'order': 1},
         ]
     },
     {
@@ -83,7 +98,17 @@ items = [
             {'title': '同工資料', 'route': '/eureka/staff/', 'order': 2},
         ]
     },
-    {'title': '財會', 'icon': '⚪', 'order': 120},
+    {
+        'title': '財會',
+        'icon': '💰',
+        'order': 120,
+        'children': [
+            {'title': '預算表維護', 'route': '/finance/budget/', 'order': 1},
+            {'title': '銀行帳戶結餘表', 'route': '/finance/bank-balances/', 'order': 2},
+            {'title': '基金與團契款餘額', 'route': '/finance/fund-fellowship-balances/', 'order': 3},
+            {'title': '奉獻金額與人數統計', 'route': '/finance/offering-statistics/', 'order': 4},
+        ]
+    },
 ]
 
 for item_data in items:

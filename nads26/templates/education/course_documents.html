@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}{{ course.code }} 產出課程文件 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<style>
+    .edu-workspace-wrapper {
+        background-color: #0d1527;
+        color: #f8fafc;
+        padding: 24px;
+        border-radius: 16px;
+        min-height: 85vh;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    /* Breadcrumb */
+    .edu-breadcrumb {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-size: 0.88rem;
+        color: #94a3b8;
+        margin-bottom: 20px;
+    }
+
+    .edu-breadcrumb a {
+        color: #38bdf8;
+        text-decoration: none;
+    }
+
+    .edu-breadcrumb a:hover {
+        text-decoration: underline;
+    }
+
+    /* Header styling */
+    .course-summary-card {
+        background-color: #131c2e;
+        border: 1px solid #223049;
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .course-title {
+        margin: 0;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #ffffff;
+    }
+
+    .course-meta-row {
+        display: flex;
+        gap: 20px;
+        font-size: 0.85rem;
+        color: #94a3b8;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+
+    .course-meta-row span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* Document Cards Grid */
+    .doc-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+    }
+
+    .doc-card {
+        background-color: #131c2e;
+        border: 1px solid #223049;
+        border-radius: 12px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 250px;
+        transition: transform 0.2s, border-color 0.2s;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .doc-card:hover {
+        transform: translateY(-2px);
+        border-color: #38bdf8;
+    }
+
+    .doc-info {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .doc-icon {
+        font-size: 2.2rem;
+        color: #38bdf8;
+        margin-bottom: 4px;
+    }
+
+    .doc-title {
+        margin: 0;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #ffffff;
+    }
+
+    .doc-desc {
+        font-size: 0.88rem;
+        color: #94a3b8;
+        line-height: 1.5;
+    }
+
+    .btn-generate {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        color: #ffffff;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        cursor: pointer;
+        text-decoration: none;
+        margin-top: 20px;
+        transition: all 0.2s;
+    }
+
+    .btn-generate:hover {
+        filter: brightness(1.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edu-workspace-wrapper">
+    <!-- Breadcrumb -->
+    <div class="edu-breadcrumb">
+        <a href="{% url 'education:course-list' %}">課程規劃</a>
+        <i class="bi bi-chevron-right"></i>
+        <a href="{% url 'education:course-detail' course.pk %}">{{ course.code }} 詳情</a>
+        <i class="bi bi-chevron-right"></i>
+        <span>產出課程文件</span>
+    </div>
+
+    <!-- Course Summary -->
+    <div class="course-summary-card">
+        <h2 class="course-title">{{ course.subject }}</h2>
+        <div class="course-meta-row">
+            <span><i class="bi bi-person-fill"></i> 講師: {{ course.teachers }}</span>
+            <span><i class="bi bi-door-open-fill text-warning"></i> 教室: {{ course.classroom_name|default:"未設定" }}</span>
+            <span><i class="bi bi-clock-fill"></i> 時間: {{ course.class_time }}</span>
+            <span><i class="bi bi-card-checklist"></i> 總堂數: {{ course.total_classes }} 堂</span>
+        </div>
+    </div>
+
+    <!-- Documents Grid -->
+    <div class="doc-grid">
+        
+        <!-- 課程公告 -->
+        <div class="doc-card">
+            <div class="doc-info">
+                <i class="bi bi-megaphone doc-icon text-info"></i>
+                <h4 class="doc-title">課程公告海報</h4>
+                <p class="doc-desc">產生適合列印或公告的精美課程海報，包含簡介、授課師資、教室與詳細的課程時間表大綱。</p>
+            </div>
+            <a href="{% url 'education:doc-announcement' course.pk %}" target="_blank" class="btn-generate">
+                <i class="bi bi-printer-fill"></i> 開啟並列印公告
+            </a>
+        </div>
+
+        <!-- 教室門貼 -->
+        <div class="doc-card">
+            <div class="doc-info">
+                <i class="bi bi-door-open doc-icon text-warning"></i>
+                <h4 class="doc-title">教室門口標示貼</h4>
+                <p class="doc-desc">產生特大字體的教室門口標示單，標明本課程使用的教室、主題、授課師資與時間，供引導與指引學員。</p>
+            </div>
+            <a href="{% url 'education:doc-doorsign' course.pk %}" target="_blank" class="btn-generate">
+                <i class="bi bi-printer-fill"></i> 開啟並列印門貼
+            </a>
+        </div>
+
+        <!-- 課程回應單 -->
+        <div class="doc-card">
+            <div class="doc-info">
+                <i class="bi bi-chat-square-text doc-icon text-success"></i>
+                <h4 class="doc-title">課程回應與滿意度單</h4>
+                <p class="doc-desc">產生課後意見滿意度調查問卷，包含課程實用度、滿意度、時間安排以及學員手寫建議之標準表格。</p>
+            </div>
+            <a href="{% url 'education:doc-feedback' course.pk %}" target="_blank" class="btn-generate">
+                <i class="bi bi-printer-fill"></i> 開啟並列印回應單
+            </a>
+        </div>
+
+        <!-- 點名表 -->
+        <div class="doc-card">
+            <div class="doc-info">
+                <i class="bi bi-journal-check doc-icon text-danger"></i>
+                <h4 class="doc-title">課堂點名與簽到表</h4>
+                <p class="doc-desc">自動彙整本課程所有堂次日期與主題，產出帶有學員名冊簽到欄位的標準課堂點名紙本表格。</p>
+            </div>
+            <a href="{% url 'education:doc-attendance' course.pk %}" target="_blank" class="btn-generate">
+                <i class="bi bi-printer-fill"></i> 開啟並列印點名表
+            </a>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

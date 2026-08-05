@@ -4,7 +4,29 @@ from django.conf import settings
 from django.db import models
 
 
+BUDGET_PAGE_CHOICES = [
+    ('staff-special-reserve', '同工-特別-預備'),
+    ('administration', '行政'),
+    ('worship', '崇拜'),
+    ('education', '教育'),
+    ('mission', '宣教'),
+    ('care', '關懷'),
+    ('counseling', '輔導'),
+    ('technology', '科技'),
+    ('gospel', '福音'),
+    ('pastoral-one', '牧區一'),
+    ('pastoral-two', '牧區二'),
+]
+
+
 class BudgetItem(models.Model):
+    page_group = models.CharField(
+        '所屬分頁',
+        max_length=40,
+        choices=BUDGET_PAGE_CHOICES,
+        default='staff-special-reserve',
+        db_index=True,
+    )
     category = models.CharField('分類', max_length=120, blank=True, default='')
     budget_code = models.CharField('2026預算代號', max_length=60, blank=True, default='', db_index=True)
     ministry = models.CharField('事工', max_length=200, blank=True, default='')

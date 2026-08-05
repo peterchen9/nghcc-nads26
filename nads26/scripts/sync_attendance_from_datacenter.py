@@ -37,7 +37,7 @@ def sync():
     print(f"Found {len(rows)} records in daka_by_person.")
     
     updated_count = 0
-    for r in rows:
+    for i, r in enumerate(rows):
         church_id = r['church_id']
         data_str = r['data_str'] or ''
         percent_year = r['percent_year'] or ''
@@ -53,6 +53,9 @@ def sync():
         
         if dst_cur.rowcount > 0:
             updated_count += 1
+            
+        if i % 200 == 0:
+            dst_conn.commit()
             
     dst_conn.commit()
     print(f"Sync complete. Updated {updated_count} member attendance records in local members table.")

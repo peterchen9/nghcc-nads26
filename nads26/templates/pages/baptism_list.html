@@ -1,0 +1,1337 @@
+{% extends "base.html" %}
+
+{% block title %}洗禮名單 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Premium Spacing between rows */
+    .premium-table td {
+        padding: 6px 20px !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        color: #ffffff;
+        font-size: 0.95rem;
+    }
+    
+    .premium-table th {
+        padding: 10px 20px !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--accent-color);
+        /* Sticky Header */
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: #2b3e55; /* Solid background matching sidebar color */
+    }
+
+    /* Scrollable table-container */
+    .table-container {
+        width: 100%;
+        max-height: 480px;
+        overflow-y: auto;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.01);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        margin-bottom: 20px;
+    }
+
+    /* Year capsules Horizontal Scroll Filter */
+    .year-capsules-container {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding: 10px 5px 15px 5px;
+        margin-bottom: 15px;
+        scrollbar-width: thin;
+    }
+    
+    .year-capsules-container::-webkit-scrollbar {
+        height: 6px;
+    }
+    
+    .year-capsules-container::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 4px;
+    }
+    
+    .year-capsule {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        color: var(--text-secondary);
+        padding: 6px 14px;
+        border-radius: 30px;
+        cursor: pointer;
+        white-space: nowrap;
+        font-family: 'Outfit', sans-serif;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+    }
+    
+    .year-capsule:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: var(--accent-color);
+        color: #ffffff;
+    }
+    
+    .year-capsule.active {
+        background: var(--accent-color);
+        border-color: var(--accent-color);
+        color: #2f4156;
+        font-weight: 600;
+    }
+
+    /* Chart Design */
+    .chart-card {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        border-radius: 20px;
+        padding: 20px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    }
+    
+    .chart-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #ffffff;
+    }
+
+    /* Split Layout */
+    .split-layout {
+        display: flex;
+        gap: 25px;
+        margin-top: 10px;
+    }
+    
+    .main-column {
+        flex: 7; /* 70% width */
+        min-width: 0;
+    }
+    
+    .side-column {
+        flex: 3; /* 30% width */
+        min-width: 320px;
+    }
+    
+    @media (max-width: 992px) {
+        .split-layout {
+            flex-direction: column;
+        }
+        .side-column {
+            flex: 1;
+            width: 100%;
+        }
+    }
+
+    /* Right side applicant box styling */
+    .applicant-box {
+        background: rgba(59, 130, 246, 0.03);
+        border: 1px solid rgba(59, 130, 246, 0.1);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 4px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Control Panel */
+    .control-panel {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .search-wrapper {
+        position: relative;
+        flex-grow: 1;
+        max-width: 400px;
+    }
+
+    .search-input {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 12px 20px 12px 40px;
+        color: #ffffff;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        box-sizing: border-box;
+    }
+
+    .search-input:focus {
+        outline: none;
+        background: rgba(255, 255, 255, 0.07);
+        border-color: var(--accent-color);
+        box-shadow: 0 0 10px rgba(188, 220, 255, 0.15);
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-secondary);
+        pointer-events: none;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-download {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+    }
+
+    .btn-download:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: var(--accent-color);
+    }
+
+    .btn-action-primary {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        box-shadow: 0 4px 15px rgba(29, 78, 216, 0.3);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        font-size: 0.9rem;
+    }
+
+    .btn-action-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(29, 78, 216, 0.4);
+        filter: brightness(1.1);
+    }
+
+    /* Badges */
+    .badge-category {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 30px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .badge-adult {
+        background: rgba(59, 130, 246, 0.15);
+        color: #93c5fd;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .badge-infant {
+        background: rgba(16, 185, 129, 0.15);
+        color: #6ee7b7;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-confirm {
+        background: rgba(245, 158, 11, 0.15);
+        color: #fcd34d;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .badge-gender-m {
+        color: #60a5fa;
+        font-weight: 600;
+    }
+    
+    .badge-gender-f {
+        color: #f472b6;
+        font-weight: 600;
+    }
+
+    /* Modal Styling */
+    .modal-backdrop {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(5px);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .modal-card {
+        background: #253344;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        width: 100%;
+        max-width: 500px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: modalFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes modalFadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-header {
+        padding: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0;
+        color: #ffffff;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+    }
+
+    .modal-close:hover {
+        color: #ffffff;
+    }
+
+    .modal-body {
+        padding: 20px;
+        overflow-y: auto;
+        max-height: 70vh;
+    }
+
+    .modal-footer {
+        padding: 15px 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    /* Modal Form elements */
+    .form-group {
+        margin-bottom: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .form-group label {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
+
+    .form-control {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 10px;
+        color: #ffffff;
+        font-size: 0.95rem;
+        box-sizing: border-box;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--accent-color);
+    }
+
+    /* Checkbox Styling */
+    .form-check {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 5px;
+    }
+
+    .form-check input {
+        cursor: pointer;
+        width: 16px;
+        height: 16px;
+    }
+
+    /* Pagination */
+    .pagination-panel {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        padding: 10px 5px;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .pagination-buttons {
+        display: flex;
+        gap: 5px;
+    }
+
+    .btn-page {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        color: #ffffff;
+        padding: 8px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+    }
+
+    .btn-page:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: var(--accent-color);
+    }
+
+    .btn-page.active {
+        background: var(--accent-color);
+        color: #2f4156;
+        font-weight: 600;
+        border-color: var(--accent-color);
+    }
+
+    .btn-page:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .highlight {
+        background-color: rgba(250, 204, 21, 0.3);
+        color: #ffffff;
+        padding: 2px 4px;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+
+    .link-name {
+        color: #ffffff;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        text-decoration-color: rgba(255, 255, 255, 0.3);
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .link-name:hover {
+        color: var(--accent-color);
+        text-decoration-color: var(--accent-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <h2 style="margin: 0; background: linear-gradient(135deg, #fff 0%, var(--accent-color) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">洗禮管理主頁</h2>
+        <div class="button-group">
+            <button class="btn-download" id="openSessionBtn">
+                <span>新建洗禮場次</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Chart Card -->
+    <div class="chart-card">
+        <span class="chart-title">年度洗禮人數趨勢圖 (依類別堆疊)</span>
+        <div style="height: 180px; position: relative; margin-top: 15px;">
+            <canvas id="baptismChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Split Columns Layout -->
+    <div class="split-layout">
+        
+        <!-- Left Side: Completed Baptized List (70%) -->
+        <div class="main-column">
+            <span style="display: block; font-size: 1.1rem; font-weight: 600; color: var(--accent-color); margin-bottom: 10px;">已受洗名單</span>
+            
+            <!-- Year capsules Horizontal Scroll Filter -->
+            <div class="year-capsules-container" id="yearCapsules">
+                <button class="year-capsule active" data-year="all">全部</button>
+            </div>
+
+            <!-- Control Panel -->
+            <div class="control-panel">
+                <div class="search-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" class="search-input" placeholder="搜尋姓名、牧師、類別或日期...">
+                </div>
+                <div>
+                    <a href="/media/baptism_organized.xlsx" class="btn-download" download>
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle;">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        <span>下載 Excel 檔</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="table-container">
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">洗禮日期</th>
+                            <th style="width: 15%;">主禮牧師</th>
+                            <th style="width: 18%;">姓名</th>
+                            <th style="width: 10%;">性別</th>
+                            <th style="width: 15%;">洗禮類別</th>
+                            <th>註記</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Rows will be dynamically rendered via JS for paging -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination Panel -->
+            <div class="pagination-panel">
+                <div id="paginationInfo">顯示第 0 到 0 筆，共 0 筆</div>
+                <div class="pagination-buttons" id="paginationBtns"></div>
+            </div>
+        </div>
+        
+        <!-- Right Side: Registered Applicants List (30%) -->
+        <div class="side-column">
+            <div class="applicant-box">
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 1.1rem; font-weight: 600; color: #ffffff;">洗禮報名名單</span>
+                        <button class="btn-action-primary" id="openRegisterBtn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px;">洗禮報名</button>
+                    </div>
+                    <button class="btn-download" id="btnBatchComplete" style="display: flex; width: 100%; justify-content: center; padding: 8px 15px; font-size: 0.85rem; border-radius: 8px; border-color: rgba(59, 130, 246, 0.25); box-sizing: border-box;">
+                        完成洗禮者加入總表
+                    </button>
+                </div>
+                
+                <div class="table-container" style="max-height: 520px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                    <table class="premium-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 15%; padding: 8px 10px !important; text-align: center;">
+                                    <input type="checkbox" id="selectAllApplicants" style="cursor: pointer;">
+                                </th>
+                                <th style="width: 50%; padding: 8px 10px !important;">姓名</th>
+                                <th style="padding: 8px 10px !important;">類別</th>
+                            </tr>
+                        </thead>
+                        <tbody id="applicantTableBody">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- =================================== -->
+<!-- MODAL: BAPTISM REGISTRATION (報名)   -->
+<!-- =================================== -->
+<div class="modal-backdrop" id="registerModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 class="modal-title">洗禮報名登記</h3>
+            <button class="modal-close" id="closeRegisterModal">&times;</button>
+        </div>
+        <form id="registerForm" method="post" action="{% url 'worship-baptism-register' %}">
+            {% csrf_token %}
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="regSession">選擇洗禮場次 *</label>
+                    <select class="form-control" id="regSession" name="session_id" required>
+                        <option value="">-- 請選擇場次 --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="regName">受洗人姓名 *</label>
+                    <input type="text" class="form-control" id="regName" name="name" placeholder="請輸入姓名" required>
+                </div>
+                <div class="form-group">
+                    <label for="regGender">性別</label>
+                    <select class="form-control" id="regGender" name="gender">
+                        <option value="男">男</option>
+                        <option value="女">女</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="regCategory">洗禮類別</label>
+                    <select class="form-control" id="regCategory" name="category">
+                        <option value="成人">成人</option>
+                        <option value="嬰兒洗">嬰兒洗</option>
+                        <option value="堅信禮">堅信禮</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="regInterviewPastor">受洗約談牧者</label>
+                    <input type="text" class="form-control" id="regInterviewPastor" name="interview_pastor" placeholder="約談牧師姓名">
+                </div>
+                <div class="form-group">
+                    <label for="regGiftBible">贈送聖經</label>
+                    <input type="text" class="form-control" id="regGiftBible" name="gift_bible" placeholder="例如：是、否、或聖經版本">
+                </div>
+                <div class="form-group">
+                    <label for="regVerse">受洗經文</label>
+                    <input type="text" class="form-control" id="regVerse" name="verse" placeholder="例如：約翰福音3:16">
+                </div>
+                <div class="form-group">
+                    <label for="regNote">註記</label>
+                    <textarea class="form-control" id="regNote" name="note" rows="2" placeholder="其它備註說明..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-download" id="cancelRegisterModal">取消</button>
+                <button type="submit" class="btn-action-primary">送出報名</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- =================================== -->
+<!-- MODAL: NEW SESSION (新建場次)        -->
+<!-- =================================== -->
+<div class="modal-backdrop" id="sessionModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 class="modal-title">新建洗禮場次</h3>
+            <button class="modal-close" id="closeSessionModal">&times;</button>
+        </div>
+        <form id="sessionForm" method="post" action="{% url 'worship-baptism-session-new' %}">
+            {% csrf_token %}
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="sessDate">洗禮日期 *</label>
+                    <input type="date" class="form-control" id="sessDate" name="date" required>
+                </div>
+                <div class="form-group">
+                    <label for="sessLocation">洗禮場次/地點 *</label>
+                    <input type="text" class="form-control" id="sessLocation" name="location" placeholder="例如：主日第一堂、教堂大堂" required>
+                </div>
+                <div class="form-group">
+                    <label for="sessPastor">主領牧師 *</label>
+                    <input type="text" class="form-control" id="sessPastor" name="pastor" placeholder="主禮牧者姓名" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-download" id="cancelSessionModal">取消</button>
+                <button type="submit" class="btn-action-primary">建立場次</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- =================================== -->
+<!-- MODAL: EDIT BAPTISM RECORD         -->
+<!-- =================================== -->
+<div class="modal-backdrop" id="editModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 class="modal-title">編輯洗禮資料</h3>
+            <button class="modal-close" id="closeEditModal">&times;</button>
+        </div>
+        <form id="editForm" method="post" action="">
+            {% csrf_token %}
+            <div class="modal-body">
+                <input type="hidden" id="editId">
+                <div class="form-group">
+                    <label for="editDate">洗禮日期 *</label>
+                    <input type="date" class="form-control" id="editDate" name="date" required>
+                </div>
+                <div class="form-group">
+                    <label for="editPastor">主禮牧師</label>
+                    <input type="text" class="form-control" id="editPastor" name="pastor">
+                </div>
+                <div class="form-group">
+                    <label for="editName">姓名 *</label>
+                    <input type="text" class="form-control" id="editName" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="editGender">性別</label>
+                    <select class="form-control" id="editGender" name="gender">
+                        <option value="男">男</option>
+                        <option value="女">女</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editCategory">洗禮類別</label>
+                    <select class="form-control" id="editCategory" name="category">
+                        <option value="成人">成人</option>
+                        <option value="嬰兒洗">嬰兒洗</option>
+                        <option value="堅信禮">堅信禮</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editInterviewPastor">受洗約談牧者</label>
+                    <input type="text" class="form-control" id="editInterviewPastor" name="interview_pastor">
+                </div>
+                <div class="form-group">
+                    <label for="editGiftBible">贈送聖經</label>
+                    <input type="text" class="form-control" id="editGiftBible" name="gift_bible">
+                </div>
+                <div class="form-group">
+                    <label for="editVerse">受洗經文</label>
+                    <input type="text" class="form-control" id="editVerse" name="verse">
+                </div>
+                <div class="form-group">
+                    <label for="editNote">註記</label>
+                    <textarea class="form-control" id="editNote" name="note" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                    <div class="form-check">
+                        <input type="checkbox" id="editIsCompleted" name="is_completed">
+                        <label for="editIsCompleted" style="color: #ffffff; cursor: pointer;">受洗完成</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-download" id="cancelEditModal">取消</button>
+                <button type="submit" class="btn-action-primary">儲存修改</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- =================================== -->
+<!-- MODAL: MEMBER PROFILE DETAILS (Eureka) -->
+<!-- =================================== -->
+<div class="modal-backdrop" id="profileModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 class="modal-title">會友個人資料 (Eureka!)</h3>
+            <button class="modal-close" id="closeProfileModal">&times;</button>
+        </div>
+        <div class="modal-body" id="profileModalBody">
+            <!-- Loaded dynamically via AJAX -->
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-download" id="cancelProfileModal">關閉</button>
+        </div>
+    </div>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // Embed the JSON data from server
+    let rawData = {{ persons_json|safe }};
+    let sessions = {{ sessions|safe }};
+    
+    // Initial Chart Data
+    let chartLabels = {{ chart_labels_json|safe }};
+    let chartAdults = {{ chart_adults_json|safe }};
+    let chartInfants = {{ chart_infants_json|safe }};
+    let chartConfirms = {{ chart_confirms_json|safe }};
+    let baptismChart = null;
+    
+    // Filter State
+    let selectedYear = 'all';
+    let currentPage = 1;
+    const rowsPerPage = 15;
+
+    // Elements
+    const searchInput = document.getElementById('searchInput');
+    const tableBody = document.getElementById('tableBody');
+    const applicantTableBody = document.getElementById('applicantTableBody');
+    const paginationInfo = document.getElementById('paginationInfo');
+    const paginationBtns = document.getElementById('paginationBtns');
+    const yearCapsules = document.getElementById('yearCapsules');
+    
+    // Modals
+    const registerModal = document.getElementById('registerModal');
+    const sessionModal = document.getElementById('sessionModal');
+    const editModal = document.getElementById('editModal');
+    const profileModal = document.getElementById('profileModal');
+    const profileModalBody = document.getElementById('profileModalBody');
+    
+    // Form buttons trigger
+    const openRegisterBtn = document.getElementById('openRegisterBtn');
+    const openSessionBtn = document.getElementById('openSessionBtn');
+    
+    // Form Elements
+    const registerForm = document.getElementById('registerForm');
+    const regSessionSelect = document.getElementById('regSession');
+    const sessionForm = document.getElementById('sessionForm');
+    const editForm = document.getElementById('editForm');
+    
+    // Batch Checkbox Actions
+    const selectAllApplicants = document.getElementById('selectAllApplicants');
+    const btnBatchComplete = document.getElementById('btnBatchComplete');
+
+    // Populate Sessions Dropdown
+    function populateSessionsDropdown() {
+        regSessionSelect.innerHTML = '<option value="">-- 請選擇場次 --</option>';
+        sessions.forEach(sess => {
+            const opt = document.createElement('option');
+            opt.value = sess.id;
+            opt.textContent = `${sess.date} - ${sess.location} (主領: ${sess.pastor})`;
+            regSessionSelect.appendChild(opt);
+        });
+    }
+
+    // Modal Control: Register (報名)
+    openRegisterBtn.onclick = () => {
+        populateSessionsDropdown();
+        registerForm.reset();
+        registerModal.style.display = 'flex';
+    };
+    const hideRegisterModal = () => { registerModal.style.display = 'none'; };
+    document.getElementById('closeRegisterModal').onclick = hideRegisterModal;
+    document.getElementById('cancelRegisterModal').onclick = hideRegisterModal;
+
+    // Modal Control: Session (場次)
+    openSessionBtn.onclick = () => {
+        sessionForm.reset();
+        sessionModal.style.display = 'flex';
+    };
+    const hideSessionModal = () => { sessionModal.style.display = 'none'; };
+    document.getElementById('closeSessionModal').onclick = hideSessionModal;
+    document.getElementById('cancelSessionModal').onclick = hideSessionModal;
+
+    // Modal Control: Edit
+    const hideEditModal = () => { editModal.style.display = 'none'; };
+    document.getElementById('closeEditModal').onclick = hideEditModal;
+    document.getElementById('cancelEditModal').onclick = hideEditModal;
+
+    // Register Form submit (AJAX)
+    registerForm.onsubmit = function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(res => {
+            if (res.success) {
+                rawData.unshift(res.person);
+                filterAndRender();
+                updateChartAndCapsules();
+                hideRegisterModal();
+                alert('洗禮報名成功！');
+            } else {
+                alert('報名失敗: ' + res.error);
+            }
+        })
+        .catch(err => alert('連線錯誤: ' + err));
+    };
+
+    // Session Form submit (AJAX)
+    sessionForm.onsubmit = function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(res => {
+            if (res.success) {
+                sessions.unshift(res.session);
+                hideSessionModal();
+                alert('洗禮場次新建成功！');
+            } else {
+                alert('建立場次失敗: ' + res.error);
+            }
+        })
+        .catch(err => alert('連線錯誤: ' + err));
+    };
+
+    // Open Edit modal
+    function openEdit(id) {
+        const item = rawData.find(x => x.id === id);
+        if (!item) return;
+        
+        document.getElementById('editId').value = item.id;
+        const cleanDate = item.date.replace(/\//g, '-');
+        document.getElementById('editDate').value = cleanDate;
+        document.getElementById('editPastor').value = item.pastor || '';
+        document.getElementById('editName').value = item.name;
+        document.getElementById('editGender').value = item.gender || '男';
+        document.getElementById('editCategory').value = item.category || '成人';
+        document.getElementById('editInterviewPastor').value = item.interview_pastor || '';
+        document.getElementById('editGiftBible').value = item.gift_bible || '';
+        document.getElementById('editVerse').value = item.verse || '';
+        document.getElementById('editNote').value = item.note || '';
+        document.getElementById('editIsCompleted').checked = item.is_completed;
+        
+        editForm.action = `/worship/baptism/edit/${item.id}/`;
+        editModal.style.display = 'flex';
+    }
+
+    // Edit Form submit (AJAX)
+    editForm.onsubmit = function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        // Pass checkbox value explicitly
+        formData.set('is_completed', document.getElementById('editIsCompleted').checked ? 'true' : 'false');
+        
+        fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(res => {
+            if (res.success) {
+                const idx = rawData.findIndex(x => x.id === res.person.id);
+                if (idx !== -1) {
+                    rawData[idx] = res.person;
+                }
+                filterAndRender();
+                updateChartAndCapsules();
+                hideEditModal();
+                alert('資料修改成功！');
+            } else {
+                alert('儲存失敗: ' + res.error);
+            }
+        })
+        .catch(err => alert('連線錯誤: ' + err));
+    };
+
+    // Modal Control: Profile
+    const hideProfileModal = () => { profileModal.style.display = 'none'; };
+    document.getElementById('closeProfileModal').onclick = hideProfileModal;
+    document.getElementById('cancelProfileModal').onclick = hideProfileModal;
+
+    function openMemberProfile(name) {
+        profileModalBody.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-secondary);">載入中...</div>';
+        profileModal.style.display = 'flex';
+        
+        fetch(`/worship/baptism/member-profile/${encodeURIComponent(name)}/`)
+            .then(response => response.text())
+            .then(html => {
+                profileModalBody.innerHTML = html;
+            })
+            .catch(err => {
+                profileModalBody.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                        <h3 style="color: #ffffff; margin-bottom: 10px;">載入失敗</h3>
+                        <p>${err}</p>
+                    </div>
+                `;
+            });
+    }
+
+    // Click outside modal to close
+    window.onclick = function(event) {
+        if (event.target === registerModal) hideRegisterModal();
+        else if (event.target === sessionModal) hideSessionModal();
+        else if (event.target === editModal) hideEditModal();
+        else if (event.target === profileModal) hideProfileModal();
+    };
+
+    // Text highlighter helper
+    function highlightText(text, searchVal) {
+        if (!text) return '';
+        if (!searchVal) return text;
+        const escapedSearch = searchVal.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const regex = new RegExp(`(${escapedSearch})`, 'gi');
+        return text.replace(regex, '<span class="highlight">$1</span>');
+    }
+
+    // Split rawData into completed & applicants
+    function filterAndRender() {
+        const query = searchInput.value.trim().toLowerCase();
+        
+        // Render Left Column: Completed Baptisms
+        const completedData = rawData.filter(x => x.is_completed);
+        const filteredCompleted = completedData.filter(item => {
+            const itemYear = item.date.split('/')[0];
+            const matchesYear = (selectedYear === 'all' || itemYear === selectedYear);
+            
+            const matchesSearch = !query || (
+                item.name.toLowerCase().includes(query) ||
+                (item.pastor && item.pastor.toLowerCase().includes(query)) ||
+                item.category.toLowerCase().includes(query) ||
+                item.date.includes(query) ||
+                (item.note && item.note.toLowerCase().includes(query))
+            );
+            return matchesYear && matchesSearch;
+        });
+
+        // Render Right Column: Registered Applicants (Pending)
+        const applicantData = rawData.filter(x => !x.is_completed);
+        const filteredApplicants = applicantData.filter(item => {
+            const matchesSearch = !query || (
+                item.name.toLowerCase().includes(query) ||
+                item.category.toLowerCase().includes(query) ||
+                item.date.includes(query) ||
+                (item.note && item.note.toLowerCase().includes(query))
+            );
+            return matchesSearch;
+        });
+
+        currentPage = 1;
+        renderCompletedTable(filteredCompleted);
+        renderApplicantsTable(filteredApplicants);
+    }
+
+    // Render Completed table rows
+    function renderCompletedTable(pageDataList) {
+        tableBody.innerHTML = '';
+        const searchVal = searchInput.value.trim();
+        
+        if (pageDataList.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 40px 0;">未找到符合條件的受洗人</td></tr>`;
+            paginationInfo.textContent = `顯示第 0 到 0 筆，共 0 筆`;
+            paginationBtns.innerHTML = '';
+            return;
+        }
+
+        const startIdx = (currentPage - 1) * rowsPerPage;
+        const endIdx = Math.min(startIdx + rowsPerPage, pageDataList.length);
+        const pagedData = pageDataList.slice(startIdx, endIdx);
+
+        pagedData.forEach(item => {
+            const tr = document.createElement('tr');
+            
+            let genderBadge = '';
+            if (item.gender === '男') genderBadge = '<span class="badge-gender-m">♂ 男</span>';
+            else if (item.gender === '女') genderBadge = '<span class="badge-gender-f">♀ 女</span>';
+            else genderBadge = '<span style="color: var(--text-secondary);">-</span>';
+
+            let categoryClass = 'badge-adult';
+            if (item.category === '嬰兒洗') categoryClass = 'badge-infant';
+            else if (item.category === '堅信禮') categoryClass = 'badge-confirm';
+            const categoryBadge = `<span class="badge-category ${categoryClass}">${item.category}</span>`;
+
+            const nameLink = `<a class="link-name" onclick="openMemberProfile('${item.name}')">${highlightText(item.name, searchVal)}</a>`;
+
+            tr.innerHTML = `
+                <td style="font-family: 'Outfit', sans-serif;">${highlightText(item.date, searchVal)}</td>
+                <td>${highlightText(item.pastor || '-', searchVal)}</td>
+                <td style="font-weight: 600;">${nameLink}</td>
+                <td>${genderBadge}</td>
+                <td>${categoryBadge}</td>
+                <td style="color: var(--text-secondary); font-size: 0.9rem;">${highlightText(item.note || '-', searchVal)}</td>
+            `;
+            tableBody.appendChild(tr);
+        });
+
+        paginationInfo.textContent = `顯示第 ${startIdx + 1} 到 ${endIdx} 筆，共 ${pageDataList.length} 筆`;
+        renderPaginationButtons(pageDataList);
+    }
+
+    // Render Pagination Buttons
+    function renderPaginationButtons(pageDataList) {
+        paginationBtns.innerHTML = '';
+        const totalPages = Math.ceil(pageDataList.length / rowsPerPage);
+        if (totalPages <= 1) return;
+
+        const addBtn = (page, label, disabled = false, active = false) => {
+            const btn = document.createElement('button');
+            btn.className = `btn-page ${active ? 'active' : ''}`;
+            btn.textContent = label;
+            btn.disabled = disabled;
+            btn.onclick = () => {
+                currentPage = page;
+                renderCompletedTable(pageDataList);
+            };
+            paginationBtns.appendChild(btn);
+        };
+
+        addBtn(1, '«', currentPage === 1);
+        addBtn(currentPage - 1, '‹', currentPage === 1);
+
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+        if (endPage - startPage < 4) {
+            startPage = Math.max(1, endPage - 4);
+        }
+
+        for (let p = startPage; p <= endPage; p++) {
+            addBtn(p, p, false, p === currentPage);
+        }
+
+        addBtn(currentPage + 1, '›', currentPage === totalPages);
+        addBtn(totalPages, '»', currentPage === totalPages);
+    }
+
+    // Render Right side Applicants Table
+    function renderApplicantsTable(applicantList) {
+        applicantTableBody.innerHTML = '';
+        selectAllApplicants.checked = false;
+        
+        if (applicantList.length === 0) {
+            applicantTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-secondary); padding: 30px 0; font-size: 0.9rem;">無待洗報名者</td></tr>`;
+            return;
+        }
+
+        applicantList.forEach(item => {
+            const tr = document.createElement('tr');
+            
+            let categoryClass = 'badge-adult';
+            if (item.category === '嬰兒洗') categoryClass = 'badge-infant';
+            else if (item.category === '堅信禮') categoryClass = 'badge-confirm';
+            const categoryBadge = `<span class="badge-category ${categoryClass}" style="padding: 1px 6px; font-size: 0.7rem;">${item.category}</span>`;
+            
+            const nameLink = `<a class="link-name" onclick="openEdit(${item.id})">${item.name}</a>`;
+
+            tr.innerHTML = `
+                <td style="text-align: center; padding: 6px 10px !important;">
+                    <input type="checkbox" class="applicant-cb" data-id="${item.id}" style="cursor: pointer;">
+                </td>
+                <td style="font-weight: 600; padding: 6px 10px !important;">
+                    ${nameLink}
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); font-family: 'Outfit'; margin-top: 2px;">
+                        場次: ${item.date} (${item.pastor || '-'})
+                    </div>
+                </td>
+                <td style="padding: 6px 10px !important;">${categoryBadge}</td>
+            `;
+            applicantTableBody.appendChild(tr);
+        });
+    }
+
+    // Toggle Select All Checked box for Applicants list
+    selectAllApplicants.onchange = function() {
+        const checkboxes = document.querySelectorAll('.applicant-cb');
+        checkboxes.forEach(cb => cb.checked = selectAllApplicants.checked);
+    };
+
+    // Batch Complete Button Action (AJAX POST)
+    btnBatchComplete.onclick = function() {
+        const checkedBoxes = document.querySelectorAll('.applicant-cb:checked');
+        if (checkedBoxes.length === 0) {
+            alert('請先勾選您想要完成受洗的報名者。');
+            return;
+        }
+
+        if (!confirm(`您確定要將這 ${checkedBoxes.length} 位報名者標記為「受洗完成」嗎？`)) {
+            return;
+        }
+
+        const personIds = Array.from(checkedBoxes).map(cb => parseInt(cb.getAttribute('data-id')));
+
+        fetch("{% url 'worship-baptism-batch-complete' %}", {
+            method: 'POST',
+            body: JSON.stringify({ person_ids: personIds }),
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(res => {
+            if (res.success) {
+                // Update in-memory data status
+                res.persons.forEach(updatedPerson => {
+                    const idx = rawData.findIndex(x => x.id === updatedPerson.id);
+                    if (idx !== -1) {
+                        rawData[idx] = updatedPerson;
+                    }
+                });
+                
+                filterAndRender();
+                updateChartAndCapsules();
+                alert('已將選取人員標記為受洗完成，並移至左側洗禮名單！');
+            } else {
+                alert('批次處理失敗: ' + res.error);
+            }
+        })
+        .catch(err => alert('連線錯誤: ' + err));
+    };
+
+    // Render Capsules dynamically
+    function renderYearCapsules() {
+        const yearsSet = new Set();
+        // Only count completed baptisms for year filtering
+        rawData.filter(x => x.is_completed).forEach(item => {
+            if (item.date) {
+                const year = item.date.split('/')[0];
+                yearsSet.add(year);
+            }
+        });
+        
+        const yearsArray = Array.from(yearsSet).sort((a, b) => b - a);
+        yearCapsules.innerHTML = `<button class="year-capsule ${selectedYear === 'all' ? 'active' : ''}" data-year="all">全部</button>`;
+        
+        yearsArray.forEach(year => {
+            const btn = document.createElement('button');
+            btn.className = `year-capsule ${selectedYear === year ? 'active' : ''}`;
+            btn.setAttribute('data-year', year);
+            btn.textContent = year + ' 年';
+            btn.onclick = () => {
+                document.querySelectorAll('.year-capsule').forEach(el => el.classList.remove('active'));
+                btn.classList.add('active');
+                selectedYear = year;
+                filterAndRender();
+            };
+            yearCapsules.appendChild(btn);
+        });
+    }
+
+    // ChartJS Setup
+    function initChart() {
+        const ctx = document.getElementById('baptismChart').getContext('2d');
+        
+        baptismChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    {
+                        label: '成人',
+                        data: chartAdults,
+                        backgroundColor: '#3b82f6', // blue
+                        borderRadius: 4,
+                    },
+                    {
+                        label: '嬰兒洗',
+                        data: chartInfants,
+                        backgroundColor: '#10b981', // green
+                        borderRadius: 4,
+                    },
+                    {
+                        label: '堅信禮',
+                        data: chartConfirms,
+                        backgroundColor: '#f59e0b', // amber
+                        borderRadius: 4,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            color: '#cbd5e1',
+                            font: { family: 'Outfit, sans-serif', size: 10 }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1f2d3d',
+                        titleColor: '#ffffff',
+                        bodyColor: '#bcdcff',
+                        borderColor: 'rgba(255,255,255,0.08)',
+                        borderWidth: 1,
+                        padding: 10,
+                        bodyFont: { family: 'Inter, sans-serif' },
+                        titleFont: { family: 'Outfit, sans-serif', weight: 'bold' }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        grid: { display: false },
+                        ticks: {
+                            color: '#cbd5e1',
+                            font: { family: 'Outfit, sans-serif', size: 10 }
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: {
+                            color: '#cbd5e1',
+                            font: { family: 'Inter, sans-serif', size: 10 }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Update Chart & Capsules dynamically
+    function updateChartAndCapsules() {
+        const yearCounts = {};
+        
+        // Count only completed baptisms for chart
+        rawData.filter(x => x.is_completed).forEach(item => {
+            if (item.date) {
+                const year = item.date.split('/')[0];
+                const cat = item.category;
+                if (!yearCounts[year]) {
+                    yearCounts[year] = {'成人': 0, '嬰兒洗': 0, '堅信禮': 0};
+                }
+                
+                if (cat in yearCounts[year]) {
+                    yearCounts[year][cat]++;
+                } else {
+                    if (cat.includes('成人')) yearCounts[year]['成人']++;
+                    else if (cat.includes('嬰兒')) yearCounts[year]['嬰兒洗']++;
+                    else if (cat.includes('堅信')) yearCounts[year]['堅信禮']++;
+                }
+            }
+        });
+        
+        const sortedYears = Object.keys(yearCounts).sort((a, b) => a - b);
+        chartLabels = sortedYears;
+        chartAdults = sortedYears.map(y => yearCounts[y]['成人']);
+        chartInfants = sortedYears.map(y => yearCounts[y]['嬰兒洗']);
+        chartConfirms = sortedYears.map(y => yearCounts[y]['堅信禮']);
+        
+        if (baptismChart) {
+            baptismChart.data.labels = chartLabels;
+            baptismChart.data.datasets[0].data = chartAdults;
+            baptismChart.data.datasets[1].data = chartInfants;
+            baptismChart.data.datasets[2].data = chartConfirms;
+            baptismChart.update();
+        }
+        
+        renderYearCapsules();
+    }
+
+    // Input search listener
+    searchInput.addEventListener('input', filterAndRender);
+
+    // Initial load
+    renderYearCapsules();
+    initChart();
+    filterAndRender();
+</script>
+{% endblock %}

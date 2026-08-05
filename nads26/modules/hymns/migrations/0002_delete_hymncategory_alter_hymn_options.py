@@ -3,6 +3,15 @@
 from django.db import migrations
 
 
+def drop_hymn_table(apps, schema_editor):
+    if schema_editor.connection.vendor == 'sqlite':
+        pass
+    else:
+        schema_editor.execute("SET FOREIGN_KEY_CHECKS = 0;")
+        schema_editor.execute("DROP TABLE IF EXISTS hymn;")
+        schema_editor.execute("SET FOREIGN_KEY_CHECKS = 1;")
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,9 +19,9 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(
-            sql="SET FOREIGN_KEY_CHECKS = 0; DROP TABLE IF EXISTS hymn; SET FOREIGN_KEY_CHECKS = 1;",
-            reverse_sql=""
+        migrations.RunPython(
+            drop_hymn_table,
+            reverse_code=migrations.RunPython.noop
         ),
         migrations.RemoveField(
             model_name='hymn',

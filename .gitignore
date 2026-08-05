@@ -25,7 +25,29 @@ nads26/backups/
 nads26/.env
 .env
 .env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
 .agents/local-secrets.md
+
+# Local inventory/transfer tooling
+.tools/
+.ssh-known-hosts-temp
+.ssh-known-hosts*
+.codex-ssh-*
+
+# Production-only operational scripts containing embedded credentials
+nads26/scripts/classify_members.py
+nads26/scripts/sync_remote_sqlite.py
+nads26/scripts/write_wifi_tag.py
+
+# Database physical data at any checkout depth
+**/mysql_data/
+**/mysql-data/
+
+# Backup working directories at any checkout depth
+**/backups/
 
 # Python/runtime artifacts
 __pycache__/

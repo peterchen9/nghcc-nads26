@@ -77,10 +77,276 @@
         background: #94a3b8;
         color: #102033;
     }
+    .view-switch {
+        display: inline-flex;
+        width: fit-content;
+        max-width: 100%;
+        gap: 4px;
+        padding: 4px;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        background: rgba(8, 13, 20, 0.22);
+    }
+    .view-tab {
+        border: 0;
+        border-radius: 6px;
+        padding: 8px 14px;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font: inherit;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+    .view-tab.active {
+        background: var(--accent-color);
+        color: var(--sidebar-bg);
+    }
+    .view-tab:focus-visible {
+        outline: 2px solid rgba(94,234,212,0.9);
+        outline-offset: 2px;
+    }
     .btn.danger {
         border-color: rgba(248,113,113,0.45);
         color: #fecaca;
         background: rgba(248,113,113,0.1);
+    }
+    [data-view-panel][hidden] {
+        display: none !important;
+    }
+    .team-month-panel {
+        display: grid;
+        gap: 10px;
+    }
+    .team-month-panel .panel-head {
+        margin-bottom: 0;
+    }
+    .team-legend {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        color: var(--text-secondary);
+        font-size: 0.78rem;
+    }
+    .team-legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .team-legend-swatch {
+        width: 18px;
+        height: 14px;
+        border: 1px solid rgba(255,255,255,0.16);
+        border-radius: 3px;
+    }
+    .team-table-scroll {
+        max-height: calc(100vh - 255px);
+        min-height: 320px;
+        overflow: auto;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        background: rgba(8, 13, 20, 0.18);
+        scrollbar-gutter: stable;
+    }
+    .team-month-table {
+        --team-date-column-width: 60px;
+        --team-staff-column-width: 40px;
+        width: max-content;
+        border-collapse: separate;
+        border-spacing: 0;
+        color: var(--text-primary);
+        font-size: 0.78rem;
+    }
+    .team-month-table th,
+    .team-month-table td {
+        box-sizing: border-box;
+        border-right: 1px solid rgba(255,255,255,0.1);
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .team-month-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 4;
+        height: 42px;
+        padding: 6px 5px;
+        background: #293d53;
+        color: var(--accent-color);
+        font-weight: 900;
+        text-align: center;
+        white-space: nowrap;
+    }
+    .team-month-table .team-date-head,
+    .team-month-table .team-date-cell {
+        position: sticky;
+        left: 0;
+        min-width: var(--team-date-column-width);
+        width: var(--team-date-column-width);
+        max-width: var(--team-date-column-width);
+    }
+    .team-month-table .team-date-head {
+        z-index: 6;
+    }
+    .team-month-table .team-date-cell {
+        z-index: 3;
+        padding: 4px 2px;
+        background: #2c4056;
+        font-weight: 800;
+        text-align: center;
+    }
+    .team-date-weekday {
+        display: block;
+        margin-left: 0;
+        color: var(--text-secondary);
+        font-size: 0.62rem;
+    }
+    .team-staff-head {
+        width: var(--team-staff-column-width);
+        min-width: var(--team-staff-column-width);
+        max-width: var(--team-staff-column-width);
+        padding-right: 1px !important;
+        padding-left: 1px !important;
+        overflow: hidden;
+        overflow-wrap: anywhere;
+        text-overflow: ellipsis;
+        white-space: normal !important;
+        line-height: 1.08;
+    }
+    .team-staff-head.current {
+        background: #365f68;
+        color: #d5fff8;
+    }
+    .team-schedule-cell {
+        width: var(--team-staff-column-width);
+        min-width: var(--team-staff-column-width);
+        max-width: var(--team-staff-column-width);
+        padding: 0;
+        background: rgba(255,255,255,0.018);
+    }
+    .team-month-table tr.weekend .team-date-cell {
+        background: #493b46;
+        color: #fecdd3;
+    }
+    .team-month-table tr.weekend .team-schedule-cell {
+        background: rgba(248,113,113,0.035);
+    }
+    .team-slot {
+        display: grid;
+        min-height: 24px;
+        place-items: center;
+        padding: 2px 4px;
+        overflow: hidden;
+        color: #102033;
+        font-size: 0.74rem;
+        font-weight: 900;
+        line-height: 1;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .team-slot + .team-slot {
+        border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .team-slot.empty {
+        color: transparent;
+    }
+    .team-slot.editable {
+        cursor: pointer;
+    }
+    .team-slot.editable:hover,
+    .team-slot.editable:focus-visible {
+        box-shadow: inset 0 0 0 2px rgba(94,234,212,0.9);
+        outline: none;
+    }
+    .team-slot.code-補,
+    .team-legend-swatch.code-補 { background: #bfdbfe; }
+    .team-slot.code-休,
+    .team-legend-swatch.code-休 { background: #a7f3d0; }
+    .team-slot.code-特,
+    .team-legend-swatch.code-特 { background: #fde68a; }
+    .team-slot.code-公,
+    .team-legend-swatch.code-公 { background: #fbcfe8; }
+    .team-slot.code-其他,
+    .team-legend-swatch.code-其他 { background: #ddd6fe; }
+    .team-slot.code-病假,
+    .team-legend-swatch.code-病假 { background: #fca5a5; }
+    .team-slot.code-事假,
+    .team-legend-swatch.code-事假 { background: #fdba74; }
+    .team-slot.code-陪\/產假,
+    .team-legend-swatch.code-陪\/產假 { background: #5eead4; }
+    .team-slot.code-喪,
+    .team-legend-swatch.code-喪 { background: #cbd5e1; }
+    .team-slot.code-育嬰,
+    .team-legend-swatch.code-育嬰 { background: #67e8f9; }
+    .team-slot.unfilled-slot {
+        background: #64748b !important;
+        color: #000000 !important;
+    }
+    .team-slot.present-dot {
+        background: transparent !important;
+    }
+    .team-slot.present-dot::after {
+        content: '';
+        width: 5px;
+        height: 5px;
+        background-color: #ffffff;
+        border-radius: 50%;
+        display: block;
+    }
+    .leave-code-options {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+        margin-top: 4px;
+    }
+    .leave-code-option {
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 6px;
+        padding: 8px 4px;
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-primary);
+        font-size: 0.84rem;
+        font-weight: 800;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.18s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 36px;
+        box-sizing: border-box;
+    }
+    .leave-code-option:hover:not([disabled]) {
+        border-color: rgba(94, 234, 212, 0.85);
+        background: rgba(255, 255, 255, 0.12);
+    }
+    .leave-code-option.selected {
+        border-color: transparent;
+        color: #102033;
+        font-weight: 900;
+    }
+    .leave-code-option.selected.code-補 { background: #bfdbfe; color: #07111f; }
+    .leave-code-option.selected.code-休 { background: #a7f3d0; color: #07111f; }
+    .leave-code-option.selected.code-特 { background: #fde68a; color: #07111f; }
+    .leave-code-option.selected.code-公 { background: #fbcfe8; color: #07111f; }
+    .leave-code-option.selected.code-其他 { background: #ddd6fe; color: #07111f; }
+    .leave-code-option.selected.code-病假 { background: #fca5a5; color: #07111f; }
+    .leave-code-option.selected.code-事假 { background: #fdba74; color: #07111f; }
+    .leave-code-option.selected.code-陪\/產假 { background: #5eead4; color: #07111f; }
+    .leave-code-option.selected.code-喪 { background: #cbd5e1; color: #07111f; }
+    .leave-code-option.selected.code-育嬰 { background: #67e8f9; color: #07111f; }
+    .part-button.neutral-bg {
+        background: rgba(255, 255, 255, 0.04) !important;
+    }
+    .staff-status-card.unfilled {
+        border-color: #6b7280 !important;
+        background: #000000 !important;
+    }
+    .staff-status-card.unfilled .staff-status-half {
+        background: #000000 !important;
+    }
+    .staff-status-card.unfilled .staff-status-name {
+        color: #e2e8f0 !important;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.8);
     }
     .leave-grid {
         display: grid;
@@ -249,6 +515,34 @@
     .code-chip.code-特 { background: #fde68a; }
     .code-chip.code-公 { background: #fbcfe8; }
     .code-chip.code-其他 { background: #ddd6fe; }
+    .code-chip.code-病假 { background: #fca5a5; }
+    .code-chip.code-事假 { background: #fdba74; }
+    .code-chip.code-陪\/產假 { background: #5eead4; }
+    .code-chip.code-喪 { background: #cbd5e1; }
+    .code-chip.code-育嬰 { background: #67e8f9; }
+    .code-chip.present-dot {
+        background: transparent !important;
+        border: none !important;
+        display: grid;
+        place-items: center;
+    }
+    .code-chip.present-dot::after {
+        content: '';
+        width: 6px;
+        height: 6px;
+        background-color: #ffffff;
+        border-radius: 50%;
+        display: block;
+    }
+    .code-chip.unfilled-slot {
+        background: #64748b !important;
+        color: #000000 !important;
+        border: none !important;
+        font-weight: 900;
+        font-size: 0.82rem;
+        display: grid;
+        place-items: center;
+    }
     .list-panel {
         display: grid;
         gap: 9px;
@@ -329,25 +623,78 @@
     .staff-status-half + .staff-status-half {
         border-top: 1px solid rgba(15, 23, 42, 0.18);
     }
-    .church-date {
+    .church-month-calendar {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: separate;
+        border-spacing: 0;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 8px;
+        background: rgba(8, 13, 20, 0.18);
+    }
+    .church-month-calendar th,
+    .church-month-calendar td {
+        border-right: 1px solid rgba(255,255,255,0.08);
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        vertical-align: top;
+    }
+    .church-month-calendar th:last-child,
+    .church-month-calendar td:last-child {
+        border-right: 0;
+    }
+    .church-month-calendar tr:last-child td {
+        border-bottom: 0;
+    }
+    .church-month-calendar th {
+        padding: 6px 2px;
+        color: var(--accent-color);
+        background: rgba(38, 56, 77, 0.94);
+        font-size: clamp(0.68rem, 1.1vw, 0.82rem);
+    }
+    .church-month-day {
+        height: 64px;
+        padding: 4px;
+        background: rgba(255,255,255,0.025);
+        overflow: hidden;
+    }
+    .church-month-day.out-month {
+        opacity: 0.32;
+        background: rgba(255,255,255,0.012);
+    }
+    .church-month-day-head {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 8px;
-        flex-wrap: wrap;
-    }
-    .church-fields {
-        display: grid;
-        gap: 7px;
-    }
-    .church-field {
-        display: grid;
         gap: 2px;
-    }
-    .church-field-label {
-        color: var(--accent-color);
-        font-size: 0.78rem;
+        min-height: 15px;
+        margin-bottom: 3px;
+        font-size: clamp(0.68rem, 1.1vw, 0.82rem);
         font-weight: 800;
+        line-height: 1;
+    }
+    .church-event-count {
+        display: none;
+        min-width: 15px;
+        height: 15px;
+        border-radius: 999px;
+        place-items: center;
+        background: #fde68a;
+        color: #102033;
+        font-size: 0.62rem;
+        font-weight: 900;
+    }
+    .church-month-day.has-events .church-event-count {
+        display: grid;
+    }
+    .church-day-summary {
+        height: 42px;
+        overflow: hidden;
+        color: var(--text-secondary);
+        font-size: 0.72rem;
+        line-height: 1.22;
+        overflow-wrap: anywhere;
+        white-space: pre-line;
     }
     .empty-state {
         color: var(--text-secondary);
@@ -442,8 +789,20 @@
         .leave-toolbar {
             top: 70px;
         }
+        .team-table-scroll {
+            max-height: calc(100vh - 235px);
+        }
     }
     @media (max-width: 620px) {
+        .view-switch {
+            width: 100%;
+        }
+        .view-tab {
+            flex: 1;
+        }
+        .team-table-scroll {
+            max-height: calc(100vh - 285px);
+        }
         .day-cell {
             height: 70px;
             padding: 5px;
@@ -453,6 +812,13 @@
         }
         .part-button {
             min-height: 30px;
+        }
+        .church-month-day {
+            height: 58px;
+            padding: 3px;
+        }
+        .church-day-summary {
+            height: 37px;
         }
     }
 </style>
@@ -475,6 +841,10 @@
                 <a class="month-tab {% if month.value == selected_month|date:'Y-m' %}active{% endif %} {% if month.is_locked %}locked{% endif %}" href="?month={{ month.value }}">{{ month.label }}</a>
             {% endfor %}
         </nav>
+        <div class="view-switch" role="tablist" aria-label="休假表檢視">
+            <button class="view-tab active" type="button" role="tab" aria-selected="true" data-view="team">全體月表</button>
+            <button class="view-tab" type="button" role="tab" aria-selected="false" data-view="mine">我的休假</button>
+        </div>
     </section>
 
     {% if messages %}
@@ -485,7 +855,36 @@
         </div>
     {% endif %}
 
-    <div class="leave-grid">
+    <section class="leave-panel team-month-panel" data-view-panel="team">
+        <div class="panel-head">
+            <div>
+                <h3>{{ selected_month|date:'Y年n月' }}全體月表</h3>
+                <span class="muted">每位同工每天分為上午、下午兩格；點自己的格子可登記休假</span>
+            </div>
+            <span class="muted" id="teamStaffCount"></span>
+        </div>
+        <div class="team-legend" aria-label="假別圖例">
+            <span class="team-legend-item"><span class="team-legend-swatch code-休"></span>休</span>
+            <span class="team-legend-item"><span class="team-legend-swatch code-補"></span>補</span>
+            <span class="team-legend-item"><span class="team-legend-swatch code-特"></span>特</span>
+            <span class="team-legend-item"><span class="team-legend-swatch code-公"></span>公</span>
+            <span class="team-legend-item"><span class="team-legend-swatch code-其他"></span>其他</span>
+            <span class="team-legend-item"><span class="team-legend-swatch code-病假"></span>病假</span>
+            <span class="team-legend-item"><span class="team-legend-swatch code-事假"></span>事假</span>
+            <span class="team-legend-item"><span class="team-legend-swatch code-陪/產假"></span>陪/產假</span>
+            <span class="team-legend-item"><span class="team-legend-swatch code-喪"></span>喪</span>
+            <span class="team-legend-item"><span class="team-legend-swatch code-育嬰"></span>育嬰</span>
+            <span>上格：上午／下格：下午</span>
+        </div>
+        <div class="team-table-scroll" tabindex="0" aria-label="{{ selected_month|date:'Y年n月' }}全體同工休假月表">
+            <table class="team-month-table" id="teamMonthTable">
+                <thead></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="leave-grid" data-view-panel="mine" hidden>
         <div class="main-stack">
         <section class="leave-panel calendar-panel">
             <div class="panel-head">
@@ -536,6 +935,41 @@
             </div>
             <div class="list-panel" id="monthlyNotesList"></div>
         </section>
+
+        <section class="leave-panel">
+            <div class="panel-head">
+                <h3>當月教會行事曆</h3>
+                <span class="muted">{{ selected_month|date:'Y年n月' }}</span>
+            </div>
+            <table class="church-month-calendar" aria-label="{{ selected_month|date:'Y年n月' }}教會行事曆">
+                <thead>
+                    <tr>
+                        <th>日</th>
+                        <th>一</th>
+                        <th>二</th>
+                        <th>三</th>
+                        <th>四</th>
+                        <th>五</th>
+                        <th>六</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for week in calendar_weeks %}
+                        <tr>
+                            {% for day in week %}
+                                <td class="church-month-day {% if not day.in_month %}out-month{% endif %}" data-church-date="{{ day.iso }}">
+                                    <div class="church-month-day-head">
+                                        <span>{{ day.day }}</span>
+                                        <span class="church-event-count"></span>
+                                    </div>
+                                    <div class="church-day-summary"></div>
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
         </div>
 
         <div class="side-stack">
@@ -549,48 +983,11 @@
 
             <section class="leave-panel">
                 <div class="panel-head">
-                    <h3>當月教會行事曆</h3>
-                    <span class="muted">來自 2026行事曆</span>
+                    <h3>我的特休狀況</h3>
                 </div>
-                <div class="list-panel">
-                    {% if church_calendar_entries %}
-                        {% for event in church_calendar_entries %}
-                            <div class="church-row">
-                                <div class="church-date">
-                                    <strong>{{ event.event_date }}（{{ event.weekday }}）</strong>
-                                </div>
-                                <div class="church-fields">
-                                    {% if event.church_activity %}
-                                        <div class="church-field">
-                                            <span class="status-meta">{{ event.church_activity|linebreaksbr }}</span>
-                                        </div>
-                                    {% endif %}
-                                    {% if event.work_plan %}
-                                        <div class="church-field">
-                                            <span class="status-meta">{{ event.work_plan|linebreaksbr }}</span>
-                                        </div>
-                                    {% endif %}
-                                    {% if event.staff_leave_note %}
-                                        <div class="church-field">
-                                            <span class="status-meta">{{ event.staff_leave_note|linebreaksbr }}</span>
-                                        </div>
-                                    {% endif %}
-                                    {% if event.holiday_social %}
-                                        <div class="church-field">
-                                            <span class="status-meta">{{ event.holiday_social|linebreaksbr }}</span>
-                                        </div>
-                                    {% endif %}
-                                    {% if event.note %}
-                                        <div class="church-field">
-                                            <span class="status-meta">{{ event.note|linebreaksbr }}</span>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="empty-state">本月沒有教會行事曆資料。</div>
-                    {% endif %}
+                <div style="padding: 12px; font-size: 0.92rem; border: 1px solid rgba(255,255,255,0.09); border-radius: 6px; background: rgba(8, 13, 20, 0.18); display: grid; gap: 8px;">
+                    <div>年度特休：<strong style="color: var(--accent-color); font-size: 1.1rem;">{{ annual_leave_quota }}</strong> 天</div>
+                    <div>已休特休：<strong style="color: #60a5fa; font-size: 1.1rem;">{{ used_leave_days }}</strong> 天</div>
                 </div>
             </section>
         </div>
@@ -615,12 +1012,13 @@
                 <input id="leaveSlot" type="text" readonly>
             </div>
             <div class="field">
-                <label for="leaveCode">假別</label>
-                <select id="leaveCode" name="code" required>
+                <label>假別</label>
+                <div class="leave-code-options" role="radiogroup" aria-label="選擇假別">
                     {% for code in leave_codes %}
-                        <option value="{{ code }}">{{ code }}</option>
+                        <button type="button" class="leave-code-option code-{{ code }}" data-code="{{ code }}">{{ code }}</button>
                     {% endfor %}
-                </select>
+                </div>
+                <input type="hidden" name="code" id="leaveCode" required>
             </div>
             <div class="field" id="descriptionField">
                 <label for="leaveDescription">文字說明</label>
@@ -644,13 +1042,23 @@
 (() => {
     const entries = JSON.parse('{{ entries_json|escapejs }}');
     const staffNames = JSON.parse('{{ staff_names_json|escapejs }}');
+    const staffNameAliases = JSON.parse('{{ staff_name_aliases_json|escapejs }}');
     const churchEntries = JSON.parse('{{ church_calendar_entries_json|escapejs }}');
     const currentUser = '{{ current_user|escapejs }}';
+    const currentStaffName = '{{ current_staff_name|escapejs }}';
     const currentUserAliases = JSON.parse('{{ current_user_aliases_json|escapejs }}');
-    const selectedMonth = '{{ selected_month|date:'Y-m'|escapejs }}';
-    const initialDay = '{{ selected_day|date:'Y-m-d'|escapejs }}';
-    const isLocked = {% if is_locked %}true{% else %}false{% endif %};
+    const selectedMonth = "{{ selected_month|date:'Y-m'|escapejs }}";
+    const initialDay = "{{ selected_day|date:'Y-m-d'|escapejs }}";
+    const isLocked = "{{ is_locked|yesno:'true,false' }}" === "true";
+    const annualLeaveQuota = parseFloat('{{ annual_leave_quota|escapejs }}') || 0;
+    let usedLeaveDays = parseFloat('{{ used_leave_days|escapejs }}') || 0;
     const partLabels = { am: '上午', pm: '下午' };
+
+    const filledStaff = new Set();
+    entries.forEach((entry) => {
+        const canonical = canonicalStaffName(entry.staff_name || entry.staff_user);
+        if (canonical) filledStaff.add(canonical);
+    });
 
     const modal = document.getElementById('leaveModal');
     const form = document.getElementById('leaveForm');
@@ -666,6 +1074,10 @@
     const statusList = document.getElementById('dayStatusList');
     const notesList = document.getElementById('monthlyNotesList');
     const selectedDayLabel = document.getElementById('selectedDayLabel');
+    const teamMonthTable = document.getElementById('teamMonthTable');
+    const viewTabs = document.querySelectorAll('.view-tab[data-view]');
+    const viewPanels = document.querySelectorAll('[data-view-panel]');
+    const weekdayLabels = ['日', '一', '二', '三', '四', '五', '六'];
 
     function entryKey(entry) {
         return `${entry.leave_date}:${entry.day_part}`;
@@ -679,44 +1091,191 @@
         return currentUserAliases.includes(entry.staff_user) || currentUserAliases.includes(entry.staff_name);
     }
 
+    function canonicalStaffName(staffName) {
+        return staffNameAliases[staffName] || staffName;
+    }
+
+    function isCurrentStaffName(staffName) {
+        const canonicalName = canonicalStaffName(staffName);
+        return currentUserAliases.some((alias) => canonicalStaffName(alias) === canonicalName);
+    }
+
     function entriesForDate(date) {
         return entries.filter((entry) => entry.leave_date === date);
     }
 
     function leaveForStaff(date, staffName, part) {
+        const canonicalName = canonicalStaffName(staffName);
         return entries.find((entry) => {
             return entry.leave_date === date
                 && entry.day_part === part
-                && (entry.staff_name === staffName || entry.staff_user === staffName);
+                && [entry.staff_name, entry.staff_user]
+                    .filter(Boolean)
+                    .some((name) => canonicalStaffName(name) === canonicalName);
         });
+    }
+
+    function normalizedStaffNames() {
+        const normalized = [];
+
+        staffNames.forEach((staffName) => {
+            const canonicalName = canonicalStaffName(staffName);
+            if (canonicalName && !normalized.includes(canonicalName)) normalized.push(canonicalName);
+        });
+        return normalized;
     }
 
     function setChip(chip, entry) {
         chip.className = 'code-chip';
-        if (!entry) {
-            chip.classList.add('empty');
+        chip.classList.remove('present-dot', 'unfilled-slot', 'empty');
+        
+        const isCurrentUserFilled = filledStaff.has(canonicalStaffName(currentStaffName));
+        
+        if (!isCurrentUserFilled) {
+            chip.classList.add('unfilled-slot');
+            chip.textContent = '?';
+        } else if (!entry) {
+            chip.classList.add('present-dot');
             chip.textContent = '';
-            return;
+        } else {
+            chip.classList.add(`code-${entry.code}`);
+            chip.textContent = entry.code;
         }
-        chip.classList.add(`code-${entry.code}`);
-        chip.textContent = entry.code;
     }
 
     function renderCalendarBadges() {
         document.querySelectorAll('[data-chip-for]').forEach((chip) => {
             const [date, part] = chip.dataset.chipFor.split(':');
-            setChip(chip, currentUserEntry(date, part));
+            const entry = currentUserEntry(date, part);
+            setChip(chip, entry);
+            
+            const button = chip.closest('.part-button');
+            if (button) {
+                const isCurrentUserFilled = filledStaff.has(canonicalStaffName(currentStaffName));
+                if (!isCurrentUserFilled || !entry) {
+                    button.classList.add('neutral-bg');
+                } else {
+                    button.classList.remove('neutral-bg');
+                }
+            }
         });
+    }
+
+    function renderTeamMonthTable() {
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const daysInMonth = new Date(year, month, 0).getDate();
+        const teamStaffNames = normalizedStaffNames();
+        const headerRow = document.createElement('tr');
+        const dateHeader = document.createElement('th');
+        dateHeader.className = 'team-date-head';
+        dateHeader.scope = 'col';
+        dateHeader.textContent = '日期';
+        headerRow.appendChild(dateHeader);
+
+        teamStaffNames.forEach((staffName) => {
+            const header = document.createElement('th');
+            header.className = 'team-staff-head';
+            if (isCurrentStaffName(staffName)) header.classList.add('current');
+            header.scope = 'col';
+            header.textContent = staffName;
+            header.title = staffName;
+            headerRow.appendChild(header);
+        });
+        teamMonthTable.tHead.replaceChildren(headerRow);
+
+        const rows = document.createDocumentFragment();
+        for (let day = 1; day <= daysInMonth; day += 1) {
+            const date = `${selectedMonth}-${String(day).padStart(2, '0')}`;
+            const weekday = new Date(`${date}T00:00:00`).getDay();
+            const row = document.createElement('tr');
+            if (weekday === 0 || weekday === 6) row.classList.add('weekend');
+
+            const dateCell = document.createElement('th');
+            dateCell.className = 'team-date-cell';
+            dateCell.scope = 'row';
+            dateCell.innerHTML = `${String(day).padStart(2, '0')}<span class="team-date-weekday">週${weekdayLabels[weekday]}</span>`;
+            row.appendChild(dateCell);
+
+            teamStaffNames.forEach((staffName) => {
+                const cell = document.createElement('td');
+                cell.className = 'team-schedule-cell';
+                const isFilled = filledStaff.has(canonicalStaffName(staffName));
+                ['am', 'pm'].forEach((part) => {
+                    const entry = leaveForStaff(date, staffName, part);
+                    const slot = document.createElement('div');
+                    slot.className = 'team-slot';
+                    slot.tabIndex = -1;
+                    slot.dataset.date = date;
+                    slot.dataset.part = part;
+                    slot.dataset.staff = staffName;
+                    if (!isFilled) {
+                        slot.classList.add('unfilled-slot');
+                        slot.textContent = '?';
+                    } else if (entry) {
+                        slot.classList.add(`code-${entry.code}`);
+                        slot.textContent = entry.code;
+                    } else {
+                        slot.classList.add('present-dot');
+                        slot.textContent = '';
+                    }
+
+                    let titleText = '上班';
+                    if (!isFilled) {
+                        titleText = '尚未填寫';
+                    } else if (entry) {
+                        titleText = `${entry.code}${entry.description ? `－${entry.description}` : ''}`;
+                    }
+                    slot.title = `${staffName} ${date} ${partLabels[part]}：${titleText}`;
+
+                    if (isCurrentStaffName(staffName)) {
+                        slot.classList.add('editable');
+                        slot.tabIndex = 0;
+                        slot.setAttribute('role', 'button');
+                        slot.setAttribute('aria-label', `${slot.title}，點選編輯`);
+                        const editSlot = () => openModal(date, part);
+                        slot.addEventListener('click', editSlot);
+                        slot.addEventListener('keydown', (event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                editSlot();
+                            }
+                        });
+                    }
+                    cell.appendChild(slot);
+                });
+                row.appendChild(cell);
+            });
+            rows.appendChild(row);
+        }
+        teamMonthTable.tBodies[0].replaceChildren(rows);
+        document.getElementById('teamStaffCount').textContent = `${teamStaffNames.length} 位同工`;
+    }
+
+    function setActiveView(view) {
+        const targetView = view === 'mine' ? 'mine' : 'team';
+        viewTabs.forEach((tab) => {
+            const active = tab.dataset.view === targetView;
+            tab.classList.toggle('active', active);
+            tab.setAttribute('aria-selected', String(active));
+        });
+        viewPanels.forEach((panel) => {
+            panel.hidden = panel.dataset.viewPanel !== targetView;
+        });
+        try {
+            window.localStorage.setItem('staff-leave-view', targetView);
+        } catch (error) {
+            // The selected view still works when browser storage is unavailable.
+        }
     }
 
     function renderDayStatus(date) {
         selectedDayLabel.textContent = date;
-        document.querySelectorAll('.day-cell').forEach((cell) => {
+        document.querySelectorAll('.calendar-table .day-cell').forEach((cell) => {
             cell.classList.toggle('selected', cell.dataset.date === date);
         });
 
         statusList.innerHTML = '';
-        const visibleStaff = staffNames.filter((name) => !currentUserAliases.includes(name));
+        const visibleStaff = normalizedStaffNames().filter((name) => !isCurrentStaffName(name));
         if (!visibleStaff.length) {
             statusList.innerHTML = '<div class="empty-state">目前沒有同工名單。</div>';
             return;
@@ -724,13 +1283,23 @@
         const grid = document.createElement('div');
         grid.className = 'staff-status-grid';
         visibleStaff.forEach((staffName) => {
+            const canonical = canonicalStaffName(staffName);
+            const isFilled = filledStaff.has(canonical);
             const card = document.createElement('div');
             card.className = 'staff-status-card';
+            if (!isFilled) {
+                card.classList.add('unfilled');
+            }
             ['am', 'pm'].forEach((part) => {
                 const leave = leaveForStaff(date, staffName, part);
                 const half = document.createElement('div');
-                half.className = `staff-status-half ${leave ? 'absent' : 'present'}`;
-                half.title = `${staffName} ${partLabels[part]}${leave ? ` ${leave.code}${leave.description ? ` ${leave.description}` : ''}` : ' 出席'}`;
+                if (!isFilled) {
+                    half.className = 'staff-status-half';
+                    half.title = `${staffName} ${partLabels[part]} 未填寫`;
+                } else {
+                    half.className = `staff-status-half ${leave ? 'absent' : 'present'}`;
+                    half.title = `${staffName} ${partLabels[part]}${leave ? ` ${leave.code}${leave.description ? ` ${leave.description}` : ''}` : ' 出席'}`;
+                }
                 card.appendChild(half);
             });
             const name = document.createElement('span');
@@ -770,23 +1339,74 @@
         if (!required) descriptionInput.value = '';
     }
 
+    function selectLeaveCode(code) {
+        codeInput.value = code;
+        document.querySelectorAll('.leave-code-option').forEach((opt) => {
+            opt.classList.toggle('selected', opt.dataset.code === code);
+        });
+        updateDescriptionRequirement();
+    }
+
+    document.querySelectorAll('.leave-code-option').forEach((opt) => {
+        opt.addEventListener('click', () => {
+            if (isLocked || opt.disabled) return;
+            selectLeaveCode(opt.dataset.code);
+        });
+    });
+
     function openModal(date, part) {
         const entry = currentUserEntry(date, part);
         actionInput.value = 'save';
         dateInput.value = date;
         partInput.value = part;
         slotInput.value = `${date} ${partLabels[part]}`;
-        codeInput.value = entry ? entry.code : '休';
+
+        const specialOption = document.querySelector('.leave-code-option[data-code="特"]');
+        if (specialOption) {
+            const isCurrentSpecial = entry && entry.code === '特';
+            if (!isCurrentSpecial && (usedLeaveDays + 0.5 > annualLeaveQuota)) {
+                specialOption.disabled = true;
+                specialOption.title = '已無特休額度，無法新增特休';
+                specialOption.style.opacity = '0.35';
+                specialOption.style.cursor = 'not-allowed';
+            } else {
+                specialOption.disabled = false;
+                specialOption.title = '';
+                specialOption.style.opacity = '';
+                specialOption.style.cursor = '';
+            }
+        }
+
+        selectLeaveCode(entry ? entry.code : '休');
+
         descriptionInput.value = entry ? (entry.description || '') : '';
         deleteButton.style.display = !isLocked && entry ? 'inline-flex' : 'none';
         saveButton.style.display = isLocked ? 'none' : 'inline-flex';
-        codeInput.disabled = isLocked;
+
+        document.querySelectorAll('.leave-code-option').forEach((opt) => {
+            if (isLocked) {
+                opt.disabled = true;
+                opt.style.opacity = '0.5';
+                opt.style.cursor = 'default';
+            } else if (opt.dataset.code !== '特') {
+                opt.disabled = false;
+                opt.style.opacity = '';
+                opt.style.cursor = '';
+            }
+        });
+
         descriptionInput.readOnly = isLocked;
-        updateDescriptionRequirement();
         modal.classList.add('open');
         modal.setAttribute('aria-hidden', 'false');
         renderDayStatus(date);
-        setTimeout(() => (isLocked ? document.getElementById('closeLeaveModal') : codeInput).focus(), 0);
+        setTimeout(() => {
+            if (isLocked) {
+                document.getElementById('closeLeaveModal').focus();
+            } else {
+                const activeOpt = document.querySelector('.leave-code-option.selected');
+                if (activeOpt) activeOpt.focus();
+            }
+        }, 0);
     }
 
     function closeModal() {
@@ -801,7 +1421,7 @@
         });
     });
 
-    document.querySelectorAll('.day-cell').forEach((cell) => {
+    document.querySelectorAll('.calendar-table .day-cell').forEach((cell) => {
         cell.addEventListener('click', (event) => {
             if (event.target.closest('.part-button')) return;
             if (cell.classList.contains('out-month')) return;
@@ -809,7 +1429,55 @@
         });
     });
 
-    codeInput.addEventListener('change', updateDescriptionRequirement);
+    viewTabs.forEach((tab) => {
+        tab.addEventListener('click', () => setActiveView(tab.dataset.view));
+    });
+
+    function churchEntrySummary(entry) {
+        return [
+            entry.church_activity,
+            entry.work_plan,
+            entry.staff_leave_note,
+            entry.holiday_social,
+            entry.note,
+        ].filter(Boolean).join('\n');
+    }
+
+    function fitChurchCalendarText(summary) {
+        const maximum = 11.5;
+        const minimum = 7;
+        let low = minimum;
+        let high = maximum;
+
+        summary.style.fontSize = `${maximum}px`;
+        for (let attempt = 0; attempt < 7; attempt += 1) {
+            const size = (low + high) / 2;
+            summary.style.fontSize = `${size}px`;
+            const fits = summary.scrollHeight <= summary.clientHeight
+                && summary.scrollWidth <= summary.clientWidth;
+            if (fits) {
+                low = size;
+            } else {
+                high = size;
+            }
+        }
+        summary.style.fontSize = `${low.toFixed(2)}px`;
+    }
+
+    function renderChurchMonthCalendar() {
+        document.querySelectorAll('.church-month-day[data-church-date]').forEach((cell) => {
+            const events = churchEntries.filter((entry) => entry.event_date === cell.dataset.churchDate);
+            const count = cell.querySelector('.church-event-count');
+            const summary = cell.querySelector('.church-day-summary');
+
+            cell.classList.toggle('has-events', events.length > 0);
+            count.textContent = events.length || '';
+            summary.textContent = events.map(churchEntrySummary).filter(Boolean).join('\n');
+            summary.title = summary.textContent;
+            fitChurchCalendarText(summary);
+        });
+    }
+
     deleteButton.addEventListener('click', (event) => {
         if (!confirm('確定要刪除這筆休假資料？')) {
             event.preventDefault();
@@ -819,8 +1487,18 @@
         codeInput.required = false;
         descriptionInput.required = false;
     });
-    form.addEventListener('submit', () => {
-        if (document.activeElement !== deleteButton) actionInput.value = 'save';
+    form.addEventListener('submit', (event) => {
+        if (document.activeElement !== deleteButton) {
+            actionInput.value = 'save';
+            const selectedCode = codeInput.value;
+            const entry = currentUserEntry(dateInput.value, partInput.value);
+            const isCurrentSpecial = entry && entry.code === '特';
+            if (selectedCode === '特' && !isCurrentSpecial && (usedLeaveDays + 0.5 > annualLeaveQuota)) {
+                alert(`您的特休已達上限 (${annualLeaveQuota} 天)，無法再新增特休。`);
+                event.preventDefault();
+                return;
+            }
+        }
     });
     document.getElementById('closeLeaveModal').addEventListener('click', closeModal);
     document.getElementById('cancelLeaveModal').addEventListener('click', closeModal);
@@ -832,7 +1510,23 @@
     });
 
     renderCalendarBadges();
+    renderTeamMonthTable();
     renderMonthlyNotes();
+    renderChurchMonthCalendar();
+    if ('ResizeObserver' in window) {
+        const calendar = document.querySelector('.church-month-calendar');
+        const resizeObserver = new ResizeObserver(() => {
+            calendar.querySelectorAll('.church-day-summary').forEach(fitChurchCalendarText);
+        });
+        resizeObserver.observe(calendar);
+    }
+    let initialView = 'team';
+    try {
+        initialView = window.localStorage.getItem('staff-leave-view') || 'team';
+    } catch (error) {
+        initialView = 'team';
+    }
+    setActiveView(initialView);
     renderDayStatus(initialDay.startsWith(selectedMonth) ? initialDay : `${selectedMonth}-01`);
 })();
 </script>

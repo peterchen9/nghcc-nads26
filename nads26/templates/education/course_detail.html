@@ -1,0 +1,585 @@
+{% extends "base.html" %}
+
+{% block title %}{{ course.code }} 課程詳情 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<style>
+    .edu-workspace-wrapper {
+        background-color: #0d1527;
+        color: #f8fafc;
+        padding: 24px;
+        border-radius: 16px;
+        min-height: 85vh;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    /* Breadcrumb navigation */
+    .edu-breadcrumb {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-size: 0.88rem;
+        color: #94a3b8;
+        margin-bottom: 20px;
+    }
+
+    .edu-breadcrumb a {
+        color: #38bdf8;
+        text-decoration: none;
+    }
+
+    .edu-breadcrumb a:hover {
+        text-decoration: underline;
+    }
+
+    /* Detail Grid Layout */
+    .detail-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
+        margin-bottom: 24px;
+    }
+
+    /* Main Info Card */
+    .info-card {
+        background-color: #131c2e;
+        border: 1px solid #223049;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .info-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        border-bottom: 1px solid #223049;
+        padding-bottom: 16px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .info-title-area {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .info-code {
+        background-color: rgba(56, 189, 248, 0.15);
+        color: #38bdf8;
+        font-family: monospace;
+        font-weight: 700;
+        font-size: 0.95rem;
+        padding: 4px 10px;
+        border-radius: 6px;
+        align-self: flex-start;
+    }
+
+    .info-subject {
+        margin: 0;
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #ffffff;
+    }
+
+    .info-intro {
+        font-size: 0.95rem;
+        color: #cbd5e1;
+        line-height: 1.6;
+        background-color: #0d1527;
+        padding: 16px;
+        border-radius: 8px;
+        border-left: 4px solid #38bdf8;
+        margin-bottom: 24px;
+    }
+
+    /* Key-value Data Grid */
+    .data-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .meta-item {
+        background-color: #1a2333;
+        border: 1px solid #223049;
+        border-radius: 8px;
+        padding: 14px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .meta-icon {
+        font-size: 1.6rem;
+        color: #38bdf8;
+        background-color: rgba(56, 189, 248, 0.1);
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .meta-label {
+        font-size: 0.75rem;
+        color: #94a3b8;
+        font-weight: 600;
+    }
+
+    .meta-value {
+        font-size: 0.95rem;
+        color: #ffffff;
+        font-weight: 700;
+    }
+
+    /* Syllabus / Class list */
+    .syllabus-section-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin: 28px 0 16px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .syllabus-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+
+    .syllabus-table th {
+        background-color: #1a2333;
+        color: #94a3b8;
+        padding: 10px 14px;
+        text-align: left;
+        border-bottom: 2px solid #223049;
+    }
+
+    .syllabus-table td {
+        padding: 12px 14px;
+        border-bottom: 1px solid #223049;
+    }
+
+    .syllabus-num-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        background-color: #38bdf8;
+        color: #0d1527;
+        font-weight: 700;
+        border-radius: 50%;
+        font-size: 0.8rem;
+    }
+
+    /* Sidebar Actions & Integrations */
+    .sidebar-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .panel-card {
+        background-color: #131c2e;
+        border: 1px solid #223049;
+        border-radius: 12px;
+        padding: 20px;
+    }
+
+    .panel-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin-top: 0;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid #223049;
+        padding-bottom: 10px;
+    }
+
+    .action-btn-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .btn-panel-action {
+        width: 100%;
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.88rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+    }
+
+    .btn-panel-edit {
+        background-color: #0284c7;
+        color: #ffffff;
+    }
+
+    .btn-panel-edit:hover {
+        background-color: #0369a1;
+    }
+
+    .btn-panel-delete {
+        background-color: rgba(220, 38, 38, 0.15);
+        color: #f87171;
+        border: 1px solid rgba(220, 38, 38, 0.3);
+        justify-content: center;
+    }
+
+    .btn-panel-delete:hover {
+        background-color: #dc2626;
+        color: #ffffff;
+    }
+
+    /* Future integrations widgets */
+    .integration-item {
+        background-color: #1a2333;
+        border: 1px solid #223049;
+        border-radius: 8px;
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        opacity: 0.85;
+        transition: all 0.2s;
+    }
+
+    .integration-item:hover {
+        opacity: 1;
+        border-color: #38bdf8;
+        transform: translateX(4px);
+    }
+
+    .integration-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .integration-name {
+        font-weight: 600;
+        font-size: 0.88rem;
+        color: #f8fafc;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .badge-planned {
+        background-color: rgba(230, 97, 0, 0.15);
+        color: #e66100;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+
+    .integration-desc {
+        font-size: 0.78rem;
+        color: #94a3b8;
+        line-height: 1.4;
+    }
+
+    @media (max-width: 1024px) {
+        .detail-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Table Actions */
+    .btn-row-action {
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s;
+    }
+
+    .btn-row-view {
+        background-color: #1e293b;
+        color: #cbd5e1;
+        border: 1px solid #334155;
+    }
+
+    .btn-row-view:hover {
+        background-color: #334155;
+        color: #ffffff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edu-workspace-wrapper">
+    <!-- Breadcrumb -->
+    <div class="edu-breadcrumb">
+        <a href="{% url 'education:course-list' %}">課程規劃</a>
+        <i class="bi bi-chevron-right"></i>
+        <span>{{ course.code }} 詳情</span>
+    </div>
+
+    <!-- Main Detail Grid -->
+    <div class="detail-grid">
+        
+        <!-- Left Panel: Course Information & Schedule -->
+        <div class="info-card">
+            
+            <div class="info-header">
+                <div class="info-title-area">
+                    <span class="info-code">{{ course.code }}</span>
+                    <h2 class="info-subject">{{ course.subject }}</h2>
+                </div>
+            </div>
+
+            <!-- Course Introduction -->
+            <div class="syllabus-section-title">
+                <i class="bi bi-file-text-fill text-info"></i> 課程簡介
+            </div>
+            <div class="info-intro">
+                {{ course.introduction|default:"此課程目前無簡介資料。"|linebreaksbr }}
+            </div>
+
+            <!-- Key Metadata Items -->
+            <div class="syllabus-section-title">
+                <i class="bi bi-info-circle-fill text-info"></i> 基本資訊
+            </div>
+            <div class="data-meta-grid">
+                <div class="meta-item">
+                    <div class="meta-icon"><i class="bi bi-person-fill"></i></div>
+                    <div>
+                        <div class="meta-label">主要授課師資</div>
+                        <div class="meta-value">{{ course.teachers }}</div>
+                    </div>
+                </div>
+
+                <div class="meta-item">
+                    <div class="meta-icon"><i class="bi bi-person-badge-fill"></i></div>
+                    <div>
+                        <div class="meta-label">班長</div>
+                        <div class="meta-value">{{ course.class_leader|default:"未設定" }}</div>
+                    </div>
+                </div>
+
+                <div class="meta-item">
+                    <div class="meta-icon"><i class="bi bi-calendar3"></i></div>
+                    <div>
+                        <div class="meta-label">課程堂數 / 次數</div>
+                        <div class="meta-value">{{ course.total_classes }} 堂</div>
+                    </div>
+                </div>
+
+                <div class="meta-item">
+                    <div class="meta-icon"><i class="bi bi-hourglass-split"></i></div>
+                    <div>
+                        <div class="meta-label">每堂上課時數</div>
+                        <div class="meta-value">{{ course.hours_per_class }} 分鐘</div>
+                    </div>
+                </div>
+
+                <div class="meta-item">
+                    <div class="meta-icon"><i class="bi bi-clock-fill"></i></div>
+                    <div>
+                        <div class="meta-label">固定上課時間</div>
+                        <div class="meta-value">{{ course.class_time }}</div>
+                    </div>
+                </div>
+
+                <div class="meta-item">
+                    <div class="meta-icon"><i class="bi bi-door-open-fill text-warning"></i></div>
+                    <div>
+                        <div class="meta-label">上課教室</div>
+                        <div class="meta-value">{{ course.classroom_name|default:"未設定" }}</div>
+                    </div>
+                </div>
+
+                <div class="meta-item">
+                    <div class="meta-icon"><i class="bi bi-arrow-repeat"></i></div>
+                    <div>
+                        <div class="meta-label">補課安排狀態</div>
+                        <div class="meta-value">
+                            {% if course.makeup_required %}
+                                <span class="text-warning">需要規劃補課</span>
+                            {% else %}
+                                <span class="text-muted">不需補課</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Syllabus Course Classes Table -->
+            <div class="syllabus-section-title">
+                <i class="bi bi-calendar-event-fill text-info"></i> 課程大綱與時間表
+            </div>
+            <div class="table-container">
+                <table class="syllabus-table">
+                    <thead>
+                        <tr>
+                            <th width="10%">堂次</th>
+                            <th width="15%">日期</th>
+                            <th width="35%">課堂主題</th>
+                            <th width="20%">授課老師</th>
+                            <th width="20%">補課錄音</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for class_obj in classes %}
+                        <tr>
+                            <td><span class="syllabus-num-badge">{{ class_obj.class_number }}</span></td>
+                            <td class="fw-bold text-info">
+                                {% if class_obj.date %}
+                                    {{ class_obj.date|date:"Y-m-d" }}
+                                {% else %}
+                                    <span class="text-muted">未設定日期</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ class_obj.subject }}</td>
+                            <td>{{ class_obj.teacher }}</td>
+                            <td>
+                                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                    {% if class_obj.recording %}
+                                        <span class="text-success" style="font-size: 0.8rem; font-weight: 600;"><i class="bi bi-file-earmark-music-fill text-success"></i> 已錄音</span>
+                                    {% endif %}
+                                    <a href="{% url 'education:class-record' class_obj.pk %}" class="btn-row-action btn-row-view">
+                                        <i class="bi bi-mic-fill text-danger"></i> 手機錄音
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 24px; color: #94a3b8;">
+                                尚未設定任何課堂時間表大綱。
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+
+        <!-- Right Panel: Actions & Future Extensions -->
+        <div class="sidebar-panel">
+            
+            <!-- Quick Actions -->
+            <div class="panel-card">
+                <h5 class="panel-title"><i class="bi bi-lightning-fill text-warning"></i> 課程管理動作</h5>
+                <div class="action-btn-list">
+                    <a href="{% url 'education:course-edit' course.pk %}" class="btn-panel-action btn-panel-edit">
+                        <i class="bi bi-pencil-square"></i> 編輯課程與課表
+                    </a>
+
+                    <a href="{% url 'education:course-documents' course.pk %}" class="btn-panel-action" style="background-color: #1e293b; color: #cbd5e1; border: 1px solid #334155;">
+                        <i class="bi bi-file-earmark-pdf-fill text-warning"></i> 產出課程文件
+                    </a>
+
+                    <a href="{% url 'education:course-board' course.pk %}" class="btn-panel-action" style="background-color: #1e293b; color: #cbd5e1; border: 1px solid #334155;">
+                        <i class="bi bi-chat-left-text-fill text-info"></i> 課程討論版 / 公告
+                    </a>
+
+                    <a href="{% url 'education:course-makeup' course.pk %}" class="btn-panel-action" style="background-color: #1e293b; color: #cbd5e1; border: 1px solid #334155;">
+                        <i class="bi bi-play-circle-fill text-success"></i> 學員補課專區
+                    </a>
+                    
+                    <form method="post" action="{% url 'education:course-delete' course.pk %}" onsubmit="return confirm('確定要刪除課程規劃 【{{ course.code }} — {{ course.subject }}】嗎？此動作無法復原！');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-panel-action btn-panel-delete">
+                            <i class="bi bi-trash"></i> 刪除此課程規劃
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Future Integrations (未來整合與表單產生) -->
+            <div class="panel-card" style="display: flex; flex-direction: column; gap: 12px;">
+                <h5 class="panel-title" style="margin-bottom: 4px;"><i class="bi bi-link-45deg text-info"></i> 未來串接與表單</h5>
+                <p style="font-size: 0.78rem; color: #94a3b8; margin: 0 0 10px 0;">未來將依據此課程規劃資料產生以下關聯表單與應用：</p>
+                
+                <div class="integration-item">
+                    <div class="integration-header">
+                        <span class="integration-name"><i class="bi bi-megaphone"></i> 課程公告</span>
+                        <span class="badge-planned">規劃中</span>
+                    </div>
+                    <div class="integration-desc">一鍵匯出精美的 PDF 海報或自動發佈最新公告。</div>
+                </div>
+
+                <div class="integration-item">
+                    <div class="integration-header">
+                        <span class="integration-name"><i class="bi bi-journal-check"></i> 課堂點名表</span>
+                        <span class="badge-planned">規劃中</span>
+                    </div>
+                    <div class="integration-desc">自動列印點名紙本，或提供 QR-code 行動線上點名表。</div>
+                </div>
+
+                <div class="integration-item">
+                    <div class="integration-header">
+                        <span class="integration-name"><i class="bi bi-door-open"></i> 教室門口標示</span>
+                        <span class="badge-planned">規劃中</span>
+                    </div>
+                    <div class="integration-desc">列印門口當週課堂標示單，指示學員位置。</div>
+                </div>
+
+                <div class="integration-item">
+                    <div class="integration-header">
+                        <span class="integration-name"><i class="bi bi-chat-left-text"></i> 建立課程群組</span>
+                        <span class="badge-planned">規劃中</span>
+                    </div>
+                    <div class="integration-desc">串接 LINE 或通訊軟體 API 自動生成課程班級群組。</div>
+                </div>
+
+                <div class="integration-item">
+                    <div class="integration-header">
+                        <span class="integration-name"><i class="bi bi-pc-display-horizontal"></i> 補課網頁</span>
+                        <span class="badge-planned">規劃中</span>
+                    </div>
+                    <div class="integration-desc">提供未到課學員看影片補課的專屬登入與學習歷程網頁。</div>
+                </div>
+
+                <div class="integration-item">
+                    <div class="integration-header">
+                        <span class="integration-name"><i class="bi bi-award"></i> 結業與全勤計算</span>
+                        <span class="badge-planned">規劃中</span>
+                    </div>
+                    <div class="integration-desc">課程結束自動結算全勤、發放獎勵，以及計算教師車馬費津貼。</div>
+                </div>
+
+                <div class="integration-item">
+                    <div class="integration-header">
+                        <span class="integration-name"><i class="bi bi-building-add"></i> 自動預約教室</span>
+                        <span class="badge-planned">規劃中</span>
+                    </div>
+                    <div class="integration-desc">依據上課時間自動預約系統內的空閒教室，避免時間衝突。</div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+{% endblock %}

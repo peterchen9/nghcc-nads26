@@ -52,6 +52,8 @@ urlpatterns = [
     path('finance/fund-fellowship-balances/', include('modules.budget.fund_fellowship_urls')),
     path('finance/offering-statistics/', include('modules.budget.offering_urls')),
     path('eureka/', include('modules.eureka.urls')),
+    path('file-center/', include('modules.file_center.urls')),
+    path('education/', include('modules.education.urls')),
     path('', include('modules.pages.urls')),
 ]
 

@@ -1,0 +1,998 @@
+{% extends "base.html" %}
+
+{% block title %}教室檢查紀錄 - {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .inspection-container {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .toolbar-card {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        backdrop-filter: blur(10px);
+    }
+
+    .toolbar-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .toolbar-title h2 {
+        margin: 0;
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #fff;
+    }
+
+    .toolbar-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .year-select {
+        background: rgba(15, 23, 42, 0.6);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 6px;
+        padding: 6px 14px;
+        font-size: 0.95rem;
+        outline: none;
+        cursor: pointer;
+    }
+
+    .btn-action {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 7px 14px;
+        font-size: 0.88rem;
+        font-weight: 500;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    .btn-action:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #e2e8f0;
+    }
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.18);
+    }
+
+    /* Legend */
+    .legend-bar {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .legend-badge {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        display: inline-block;
+    }
+    .legend-blank {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px dashed rgba(255, 255, 255, 0.2);
+    }
+    .legend-green {
+        background: #22c55e;
+        box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+    }
+    .legend-red {
+        background: #ef4444;
+        box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+    }
+
+    /* Matrix Table Container */
+    .table-wrapper {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        overflow: auto;
+        max-height: calc(100vh - 170px);
+        max-width: 100%;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    .matrix-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 0.85rem;
+    }
+
+    .matrix-table th,
+    .matrix-table td {
+        padding: 8px 6px;
+        text-align: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        border-right: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .matrix-table th {
+        background: #1e2d3d;
+        color: #94a3b8;
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        white-space: nowrap;
+    }
+
+    /* Sticky room column */
+    .matrix-table th.room-col,
+    .matrix-table td.room-col {
+        position: sticky;
+        left: 0;
+        z-index: 12;
+        background: #233446;
+        text-align: left;
+        padding-left: 14px;
+        padding-right: 14px;
+        font-weight: 600;
+        white-space: nowrap;
+        border-right: 2px solid rgba(255, 255, 255, 0.1);
+    }
+    .matrix-table th.room-col {
+        z-index: 30;
+        top: 0;
+        background: #192533;
+    }
+
+    .week-header-th {
+        padding: 4px 2px !important;
+        min-width: 32px;
+        line-height: 1.2;
+    }
+    .header-month {
+        font-size: 0.72rem;
+        color: #60a5fa;
+        font-weight: 700;
+        min-height: 1.1em;
+    }
+    .header-day {
+        font-size: 0.84rem;
+        color: #e2e8f0;
+        font-weight: 600;
+    }
+    .month-start-col {
+        border-left: 2px solid rgba(59, 130, 246, 0.4) !important;
+    }
+
+
+
+    .room-link {
+        color: #60a5fa;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+    .room-link:hover {
+        color: #93c5fd;
+        text-decoration: underline;
+    }
+
+    /* Week cell styles */
+    .week-cell {
+        width: 32px;
+        min-width: 32px;
+        height: 32px;
+        position: relative;
+        cursor: default;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .week-cell-inner {
+        width: 24px;
+        height: 24px;
+        margin: 0 auto;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .cell-none {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px dashed rgba(255, 255, 255, 0.1);
+        color: transparent;
+    }
+
+    .cell-normal {
+        background: #15803d;
+        color: #ffffff;
+        box-shadow: 0 0 6px rgba(34, 197, 94, 0.3);
+    }
+    .cell-normal:hover {
+        background: #22c55e;
+        transform: scale(1.15);
+        z-index: 15;
+    }
+
+    .cell-abnormal {
+        background: #b91c1c;
+        color: #ffffff;
+        box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+        animation: pulse-red 2s infinite;
+    }
+    .cell-abnormal:hover {
+        background: #ef4444;
+        transform: scale(1.15);
+        z-index: 15;
+    }
+
+    @keyframes pulse-red {
+        0% { box-shadow: 0 0 4px rgba(239, 68, 68, 0.4); }
+        50% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.8); }
+        100% { box-shadow: 0 0 4px rgba(239, 68, 68, 0.4); }
+    }
+
+    .current-week-col {
+        background: rgba(59, 130, 246, 0.16) !important;
+        border-left: 1.5px solid rgba(59, 130, 246, 0.4) !important;
+        border-right: 1.5px solid rgba(59, 130, 246, 0.4) !important;
+    }
+    th.current-week-col {
+        background: linear-gradient(180deg, #1e3a8a 0%, #1d4ed8 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+        border-bottom: 3px solid #f59e0b !important;
+    }
+    th.current-week-col .header-month {
+        color: #fbbf24 !important;
+        font-weight: 800;
+    }
+    th.current-week-col .header-day {
+        color: #ffffff !important;
+        font-size: 0.9rem;
+        font-weight: 800;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    }
+    .current-week-tag {
+        background: #f59e0b;
+        color: #0f172a;
+        font-size: 0.65rem;
+        font-weight: 800;
+        padding: 1px 4px;
+        border-radius: 3px;
+        display: inline-block;
+        line-height: 1;
+        letter-spacing: -0.5px;
+    }
+
+
+    /* Floating Tooltip */
+    .custom-tooltip {
+        position: absolute;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(15, 23, 42, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #f8fafc;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 0.78rem;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s ease, visibility 0.2s ease;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+        z-index: 100;
+        text-align: left;
+        line-height: 1.4;
+    }
+    .week-cell:hover .custom-tooltip {
+        opacity: 1;
+        visibility: visible;
+    }
+    .tooltip-title {
+        font-weight: 600;
+        color: #93c5fd;
+        margin-bottom: 3px;
+    }
+
+    /* Modal Overlay & Dialog */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(5px);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.25s ease, visibility 0.25s ease;
+    }
+    .modal-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .modal-card {
+        background: #1e293b;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 12px;
+        width: 90%;
+        max-width: 520px;
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        overflow: hidden;
+        transform: scale(0.95);
+        transition: transform 0.25s ease;
+    }
+    .modal-overlay.active .modal-card {
+        transform: scale(1);
+    }
+
+    .modal-header {
+        padding: 16px 20px;
+        background: rgba(255, 255, 255, 0.04);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .modal-header h3 {
+        margin: 0;
+        font-size: 1.15rem;
+        color: #fff;
+    }
+    .modal-close {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        font-size: 1.5rem;
+        cursor: pointer;
+        line-height: 1;
+    }
+    .modal-close:hover {
+        color: #fff;
+    }
+
+    .modal-body {
+        padding: 20px;
+        overflow-y: auto;
+        flex-grow: 1;
+    }
+
+    .item-list {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 16px 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .item-row {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 6px;
+        padding: 8px 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    .item-title {
+        font-size: 0.9rem;
+        color: #e2e8f0;
+    }
+    .item-actions {
+        display: flex;
+        gap: 6px;
+    }
+    .btn-icon {
+        background: rgba(255, 255, 255, 0.08);
+        border: none;
+        color: #cbd5e1;
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-size: 0.78rem;
+        cursor: pointer;
+    }
+    .btn-icon:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+    }
+    .btn-icon-danger:hover {
+        background: #ef4444;
+        color: #fff;
+    }
+
+    .add-item-form {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+    }
+    .add-item-input {
+        flex-grow: 1;
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 6px;
+        padding: 7px 12px;
+        color: #fff;
+        font-size: 0.88rem;
+        outline: none;
+    }
+
+    .modal-footer {
+        padding: 14px 20px;
+        background: rgba(255, 255, 255, 0.02);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .qr-preview-box {
+        text-align: center;
+        padding: 20px;
+    }
+    .qr-img {
+        width: 220px;
+        height: 220px;
+        background: #fff;
+        padding: 10px;
+        border-radius: 8px;
+        margin: 0 auto 14px auto;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="inspection-container">
+    <!-- Toolbar -->
+    <div class="toolbar-card">
+        <div class="toolbar-title">
+            <h2>🔍 教室檢查紀錄表</h2>
+            <div class="legend-bar">
+                <div class="legend-item"><span class="legend-badge legend-blank"></span>未檢查</div>
+                <div class="legend-item"><span class="legend-badge legend-green"></span>檢查完成</div>
+                <div class="legend-item"><span class="legend-badge legend-red"></span>檢查有異常</div>
+            </div>
+        </div>
+        <div class="toolbar-controls">
+            <form method="get" id="yearForm" style="margin: 0;">
+                <label style="font-size: 0.88rem; color: #94a3b8; margin-right: 6px;">年度：</label>
+                <select name="year" class="year-select" onchange="document.getElementById('yearForm').submit();">
+                    {% for y in years %}
+                        <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }} 年</option>
+                    {% endfor %}
+                </select>
+            </form>
+
+            <a href="{% url 'facility-classroom-inspection-pdf' %}" target="_blank" class="btn-action">📄 批次印製教室 QR Code (PDF)</a>
+            <button class="btn-action btn-secondary" onclick="openRoomsManagerModal()">⚙️ 教室清單管理</button>
+        </div>
+    </div>
+
+
+
+    <!-- Matrix Table -->
+    <div class="table-wrapper">
+        <table class="matrix-table">
+            <thead>
+                <tr>
+                    <th class="room-col">教室名稱</th>
+                    {% for winfo in weeks %}
+                        <th class="week-header-th {% if winfo.is_current_week %}current-week-col{% endif %} {% if winfo.show_month %}month-start-col{% endif %}" title="第 {{ winfo.week }} 週 ({{ winfo.monday_date }} 週一)">
+                            <div class="header-month">
+                                {% if winfo.is_current_week %}
+                                    {% if winfo.month_label %}{{ winfo.month_label }}{% else %}<span class="current-week-tag">本週</span>{% endif %}
+                                {% else %}
+                                    {{ winfo.month_label }}
+                                {% endif %}
+                            </div>
+                            <div class="header-day">{{ winfo.day_label }}</div>
+                        </th>
+                    {% endfor %}
+
+                </tr>
+            </thead>
+            <tbody>
+                {% for room in rooms %}
+                <tr>
+                    <td class="room-col">
+                        <a class="room-link" onclick="openItemsModal({{ room.id }}, '{{ room.name|escapejs }}')" title="點擊檢視/編輯檢查項目與QR Code">
+                            📋 {{ room.name }}
+                        </a>
+                    </td>
+                    {% for wdata in room.weeks_data %}
+                        <td class="{% if wdata.week == curr_isoweek %}current-week-col{% endif %} {% if wdata.show_month %}month-start-col{% endif %}">
+                            <div class="week-cell">
+                                <div class="week-cell-inner cell-{{ wdata.status }}">
+                                    {% if wdata.status == 'normal' %}✓{% elif wdata.status == 'abnormal' %}!{% endif %}
+                                </div>
+                                {% if wdata.has_record %}
+                                <div class="custom-tooltip">
+                                    <div class="tooltip-title">{{ room.name }} - {{ wdata.monday_date }} (第{{ wdata.week }}週)</div>
+                                    <div>🕒 時間：{{ wdata.time }}</div>
+                                    <div>📱 MAC：{{ wdata.mac|default:"-" }}</div>
+                                    <div>🌐 IP 位址：{{ wdata.ip|default:"-" }}</div>
+                                    <div>📶 網路 SSID：{{ wdata.ssid|default:"未知" }}</div>
+                                    <div>👤 檢查者：{{ wdata.inspector|default:"未填" }}</div>
+                                    <div>📌 狀況：{{ wdata.note }}</div>
+                                </div>
+
+                                {% else %}
+                                <div class="custom-tooltip">
+                                    <div class="tooltip-title">{{ room.name }} - {{ wdata.monday_date }} (第{{ wdata.week }}週)</div>
+                                    <div>未有檢查紀錄</div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                    {% endfor %}
+                </tr>
+
+                {% empty %}
+                <tr>
+                    <td colspan="54" style="text-align: center; padding: 30px; color: #94a3b8;">
+                        目前尚未建立任何教室資料
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal 1: Inspection Items Manager -->
+<div class="modal-overlay" id="itemsModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 id="itemsModalTitle">教室檢查項目</h3>
+            <button class="modal-close" onclick="closeModal('itemsModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size: 0.85rem; color: #94a3b8; margin: 0 0 12px 0;">
+                點選教室名稱時出現之檢查項目清單，可新增、編輯或刪除：
+            </p>
+            <ul class="item-list" id="itemsContainer">
+                <li style="color: #94a3b8; font-size: 0.85rem; text-align: center;">載入中...</li>
+            </ul>
+            <div class="add-item-form">
+                <input type="text" id="newItemName" class="add-item-input" placeholder="輸入新檢查項目名稱..." onkeydown="if(event.key==='Enter') addInspectionItem();" />
+                <button class="btn-action" onclick="addInspectionItem()">＋ 新增項目</button>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-action btn-secondary" onclick="openQrModalFromCurrentRoom()">📱 顯示 QR Code</button>
+            <button class="btn-action btn-secondary" onclick="closeModal('itemsModal')">關閉</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 2: QR Code Viewer -->
+<div class="modal-overlay" id="qrcodeModal">
+    <div class="modal-card" style="max-width: 400px;">
+        <div class="modal-header">
+            <h3 id="qrcodeModalTitle">教室 QR Code</h3>
+            <button class="modal-close" onclick="closeModal('qrcodeModal')">&times;</button>
+        </div>
+        <div class="modal-body qr-preview-box">
+            <img id="qrCodeImg" src="" alt="QR Code" class="qr-img" />
+            <p style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 8px;">
+                將此 QR Code 貼在教室內，供檢查者手機掃描後進入登記檢查結果。
+            </p>
+            <div style="word-break: break-all; font-size: 0.78rem; color: #60a5fa;" id="qrTargetUrl"></div>
+        </div>
+        <div class="modal-footer" style="justify-content: center; gap: 10px;">
+            <button class="btn-action" onclick="printQrCode()">🖨️ 列印 QR Code</button>
+            <button class="btn-action btn-secondary" onclick="closeModal('qrcodeModal')">關閉</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 3: Rooms Manager -->
+<div class="modal-overlay" id="roomsModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>教室清單管理</h3>
+            <button class="modal-close" onclick="closeModal('roomsModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <ul class="item-list" id="roomsContainer">
+                <li style="color: #94a3b8; font-size: 0.85rem; text-align: center;">載入中...</li>
+            </ul>
+            <div class="add-item-form">
+                <input type="text" id="newRoomName" class="add-item-input" placeholder="輸入新教室名稱 (例如 601)..." onkeydown="if(event.key==='Enter') addRoom();" />
+                <button class="btn-action" onclick="addRoom()">＋ 新增教室</button>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-action btn-secondary" onclick="closeModal('roomsModal'); location.reload();">完成並重載</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentRoomId = null;
+    let currentRoomName = '';
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).classList.remove('active');
+    }
+
+    function openModal(modalId) {
+        document.getElementById(modalId).classList.add('active');
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function openItemsModal(roomId, roomName) {
+        currentRoomId = roomId;
+        currentRoomName = roomName;
+        document.getElementById('itemsModalTitle').textContent = roomName + ' 教室 - 檢查項目';
+        loadItems(roomId);
+        openModal('itemsModal');
+    }
+
+    function loadItems(roomId) {
+        const container = document.getElementById('itemsContainer');
+        container.replaceChildren();
+        const loading = document.createElement('li');
+        loading.style.color = '#94a3b8';
+        loading.style.fontSize = '0.85rem';
+        loading.style.textAlign = 'center';
+        loading.textContent = '載入中...';
+        container.appendChild(loading);
+
+        fetch('/facility/classroom-inspection/api/items/?room_id=' + roomId)
+            .then(res => res.json())
+            .then(data => {
+                container.replaceChildren();
+                if (data.status === 'ok') {
+                    if (data.items.length === 0) {
+                        const empty = document.createElement('li');
+                        empty.style.color = '#94a3b8';
+                        empty.style.fontSize = '0.85rem';
+                        empty.style.textAlign = 'center';
+                        empty.textContent = '尚無檢查項目';
+                        container.appendChild(empty);
+                        return;
+                    }
+                    data.items.forEach(item => {
+                        const li = document.createElement('li');
+                        li.className = 'item-row';
+
+                        const span = document.createElement('span');
+                        span.className = 'item-title';
+                        span.textContent = item.item_name;
+                        li.appendChild(span);
+
+                        const actionsDiv = document.createElement('div');
+                        actionsDiv.className = 'item-actions';
+
+                        const editBtn = document.createElement('button');
+                        editBtn.className = 'btn-icon';
+                        editBtn.textContent = '✏️ 編輯';
+                        editBtn.onclick = () => editItem(item.id, item.item_name);
+                        actionsDiv.appendChild(editBtn);
+
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'btn-icon btn-icon-danger';
+                        deleteBtn.textContent = '🗑️ 刪除';
+                        deleteBtn.onclick = () => deleteItem(item.id);
+                        actionsDiv.appendChild(deleteBtn);
+
+                        li.appendChild(actionsDiv);
+                        container.appendChild(li);
+                    });
+                }
+            })
+            .catch(err => {
+                container.replaceChildren();
+                const errLi = document.createElement('li');
+                errLi.style.color = '#ef4444';
+                errLi.style.fontSize = '0.85rem';
+                errLi.textContent = '載入失敗';
+                container.appendChild(errLi);
+            });
+    }
+
+    function addInspectionItem() {
+        const input = document.getElementById('newItemName');
+        const name = input.value.trim();
+        if (!name || !currentRoomId) return;
+
+        const formData = new FormData();
+        formData.append('action', 'add');
+        formData.append('room_id', currentRoomId);
+        formData.append('item_name', name);
+
+        fetch('/facility/classroom-inspection/api/items/', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                input.value = '';
+                loadItems(currentRoomId);
+            } else {
+                alert(data.message || '新增失敗');
+            }
+        });
+    }
+
+    function editItem(itemId, oldName) {
+        const newName = prompt('請輸入新的檢查項目名稱：', oldName);
+        if (newName === null) return;
+        const name = newName.trim();
+        if (!name) return;
+
+        const formData = new FormData();
+        formData.append('action', 'edit');
+        formData.append('item_id', itemId);
+        formData.append('item_name', name);
+
+        fetch('/facility/classroom-inspection/api/items/', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                loadItems(currentRoomId);
+            } else {
+                alert(data.message || '修改失敗');
+            }
+        });
+    }
+
+    function deleteItem(itemId) {
+        if (!confirm('確定要刪除此檢查項目嗎？')) return;
+
+        const formData = new FormData();
+        formData.append('action', 'delete');
+        formData.append('item_id', itemId);
+
+        fetch('/facility/classroom-inspection/api/items/', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                loadItems(currentRoomId);
+            } else {
+                alert(data.message || '刪除失敗');
+            }
+        });
+    }
+
+    function openQrModalFromCurrentRoom() {
+        if (!currentRoomId) return;
+        document.getElementById('qrcodeModalTitle').textContent = currentRoomName + ' 教室 QR Code';
+        const qrImg = document.getElementById('qrCodeImg');
+        const qrUrl = '/facility/classroom-inspection/room/' + currentRoomId + '/qrcode/';
+        const targetInspectUrl = window.location.origin + '/facility/classroom-inspection/room/' + currentRoomId + '/inspect/';
+
+        qrImg.src = qrUrl;
+        document.getElementById('qrTargetUrl').textContent = targetInspectUrl;
+
+        closeModal('itemsModal');
+        openModal('qrcodeModal');
+    }
+
+    function printQrCode() {
+        const qrImgSrc = document.getElementById('qrCodeImg').src;
+        const targetUrl = document.getElementById('qrTargetUrl').textContent;
+        const printWin = window.open('', '_blank');
+        printWin.document.write(`
+            <html>
+                <head>
+                    <title>列印 ${currentRoomName} 教室 QR Code</title>
+                    <style>
+                        body { font-family: sans-serif; text-align: center; padding: 40px; }
+                        .card { border: 2px solid #333; border-radius: 12px; padding: 30px; display: inline-block; max-width: 350px; }
+                        h1 { margin: 0 0 10px 0; font-size: 28px; }
+                        p { color: #555; font-size: 14px; margin-bottom: 20px; }
+                        img { width: 250px; height: 250px; }
+                    </style>
+                </head>
+                <body onload="window.print();">
+                    <div class="card">
+                        <h1>${currentRoomName} 教室檢查點</h1>
+                        <p>請使用手機掃描以下 QR Code 登記檢查結果</p>
+                        <img src="${qrImgSrc}" />
+                        <p style="font-size:12px; color:#888; margin-top:15px; word-break:break-all;">${targetUrl}</p>
+                    </div>
+                </body>
+            </html>
+        `);
+        printWin.document.close();
+    }
+
+    function openRoomsManagerModal() {
+        loadRooms();
+        openModal('roomsModal');
+    }
+
+    function loadRooms() {
+        const container = document.getElementById('roomsContainer');
+        container.replaceChildren();
+        const loading = document.createElement('li');
+        loading.style.color = '#94a3b8';
+        loading.style.fontSize = '0.85rem';
+        loading.style.textAlign = 'center';
+        loading.textContent = '載入中...';
+        container.appendChild(loading);
+
+        fetch('/facility/classroom-inspection/api/rooms/')
+            .then(res => res.json())
+            .then(data => {
+                container.replaceChildren();
+                if (data.status === 'ok') {
+                    data.rooms.forEach(r => {
+                        const li = document.createElement('li');
+                        li.className = 'item-row';
+
+                        const span = document.createElement('span');
+                        span.className = 'item-title';
+                        span.textContent = r.name + ' (' + r.item_count + ' 個檢查項)';
+                        li.appendChild(span);
+
+                        const actionsDiv = document.createElement('div');
+                        actionsDiv.className = 'item-actions';
+
+                        const editBtn = document.createElement('button');
+                        editBtn.className = 'btn-icon';
+                        editBtn.textContent = '✏️ 改名';
+                        editBtn.onclick = () => editRoom(r.id, r.name, r.order_num);
+                        actionsDiv.appendChild(editBtn);
+
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'btn-icon btn-icon-danger';
+                        deleteBtn.textContent = '🗑️ 刪除';
+                        deleteBtn.onclick = () => deleteRoom(r.id, r.name);
+                        actionsDiv.appendChild(deleteBtn);
+
+                        li.appendChild(actionsDiv);
+                        container.appendChild(li);
+                    });
+                }
+            });
+    }
+
+    function addRoom() {
+        const input = document.getElementById('newRoomName');
+        const name = input.value.trim();
+        if (!name) return;
+
+        const formData = new FormData();
+        formData.append('action', 'add');
+        formData.append('name', name);
+
+        fetch('/facility/classroom-inspection/api/rooms/', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                input.value = '';
+                loadRooms();
+            } else {
+                alert(data.message || '新增失敗');
+            }
+        });
+    }
+
+    function editRoom(roomId, oldName, oldOrder) {
+        const newName = prompt('請輸入新的教室名稱：', oldName);
+        if (newName === null) return;
+        const name = newName.trim();
+        if (!name) return;
+
+        const formData = new FormData();
+        formData.append('action', 'edit');
+        formData.append('room_id', roomId);
+        formData.append('name', name);
+        formData.append('order_num', oldOrder);
+
+        fetch('/facility/classroom-inspection/api/rooms/', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                loadRooms();
+            } else {
+                alert(data.message || '修改失敗');
+            }
+        });
+    }
+
+    function deleteRoom(roomId, roomName) {
+        if (!confirm(`確定要刪除教室 [${roomName}] 及其所有檢查紀錄與項目嗎？`)) return;
+
+        const formData = new FormData();
+        formData.append('action', 'delete');
+        formData.append('room_id', roomId);
+
+        fetch('/facility/classroom-inspection/api/rooms/', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                loadRooms();
+            } else {
+                alert(data.message || '刪除失敗');
+            }
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,638 @@
+{% extends "base.html" %}
+
+{% block title %}教師課程錄音專區 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<style>
+    .edu-workspace-wrapper {
+        background-color: #0d1527;
+        color: #f8fafc;
+        padding: 20px;
+        border-radius: 16px;
+        min-height: 80vh;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    /* Mobile friendly container */
+    .record-container {
+        max-width: 500px;
+        margin: 0 auto;
+        background-color: #131c2e;
+        border: 1px solid #223049;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        text-align: center;
+    }
+
+    .record-header {
+        border-bottom: 1px solid #223049;
+        padding-bottom: 14px;
+        margin-bottom: 20px;
+    }
+
+    .record-title {
+        margin: 0;
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #ffffff;
+    }
+
+    .record-subtitle {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        margin: 6px 0 0 0;
+    }
+
+    /* Class Selector styling */
+    .class-selector-group {
+        text-align: left;
+        margin-bottom: 24px;
+    }
+
+    .selector-label {
+        font-size: 0.8rem;
+        color: #94a3b8;
+        font-weight: 600;
+        display: block;
+        margin-bottom: 6px;
+    }
+
+    .form-select-control {
+        background-color: #1e293b;
+        border: 1px solid #334155;
+        color: #f8fafc;
+        padding: 10px 14px;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        outline: none;
+        width: 100%;
+        box-sizing: border-box;
+        cursor: pointer;
+    }
+
+    .form-select-control:focus {
+        border-color: #38bdf8;
+    }
+
+    /* Timer */
+    .timer-display {
+        font-size: 3.5rem;
+        font-weight: 700;
+        color: #f8fafc;
+        font-family: monospace;
+        margin: 15px 0;
+        letter-spacing: 2px;
+    }
+
+    /* Pulsating red circle when recording */
+    .mic-button-wrapper {
+        position: relative;
+        width: 140px;
+        height: 140px;
+        margin: 0 auto 24px auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-mic {
+        width: 110px;
+        height: 110px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+        border: none;
+        color: #ffffff;
+        font-size: 2.8rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        outline: none;
+        box-shadow: 0 8px 16px rgba(239, 68, 68, 0.4);
+        transition: all 0.3s;
+        z-index: 10;
+    }
+
+    .btn-mic.recording {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+        animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 20px rgba(239, 68, 68, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+        }
+    }
+
+    /* Record state tag */
+    .status-tag {
+        font-size: 0.85rem;
+        font-weight: 700;
+        padding: 6px 14px;
+        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 20px;
+    }
+
+    .tag-ready { background-color: rgba(148, 163, 184, 0.15); color: #cbd5e1; }
+    .tag-recording { background-color: rgba(239, 68, 68, 0.15); color: #ef4444; }
+    .tag-preview { background-color: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+    .tag-success { background-color: rgba(34, 197, 94, 0.15); color: #4ade80; }
+
+    /* Audio preview player styling */
+    .preview-player {
+        width: 100%;
+        margin-bottom: 24px;
+        display: none;
+    }
+
+    /* Control buttons list */
+    .control-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .btn-control {
+        width: 100%;
+        padding: 12px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        text-decoration: none;
+    }
+
+    .btn-upload {
+        background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+        color: #ffffff;
+        box-shadow: 0 4px 10px rgba(34, 197, 94, 0.3);
+        display: none;
+    }
+
+    .btn-upload:hover {
+        filter: brightness(1.1);
+    }
+
+    .btn-upload:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .btn-back {
+        background-color: transparent;
+        border: 1px solid #334155;
+        color: #cbd5e1;
+    }
+
+    .btn-back:hover {
+        background-color: #1e293b;
+        color: #f8fafc;
+    }
+
+    /* Uploading Spinner Overlay */
+    .upload-progress-container {
+        display: none;
+        margin: 16px 0;
+        background-color: #0d1527;
+        border: 1px solid #223049;
+        border-radius: 8px;
+        padding: 14px;
+    }
+
+    .progress-bar-bg {
+        width: 100%;
+        height: 8px;
+        background-color: #1e293b;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 8px;
+    }
+
+    .progress-bar-fill {
+        width: 0%;
+        height: 100%;
+        background-color: #38bdf8;
+        transition: width 0.1s;
+    }
+
+    /* Breadcrumb navigation */
+    .edu-breadcrumb {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-size: 0.88rem;
+        color: #94a3b8;
+        margin-bottom: 20px;
+    }
+
+    .edu-breadcrumb a {
+        color: #38bdf8;
+        text-decoration: none;
+    }
+
+    .edu-breadcrumb a:hover {
+        text-decoration: underline;
+    }
+
+    .history-card {
+        margin-top: 20px;
+        background-color: #131c2e;
+        border: 1px solid #223049;
+        border-radius: 12px;
+        padding: 16px;
+        text-align: left;
+    }
+
+    .history-title {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin: 0 0 12px 0;
+        border-bottom: 1px solid #223049;
+        padding-bottom: 6px;
+    }
+
+    .history-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 0.82rem;
+    }
+
+    .history-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edu-workspace-wrapper">
+    <!-- Breadcrumb -->
+    <div class="edu-breadcrumb">
+        <a href="{% url 'education:course-list' %}">課程規劃</a>
+        <i class="bi bi-chevron-right"></i>
+        <a href="{% url 'education:course-detail' course.pk %}">{{ course.code }} 詳情</a>
+        <i class="bi bi-chevron-right"></i>
+        <span>教師手機課程錄音</span>
+    </div>
+
+    <!-- Recorder -->
+    <div class="record-container">
+        <div class="record-header">
+            <h3 class="record-title">{{ course.subject }}</h3>
+            <p class="record-subtitle">主要教師：{{ course.teachers }} | 教室：{{ course.classroom_name|default:"未指定" }}</p>
+        </div>
+
+        <!-- Class Session Dropdown Selector -->
+        <div class="class-selector-group">
+            <label class="selector-label" for="classSelect">請選擇本次錄製的堂次：</label>
+            <select id="classSelect" class="form-select-control">
+                {% for c in classes %}
+                <option value="{{ c.id }}" {% if forloop.first %}selected{% endif %}>
+                    第 {{ c.class_number }} 堂：{{ c.subject }} ({{ c.teacher }})
+                </option>
+                {% empty %}
+                <option value="">-- 目前無堂次規劃 --</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div id="statusTag" class="status-tag tag-ready">
+            <i class="bi bi-info-circle"></i> <span id="statusTagText">準備就緒，選好堂次後可開始錄音</span>
+        </div>
+
+        <div class="timer-display" id="timerDisplay">00:00</div>
+
+        <div class="mic-button-wrapper">
+            <button id="micBtn" class="btn-mic" aria-label="Microphone Button">
+                <i class="bi bi-mic-fill" id="micIcon"></i>
+            </button>
+        </div>
+
+        <audio id="audioPreview" controls class="preview-player"></audio>
+
+        <!-- Warning / info block about overwrite -->
+        <div id="overwriteNotice" style="margin: -10px 0 20px 0; font-size: 0.8rem; color: #4ade80; display: none;">
+            <i class="bi bi-file-earmark-music"></i> 本堂課已有錄音存檔，重新上傳將覆蓋舊檔。
+        </div>
+
+        <!-- Upload Status Block -->
+        <div class="upload-progress-container" id="uploadProgressContainer">
+            <div style="font-size: 0.8rem; color: #cbd5e1; display: flex; justify-content: space-between;">
+                <span id="uploadStatusText">檔案上傳中...</span>
+                <span id="uploadPercent">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progressBarFill"></div>
+            </div>
+        </div>
+
+        <div class="control-actions">
+            <button id="uploadBtn" class="btn-control btn-upload" disabled>
+                <i class="bi bi-cloud-arrow-up-fill"></i> 上傳本堂錄音檔案
+            </button>
+            <a href="{% url 'education:course-detail' course.pk %}" class="btn-control btn-back">
+                返回課程詳情
+            </a>
+        </div>
+
+        <!-- History status -->
+        <div class="history-card">
+            <h4 class="history-title"><i class="bi bi-file-earmark-music-fill text-info"></i> 本課程錄音狀態彙整</h4>
+            <ul class="history-list" id="historyList">
+                <!-- Javascript will populate list -->
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 堂次狀態資料 JSON
+    const classData = JSON.parse('{{ class_data_json|escapejs }}');
+
+    const classSelect = document.getElementById('classSelect');
+    const micBtn = document.getElementById('micBtn');
+    const micIcon = document.getElementById('micIcon');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const statusTag = document.getElementById('statusTag');
+    const statusTagText = document.getElementById('statusTagText');
+    const audioPreview = document.getElementById('audioPreview');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const overwriteNotice = document.getElementById('overwriteNotice');
+    const uploadProgressContainer = document.getElementById('uploadProgressContainer');
+    const progressBarFill = document.getElementById('progressBarFill');
+    const uploadPercent = document.getElementById('uploadPercent');
+    const uploadStatusText = document.getElementById('uploadStatusText');
+    const historyList = document.getElementById('historyList');
+
+    let mediaRecorder = null;
+    let chunks = [];
+    let recordTimer = null;
+    let startTime = 0;
+    let audioBlob = null;
+    let isRecording = false;
+
+    // 初始化狀態彙整清單
+    function renderHistoryList() {
+        historyList.innerHTML = '';
+        classData.forEach(item => {
+            const li = document.createElement('li');
+            li.className = 'history-item';
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.innerHTML = `第 ${item.number} 堂：${item.subject}`;
+            
+            const badgeSpan = document.createElement('span');
+            if (item.has_recording) {
+                badgeSpan.innerHTML = `<span style="color: #4ade80;"><i class="bi bi-check-circle-fill"></i> 已錄音</span>`;
+            } else {
+                badgeSpan.innerHTML = `<span style="color: #64748b;"><i class="bi bi-circle"></i> 未錄音</span>`;
+            }
+            
+            li.appendChild(nameSpan);
+            li.appendChild(badgeSpan);
+            historyList.appendChild(li);
+        });
+    }
+
+    // 依據選取的堂次切換狀態
+    function handleClassSelectionChange() {
+        if (isRecording) {
+            alert('錄音中無法切換堂次！請先停止錄製。');
+            // 還原為之前的選擇
+            return;
+        }
+
+        const classId = parseInt(classSelect.value);
+        const selectedClass = classData.find(c => c.id === classId);
+
+        if (!selectedClass) {
+            overwriteNotice.style.display = 'none';
+            return;
+        }
+
+        // 重設錄音預覽與狀態
+        audioPreview.style.display = 'none';
+        audioPreview.src = '';
+        uploadBtn.style.display = 'none';
+        uploadBtn.disabled = true;
+        timerDisplay.innerText = '00:00';
+        
+        statusTag.className = 'status-tag tag-ready';
+        statusTagText.innerText = `準備就緒，錄製「第 ${selectedClass.number} 堂」`;
+
+        // 檢查覆蓋提示
+        if (selectedClass.has_recording) {
+            overwriteNotice.style.display = 'block';
+        } else {
+            overwriteNotice.style.display = 'none';
+        }
+    }
+
+    classSelect.addEventListener('change', handleClassSelectionChange);
+
+    // 初始化與麥克風權限檢查
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        statusTag.className = 'status-tag tag-ready';
+        statusTag.style.backgroundColor = 'rgba(220, 38, 38, 0.15)';
+        statusTag.style.color = '#f87171';
+        statusTagText.innerText = '您的瀏覽器或設備不支援麥克風錄音！';
+        micBtn.disabled = true;
+    }
+
+    micBtn.addEventListener('click', function() {
+        if (!isRecording) {
+            startRecording();
+        } else {
+            stopRecording();
+        }
+    });
+
+    function startRecording() {
+        chunks = [];
+        audioPreview.style.display = 'none';
+        uploadBtn.style.display = 'none';
+        uploadBtn.disabled = true;
+        
+        // 停用選單避免錄製中切換
+        classSelect.disabled = true;
+
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                
+                mediaRecorder.ondataavailable = function(e) {
+                    if (e.data && e.data.size > 0) {
+                        chunks.push(e.data);
+                    }
+                };
+
+                mediaRecorder.onstop = function() {
+                    audioBlob = new Blob(chunks, { type: 'audio/webm' });
+                    
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    audioPreview.src = audioUrl;
+                    audioPreview.style.display = 'block';
+                    
+                    uploadBtn.style.display = 'inline-flex';
+                    uploadBtn.disabled = false;
+
+                    statusTag.className = 'status-tag tag-preview';
+                    statusTag.querySelector('i').className = 'bi bi-play-circle-fill';
+                    statusTagText.innerText = '錄製完畢，可試聽或直接點選上傳';
+
+                    // 釋放麥克風
+                    stream.getTracks().forEach(track => track.stop());
+                    classSelect.disabled = false;
+                };
+
+                mediaRecorder.start(1000);
+                isRecording = true;
+                startTime = Date.now();
+                updateTimer();
+                recordTimer = setInterval(updateTimer, 1000);
+
+                micBtn.className = 'btn-mic recording';
+                micIcon.className = 'bi bi-stop-fill';
+                
+                statusTag.className = 'status-tag tag-recording';
+                statusTag.querySelector('i').className = 'bi bi-record-circle';
+                statusTagText.innerText = '正在錄音中，觸碰麥克風停止錄音';
+            })
+            .catch(err => {
+                console.error('取得麥克風授權失敗:', err);
+                alert('無法取得麥克風權限，請確認是否已授權麥克風存取權！');
+                classSelect.disabled = false;
+            });
+    }
+
+    function stopRecording() {
+        if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
+        
+        mediaRecorder.stop();
+        isRecording = false;
+        clearInterval(recordTimer);
+
+        micBtn.className = 'btn-mic';
+        micIcon.className = 'bi bi-mic-fill';
+    }
+
+    function updateTimer() {
+        const elapsedMs = Date.now() - startTime;
+        const totalSecs = Math.floor(elapsedMs / 1000);
+        const mins = String(Math.floor(totalSecs / 60)).padStart(2, '0');
+        const secs = String(totalSecs % 60).padStart(2, '0');
+        timerDisplay.innerText = `${mins}:${secs}`;
+    }
+
+    // 上傳選定的錄音檔案
+    uploadBtn.addEventListener('click', function() {
+        if (!audioBlob) return;
+        
+        const classId = parseInt(classSelect.value);
+        const selectedClass = classData.find(c => c.id === classId);
+        if (!selectedClass) return;
+
+        uploadBtn.disabled = true;
+        uploadProgressContainer.style.display = 'block';
+        progressBarFill.style.width = '0%';
+        uploadPercent.innerText = '0%';
+        uploadStatusText.innerText = '正在將錄音轉檔與傳送中...';
+
+        const formData = new FormData();
+        formData.append('audio', audioBlob, 'recording.webm');
+
+        const xhr = new XMLHttpRequest();
+        // 使用點選堂次自有的 upload_url
+        xhr.open('POST', selectedClass.upload_url, true);
+        xhr.setRequestHeader('X-CSRFToken', '{{ csrf_token }}');
+
+        xhr.upload.onprogress = function(e) {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                progressBarFill.style.width = percent + '%';
+                uploadPercent.innerText = percent + '%';
+                if (percent === 100) {
+                    uploadStatusText.innerText = '檔案已傳送，伺服器處理儲存中...';
+                }
+            }
+        };
+
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                const response = JSON.parse(xhr.responseText);
+                if (response.status === 'success') {
+                    progressBarFill.style.backgroundColor = '#22c55e';
+                    uploadStatusText.innerText = '上傳成功！';
+                    
+                    statusTag.className = 'status-tag tag-success';
+                    statusTag.querySelector('i').className = 'bi bi-check-circle-fill';
+                    statusTagText.innerText = `第 ${selectedClass.number} 堂錄音自動上傳完成！`;
+
+                    // 更新本地狀態資料結構並重新繪製狀態列表
+                    selectedClass.has_recording = true;
+                    renderHistoryList();
+                    
+                    setTimeout(function() {
+                        uploadProgressContainer.style.display = 'none';
+                        handleClassSelectionChange();
+                    }, 1500);
+                } else {
+                    handleUploadError(response.message || '檔案儲存出錯');
+                }
+            } else {
+                let errorMsg = '伺服器錯誤，上傳失敗';
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    errorMsg = response.message || errorMsg;
+                } catch(e) {}
+                handleUploadError(errorMsg);
+            }
+        };
+
+        xhr.onerror = function() {
+            handleUploadError('網路連線中斷，上傳失敗！');
+        };
+
+        xhr.send(formData);
+    });
+
+    function handleUploadError(msg) {
+        uploadBtn.disabled = false;
+        uploadStatusText.innerText = '上傳失敗！';
+        progressBarFill.style.backgroundColor = '#ef4444';
+        alert('上傳失敗！錯誤原因：' + msg);
+    }
+
+    // 初始化狀態渲染與選擇
+    renderHistoryList();
+    handleClassSelectionChange();
+});
+</script>
+{% endblock %}

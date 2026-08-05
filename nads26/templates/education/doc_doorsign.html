@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>教室門貼 - {{ course.classroom_name }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif;
+            color: #0f172a;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Printable Area */
+        .print-page {
+            background-color: #ffffff;
+            width: 210mm;
+            min-height: 297mm;
+            box-sizing: border-box;
+            margin: 20px auto;
+            padding: 20mm;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* Floating toolbar */
+        .print-toolbar {
+            background-color: #1e293b;
+            color: #ffffff;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .btn-print {
+            background-color: #38bdf8;
+            color: #0f172a;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .btn-print:hover {
+            background-color: #0ea5e9;
+        }
+
+        /* Border */
+        .poster-border {
+            border: 6px solid #0f172a;
+            padding: 20mm 15mm;
+            height: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            flex-grow: 1;
+            text-align: center;
+        }
+
+        .door-header {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: 6px;
+            color: #475569;
+            text-transform: uppercase;
+            border-bottom: 2px solid #cbd5e1;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+
+        .door-room {
+            font-size: 5rem;
+            font-weight: 900;
+            color: #0f172a;
+            margin: 20px 0;
+            letter-spacing: 2px;
+        }
+
+        .door-label {
+            font-size: 1.2rem;
+            color: #64748b;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .door-subject {
+            font-size: 3rem;
+            font-weight: 900;
+            color: #0284c7;
+            margin: 15px 0 30px 0;
+            line-height: 1.3;
+        }
+
+        .door-details {
+            font-size: 1.5rem;
+            line-height: 1.8;
+            color: #1e293b;
+            font-weight: 700;
+            margin-bottom: 40px;
+        }
+
+        .door-details span {
+            color: #0f172a;
+            background-color: #f1f5f9;
+            padding: 4px 12px;
+            border-radius: 6px;
+            margin: 0 4px;
+        }
+
+        /* Schedule summary table at bottom */
+        .schedule-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #475569;
+            text-align: left;
+            margin-bottom: 10px;
+            border-left: 4px solid #0f172a;
+            padding-left: 8px;
+        }
+
+        .syllabus-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+        }
+
+        .syllabus-table th {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            font-weight: 800;
+            border: 1px solid #cbd5e1;
+            padding: 8px;
+        }
+
+        .syllabus-table td {
+            border: 1px solid #cbd5e1;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        /* Print media overrides */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: #ffffff !important;
+            }
+            .print-page {
+                margin: 0 !important;
+                padding: 10mm !important;
+                border: none !important;
+                box-shadow: none !important;
+                width: 100% !important;
+                height: 100vh !important;
+                min-height: auto !important;
+            }
+            .poster-border {
+                border-width: 5px !important;
+                padding: 12mm 10mm !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Toolbar -->
+    <div class="print-toolbar no-print">
+        <span>🚪 <strong>教室門貼列印預覽</strong>：本單張以超大字體呈現，專為貼於教室大門或引導看板設計。</span>
+        <button class="btn-print" onclick="window.print()">
+            🖨️ 開始列印
+        </button>
+    </div>
+
+    <!-- Print Page container -->
+    <div class="print-page">
+        <div class="poster-border">
+            
+            <div>
+                <div class="door-header">上 課 教 室 標 示</div>
+                
+                <div class="door-room">
+                    {{ course.classroom_name|default:"(未指定教室)" }}
+                </div>
+                
+                <div class="door-label">正 在 進 行 課 程</div>
+                
+                <div class="door-subject">
+                    {{ course.subject }}
+                </div>
+                
+                <div class="door-details">
+                    <div>課程規劃代號：<span>{{ course.code }}</span></div>
+                    <div>主要授課講師：<span>{{ course.teachers }}</span></div>
+                    <div style="margin-top: 10px;">固定上課時間：<span>{{ course.class_time }}</span></div>
+                </div>
+            </div>
+
+            <!-- Lower Schedule list -->
+            <div>
+                <div class="schedule-title">課程大綱與時間表</div>
+                <table class="syllabus-table">
+                    <thead>
+                        <tr>
+                            <th width="12%">堂次</th>
+                            <th width="28%">上課日期</th>
+                            <th width="60%">課堂主題</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c_class in classes|slice:":10" %}
+                        <tr>
+                            <td class="text-center"><strong>第 {{ c_class.class_number }} 堂</strong></td>
+                            <td class="text-center">
+                                {% if c_class.date %}
+                                    {{ c_class.date|date:"Y-m-d" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>{{ c_class.subject }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center" style="color: #64748b;">暫無詳細堂次資訊。</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% if classes.count > 10 %}
+                <p style="font-size: 0.7rem; color: #64748b; text-align: right; margin: 4px 0 0 0;">註：僅顯示前 10 堂次。本課程總計共 {{ course.total_classes }} 堂。</p>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>

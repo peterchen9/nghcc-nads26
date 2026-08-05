@@ -307,6 +307,157 @@
         font-weight: 600;
         color: var(--accent-color);
     }
+
+    /* Badge styling */
+    .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-align: center;
+    }
+    .badge-success {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    .badge-warning {
+        background: rgba(245, 158, 11, 0.15);
+        color: #fbbf24;
+        border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+    .badge-secondary {
+        background: rgba(156, 163, 175, 0.15);
+        color: #9ca3af;
+        border: 1px solid rgba(156, 163, 175, 0.2);
+    }
+    .badge-danger {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    /* Premium Modal Styling */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modal-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .modal-container {
+        background: rgba(30, 41, 59, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        border-radius: 20px;
+        width: 90%;
+        max-width: 550px;
+        max-height: 80vh;
+        display: flex;
+        flex-direction: column;
+        transform: scale(0.95);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modal-overlay.active .modal-container {
+        transform: scale(1);
+    }
+
+    .modal-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-title {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #fff;
+        font-family: 'Outfit', sans-serif;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1.5rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        transition: all 0.2s;
+    }
+
+    .modal-close:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .modal-body {
+        padding: 24px;
+        overflow-y: auto;
+        flex-grow: 1;
+    }
+
+    .modal-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+
+    .modal-table th, .modal-table td {
+        padding: 12px 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .modal-table th {
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--text-secondary);
+        font-size: 0.88rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .modal-table td {
+        color: var(--text-primary);
+        font-size: 0.95rem;
+    }
+
+    /* Modal name click links style */
+    .staff-name-link {
+        color: var(--accent-color);
+        text-decoration: none;
+        cursor: pointer;
+        transition: opacity 0.2s;
+    }
+
+    .staff-name-link:hover {
+        opacity: 0.8;
+        text-decoration: underline;
+    }
 </style>
 {% endblock %}
 
@@ -454,6 +605,85 @@
             </div>
         </div>
     </div>
+
+    <!-- 30-day Attendance Stats Card -->
+    <div class="table-card" style="margin-top: 30px;">
+        <div class="card-header">
+            <h3 class="card-title">近一個月出勤統計 ({{ start_date }} ~ {{ selected_date }})</h3>
+            <span style="font-size: 0.88rem; color: var(--text-secondary);">統計範圍：近30天 (含所選日期)</span>
+        </div>
+        <div style="overflow-x: auto;">
+            <table class="attendance-table">
+                <thead>
+                    <tr>
+                        <th>員工編號</th>
+                        <th>姓名</th>
+                        <th>準時 (天)</th>
+                        <th>遲到 (天)</th>
+                        <th>未打卡 (天)</th>
+                        <th>出勤比例統計</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in stats_30_days %}
+                        <tr>
+                            <td style="font-family: 'Outfit', sans-serif; font-weight: 600;">{{ item.employee_no }}</td>
+                            <td style="font-weight: 600;">
+                                <a href="javascript:void(0);" class="staff-name-link" data-name="{{ item.name }}" data-details="{{ item.daily_details_json|escape }}">{{ item.name }}</a>
+                            </td>
+                            <td>
+                                <span class="badge badge-success">{{ item.ontime_count }} 天</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-warning">{{ item.late_count }} 天</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-secondary">{{ item.nodata_count }} 天</span>
+                            </td>
+                            <td style="vertical-align: middle; width: 300px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div class="progress-bar-container" style="display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,0.05); width: 100%; border: 1px solid rgba(255, 255, 255, 0.05);">
+                                        <div style="width: {% widthratio item.ontime_count 30 100 %}%; background: #34d399;" title="準時: {{ item.ontime_count }} 天"></div>
+                                        <div style="width: {% widthratio item.late_count 30 100 %}%; background: #fbbf24;" title="遲到: {{ item.late_count }} 天"></div>
+                                        <div style="width: {% widthratio item.nodata_count 30 100 %}%; background: #f87171;" title="未打卡: {{ item.nodata_count }} 天"></div>
+                                    </div>
+                                    <span style="font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; width: 70px; text-align: right;">
+                                        準時 {% widthratio item.ontime_count 30 100 %}%
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal for daily details -->
+    <div id="statsModalOverlay" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h4 id="modalTitle" class="modal-title">同工出勤明細</h4>
+                <button id="modalClose" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="overflow-x: auto; max-height: 50vh;">
+                    <table class="modal-table">
+                        <thead>
+                            <tr>
+                                <th>日期</th>
+                                <th>最早打卡時間</th>
+                                <th>出勤狀態</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalTableBody">
+                            <!-- Rows populated dynamically by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -476,5 +706,64 @@
     }
     window.addEventListener('resize', adjustGrid);
     document.addEventListener('DOMContentLoaded', adjustGrid);
+
+    // Modal Interaction JS
+    document.addEventListener('DOMContentLoaded', function() {
+        const nameLinks = document.querySelectorAll('.staff-name-link');
+        const modalOverlay = document.getElementById('statsModalOverlay');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalTableBody = document.getElementById('modalTableBody');
+        const modalClose = document.getElementById('modalClose');
+
+        nameLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const name = this.getAttribute('data-name');
+                const detailsJson = this.getAttribute('data-details');
+                
+                try {
+                    const details = JSON.parse(detailsJson);
+                    modalTitle.textContent = `${name} - 近一個月每日打卡紀錄`;
+                    
+                    // Build table rows (latest first)
+                    let rowsHtml = '';
+                    const sortedDetails = details.slice().reverse();
+                    sortedDetails.forEach(day => {
+                        rowsHtml += `
+                            <tr>
+                                <td style="font-family: 'Outfit', sans-serif;">${day.date} (${day.weekday})</td>
+                                <td style="font-family: 'Outfit', sans-serif; font-weight: 600; color: ${day.time === '--:--:--' ? 'var(--text-secondary)' : 'var(--accent-color)'};">${day.time}</td>
+                                <td>
+                                    <span class="badge ${day.status_class}">${day.status}</span>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    modalTableBody.innerHTML = rowsHtml;
+                    modalOverlay.classList.add('active');
+                } catch (err) {
+                    console.error("Failed to parse daily details JSON:", err);
+                }
+            });
+        });
+
+        function closeModal() {
+            modalOverlay.classList.remove('active');
+        }
+
+        modalClose.addEventListener('click', closeModal);
+        modalOverlay.addEventListener('click', function(e) {
+            if (e.target === modalOverlay) {
+                closeModal();
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modalOverlay.classList.contains('active')) {
+                closeModal();
+            }
+        });
+    });
 </script>
 {% endblock %}

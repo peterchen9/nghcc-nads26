@@ -1,0 +1,849 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}聚會人數統計與管理 | {{ site_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Premium Attendance Dashboard Styling */
+    .attendance-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .attendance-title {
+        margin: 0;
+        font-family: 'Outfit', sans-serif;
+        font-size: 2rem;
+        background: linear-gradient(135deg, #ffffff 0%, var(--accent-color) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .attendance-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    /* Vibrant HSL Gradient Buttons */
+    .attendance-btn {
+        padding: 10px 20px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        border: none;
+        color: #ffffff;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .attendance-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+        filter: brightness(1.1);
+    }
+
+    .attendance-btn:active {
+        transform: translateY(0);
+    }
+
+    .btn-adult {
+        background: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
+    }
+
+    .btn-children {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+    .btn-youth {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+
+    .btn-prayer {
+        background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+    }
+
+    /* Grid Layout */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
+        margin-bottom: 24px;
+    }
+
+    @media (max-width: 1024px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Glassmorphism Card Style */
+    .premium-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(4px);
+    }
+
+    .card-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.25rem;
+        margin-top: 0;
+        margin-bottom: 20px;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding-bottom: 12px;
+    }
+
+    /* Summary list */
+    .summary-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        border-radius: 12px;
+    }
+
+    .summary-label {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+    }
+
+    .summary-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--accent-color);
+    }
+
+    /* Tabs Design */
+    .tabs-nav {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding-bottom: 8px;
+    }
+
+    .tab-btn {
+        background: none;
+        border: none;
+        padding: 10px 18px;
+        color: var(--text-secondary);
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+        background: rgba(255, 255, 255, 0.04);
+        color: #ffffff;
+    }
+
+    .tab-btn.active {
+        background: rgba(188, 220, 255, 0.1);
+        color: var(--accent-color);
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    /* Premium Table Styling */
+    .table-container {
+        overflow-x: auto;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+    .premium-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+
+    .premium-table th {
+        position: sticky;
+        top: 0;
+        background: #25364a;
+        padding: 14px 16px;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+        z-index: 10;
+    }
+
+    .premium-table td {
+        padding: 12px 16px;
+        font-size: 0.9rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        color: #ffffff;
+    }
+
+    .premium-table tr:hover td {
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .text-center {
+        text-align: center;
+    }
+
+    /* Modals Design */
+    .custom-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(15, 23, 42, 0.7);
+        backdrop-filter: blur(8px);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .custom-modal-backdrop.open {
+        display: flex;
+        opacity: 1;
+    }
+
+    .custom-modal {
+        width: min(500px, 100%);
+        background: #203144;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 16px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+        transform: scale(0.9);
+        transition: transform 0.3s ease;
+        overflow: hidden;
+    }
+
+    .custom-modal-backdrop.open .custom-modal {
+        transform: scale(1);
+    }
+
+    .custom-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(38, 56, 77, 0.9);
+    }
+
+    .custom-modal-header h3 {
+        margin: 0;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #ffffff;
+    }
+
+    .close-modal-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1.5rem;
+        cursor: pointer;
+        line-height: 1;
+        transition: color 0.2s;
+    }
+
+    .close-modal-btn:hover {
+        color: #ffffff;
+    }
+
+    .custom-modal-body {
+        padding: 24px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+
+    .form-group input, .form-group select {
+        width: 100%;
+        padding: 10px 14px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+        font-size: 1rem;
+        box-sizing: border-box;
+        transition: all 0.2s;
+    }
+
+    .form-group select option {
+        background-color: #203144;
+        color: #ffffff;
+    }
+
+    .form-group input:focus, .form-group select:focus {
+        border-color: var(--accent-color);
+        outline: none;
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 0 10px rgba(188, 220, 255, 0.15);
+    }
+
+    .custom-modal-footer {
+        display: flex;
+        gap: 12px;
+        margin-top: 10px;
+    }
+
+    .modal-btn {
+        flex: 1;
+        padding: 12px;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s;
+    }
+
+    .modal-btn.cancel {
+        background: rgba(255, 255, 255, 0.08);
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-btn.cancel:hover {
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    .modal-btn.submit {
+        color: #ffffff;
+    }
+
+    /* System Messages styling */
+    .system-messages {
+        margin-bottom: 20px;
+    }
+
+    .msg-alert {
+        padding: 12px 20px;
+        border-radius: 12px;
+        margin-bottom: 10px;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .msg-success {
+        background-color: rgba(16, 185, 129, 0.15);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        color: #34d399;
+    }
+
+    .msg-error {
+        background-color: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #f87171;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="padding: 24px;">
+    <!-- System Messages -->
+    {% if messages %}
+    <div class="system-messages">
+        {% for message in messages %}
+        <div class="msg-alert {% if message.tags == 'success' %}msg-success{% else %}msg-error{% endif %}">
+            <span>{{ message }}</span>
+            <button style="background:none; border:none; color:inherit; font-size:1.2rem; cursor:pointer;" onclick="this.parentElement.remove()">×</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Top Header -->
+    <div class="attendance-header">
+        <h2 class="attendance-title">聚會人數統計與管理</h2>
+        <div class="attendance-actions">
+            <button class="attendance-btn btn-adult" onclick="openModal('adultModal')">
+                <span>成人主日</span>
+            </button>
+            <button class="attendance-btn btn-children" onclick="openModal('childrenModal')">
+                <span>兒主聚會</span>
+            </button>
+            <button class="attendance-btn btn-youth" onclick="openModal('youthModal')">
+                <span>青少聚會</span>
+            </button>
+            <button class="attendance-btn btn-prayer" onclick="openModal('prayerModal')">
+                <span>禱告會</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Grid -->
+    <div class="dashboard-grid">
+        <!-- Yearly Attendance Bar Chart -->
+        <div class="premium-card">
+            <h3 class="card-title">📊 歷年人數長條圖</h3>
+            <div style="height: 350px; position: relative;">
+                <canvas id="yearlyChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Latest Statistics Panel -->
+        <div class="premium-card">
+            <h3 class="card-title">📌 最新聚會數據</h3>
+            <div class="summary-list">
+                {% if weekly_list %}
+                    {% with latest_week=weekly_list|first %}
+                    <div class="summary-item">
+                        <span class="summary-label">最新主日 ({{ latest_week.date|date:"Y-m-d" }})</span>
+                        <span class="summary-value">{{ latest_week.total|default:0|intcomma }} 人</span>
+                    </div>
+                    <div class="summary-item" style="padding-left: 28px;">
+                        <span class="summary-label">第一堂 / 第二堂 / 晚堂</span>
+                        <span class="summary-value" style="font-size:0.95rem; color:#ffffff;">
+                            {{ latest_week.first_service|default:0 }} / {{ latest_week.second_service|default:0 }} / {{ latest_week.evening_service|default:0 }}
+                        </span>
+                    </div>
+                    <div class="summary-item" style="padding-left: 28px;">
+                        <span class="summary-label">兒主 / 青少</span>
+                        <span class="summary-value" style="font-size:0.95rem; color:#ffffff;">
+                            {{ latest_week.children|default:0 }} / {{ latest_week.youth|default:0 }}
+                        </span>
+                    </div>
+                    {% endwith %}
+                {% else %}
+                    <div class="summary-item">
+                        <span class="summary-label">主日聚會</span>
+                        <span class="summary-value">暫無資料</span>
+                    </div>
+                {% endif %}
+
+                {% if prayer_list %}
+                    {% with latest_prayer=prayer_list|first %}
+                    <div class="summary-item">
+                        <span class="summary-label">最新禱告會 ({{ latest_prayer.date|date:"Y-m-d" }})</span>
+                        <span class="summary-value">{{ latest_prayer.attendance|intcomma }} 人</span>
+                    </div>
+                    {% endwith %}
+                {% else %}
+                    <div class="summary-item">
+                        <span class="summary-label">禱告會</span>
+                        <span class="summary-value">暫無資料</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Tables Card -->
+    <div class="premium-card">
+        <div class="tabs-nav">
+            <button class="tab-btn active" onclick="switchTab(event, 'sunday-tab')">⛪ 主日每週明細</button>
+            <button class="tab-btn" onclick="switchTab(event, 'prayer-tab')">🔥 禱告會明細</button>
+        </div>
+
+        <!-- Sunday Worship Table -->
+        <div id="sunday-tab" class="tab-content active">
+            <div class="table-container">
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th>週次(主日日期)</th>
+                            <th class="text-center">第一堂</th>
+                            <th class="text-center">第二堂</th>
+                            <th class="text-center">晚堂</th>
+                            <th class="text-center">線上</th>
+                            <th class="text-center">兒主</th>
+                            <th class="text-center">青少</th>
+                            <th class="text-center">總計</th>
+                            <th class="text-center">新朋友</th>
+                            <th>註記</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for week in weekly_list %}
+                        <tr>
+                            <td><strong>{{ week.date|date:"Y-m-d" }}</strong></td>
+                            <td class="text-center">{{ week.first_service|default:"-" }}</td>
+                            <td class="text-center">{{ week.second_service|default:"-" }}</td>
+                            <td class="text-center">{{ week.evening_service|default:"-" }}</td>
+                            <td class="text-center">{{ week.online|default:"-" }}</td>
+                            <td class="text-center" style="color: #34d399;">{{ week.children|default:"-" }}</td>
+                            <td class="text-center" style="color: #fbbf24;">{{ week.youth|default:"-" }}</td>
+                            <td class="text-center" style="color: var(--accent-color); font-weight:700;">{{ week.total|default:"0" }}</td>
+                            <td class="text-center">{{ week.new_friends|default:"-" }}</td>
+                            <td><span style="font-size: 0.85rem; opacity: 0.8;">{{ week.remark|default:"" }}</span></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center">無主日數據資料</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Prayer Meeting Table -->
+        <div id="prayer-tab" class="tab-content">
+            <div class="table-container">
+                <table class="premium-table" style="max-width: 600px; margin: 0 auto;">
+                    <thead>
+                        <tr>
+                            <th>日期(週四)</th>
+                            <th class="text-center">人數</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for prayer in prayer_list %}
+                        <tr>
+                            <td><strong>{{ prayer.date|date:"Y-m-d" }}</strong></td>
+                            <td class="text-center" style="color: var(--accent-color); font-weight:700; font-size:1.1rem;">{{ prayer.attendance }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" class="text-center">無禱告會數據資料</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MODALS ==================== -->
+
+<!-- 1. 成人 Modal -->
+<div class="custom-modal-backdrop" id="adultModal">
+    <div class="custom-modal">
+        <div class="custom-modal-header">
+            <h3>📝 輸入成人聚會人數</h3>
+            <button class="close-modal-btn" onclick="closeModal('adultModal')">&times;</button>
+        </div>
+        <form method="post" action="{% url 'eureka:meeting-attendance' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="adult">
+            <div class="custom-modal-body">
+                <div class="form-group">
+                    <label for="adult_date">週次 (主日日期)</label>
+                    <select name="date" id="adult_date" required>
+                        {% for date in sunday_choices %}
+                            <option value="{{ date|date:'Y-m-d' }}" {% if date == default_sunday %}selected{% endif %}>
+                                {{ date|date:'Y-m-d' }} {% if date == default_sunday %}(已過之最近主日){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="adult_first">第一堂</label>
+                    <input type="number" name="first_service" id="adult_first" min="0" placeholder="輸入第一堂人數">
+                </div>
+                <div class="form-group">
+                    <label for="adult_second">第二堂</label>
+                    <input type="number" name="second_service" id="adult_second" min="0" placeholder="輸入第二堂人數">
+                </div>
+                <div class="form-group">
+                    <label for="adult_evening">晚堂</label>
+                    <input type="number" name="evening_service" id="adult_evening" min="0" placeholder="輸入晚堂人數">
+                </div>
+                <div class="custom-modal-footer">
+                    <button type="button" class="modal-btn cancel" onclick="closeModal('adultModal')">取消</button>
+                    <button type="submit" class="modal-btn submit btn-adult">確認儲存</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 2. 兒主 Modal -->
+<div class="custom-modal-backdrop" id="childrenModal">
+    <div class="custom-modal">
+        <div class="custom-modal-header">
+            <h3>👶 輸入兒童主日學人數</h3>
+            <button class="close-modal-btn" onclick="closeModal('childrenModal')">&times;</button>
+        </div>
+        <form method="post" action="{% url 'eureka:meeting-attendance' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="children">
+            <div class="custom-modal-body">
+                <div class="form-group">
+                    <label for="children_date">週次 (主日日期)</label>
+                    <select name="date" id="children_date" required>
+                        {% for date in sunday_choices %}
+                            <option value="{{ date|date:'Y-m-d' }}" {% if date == default_sunday %}selected{% endif %}>
+                                {{ date|date:'Y-m-d' }} {% if date == default_sunday %}(已過之最近主日){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="children_attendance">人數</label>
+                    <input type="number" name="attendance" id="children_attendance" min="0" placeholder="輸入兒主人數" required>
+                </div>
+                <div class="custom-modal-footer">
+                    <button type="button" class="modal-btn cancel" onclick="closeModal('childrenModal')">取消</button>
+                    <button type="submit" class="modal-btn submit btn-children">確認儲存</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 3. 青少 Modal -->
+<div class="custom-modal-backdrop" id="youthModal">
+    <div class="custom-modal">
+        <div class="custom-modal-header">
+            <h3>⚡ 輸入青少年聚會人數</h3>
+            <button class="close-modal-btn" onclick="closeModal('youthModal')">&times;</button>
+        </div>
+        <form method="post" action="{% url 'eureka:meeting-attendance' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="youth">
+            <div class="custom-modal-body">
+                <div class="form-group">
+                    <label for="youth_date">週次 (主日日期)</label>
+                    <select name="date" id="youth_date" required>
+                        {% for date in sunday_choices %}
+                            <option value="{{ date|date:'Y-m-d' }}" {% if date == default_sunday %}selected{% endif %}>
+                                {{ date|date:'Y-m-d' }} {% if date == default_sunday %}(已過之最近主日){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="youth_attendance">人數</label>
+                    <input type="number" name="attendance" id="youth_attendance" min="0" placeholder="輸入青少人數" required>
+                </div>
+                <div class="custom-modal-footer">
+                    <button type="button" class="modal-btn cancel" onclick="closeModal('youthModal')">取消</button>
+                    <button type="submit" class="modal-btn submit btn-youth">確認儲存</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 4. 禱告會 Modal -->
+<div class="custom-modal-backdrop" id="prayerModal">
+    <div class="custom-modal">
+        <div class="custom-modal-header">
+            <h3>🔥 輸入禱告會聚會人數</h3>
+            <button class="close-modal-btn" onclick="closeModal('prayerModal')">&times;</button>
+        </div>
+        <form method="post" action="{% url 'eureka:meeting-attendance' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="prayer">
+            <div class="custom-modal-body">
+                <div class="form-group">
+                    <label for="prayer_date">週次 (週四日期)</label>
+                    <select name="date" id="prayer_date" required>
+                        {% for date in thursday_choices %}
+                            <option value="{{ date|date:'Y-m-d' }}" {% if date == default_thursday %}selected{% endif %}>
+                                {{ date|date:'Y-m-d' }} {% if date == default_thursday %}(已過之最近週四){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="prayer_attendance">人數</label>
+                    <input type="number" name="attendance" id="prayer_attendance" min="0" placeholder="輸入禱告會人數" required>
+                </div>
+                <div class="custom-modal-footer">
+                    <button type="button" class="modal-btn cancel" onclick="closeModal('prayerModal')">取消</button>
+                    <button type="submit" class="modal-btn submit btn-prayer">確認儲存</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Tab switching logic
+    function switchTab(evt, tabId) {
+        // Get all elements with class="tab-content" and hide them
+        const tabContents = document.querySelectorAll(".tab-content");
+        tabContents.forEach(content => {
+            content.classList.remove("active");
+        });
+
+        // Get all elements with class="tab-btn" and remove the class "active"
+        const tabBtns = document.querySelectorAll(".tab-btn");
+        tabBtns.forEach(btn => {
+            btn.classList.remove("active");
+        });
+
+        // Show the current tab, and add an "active" class to the button that opened the tab
+        document.getElementById(tabId).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+
+    // Modal Control Logic
+    function openModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.style.display = 'flex';
+            // Force redraw before adding class for transition
+            modal.offsetHeight;
+            modal.classList.add('open');
+        }
+    }
+
+    function closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.remove('open');
+            // Wait for transition to complete before hiding
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+    }
+
+    // Close modals on clicking outside the modal content box
+    document.querySelectorAll('.custom-modal-backdrop').forEach(backdrop => {
+        backdrop.addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeModal(this.id);
+            }
+        });
+    });
+
+    // Close on ESC key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            document.querySelectorAll('.custom-modal-backdrop.open').forEach(backdrop => {
+                closeModal(backdrop.id);
+            });
+        }
+    });
+
+    // Initialize Chart.js
+    document.addEventListener('DOMContentLoaded', function() {
+        const years = {{ yearly_years|safe }};
+        const attendances = {{ yearly_attendance|safe }};
+
+        const ctx = document.getElementById('yearlyChart').getContext('2d');
+        
+        // Define premium custom gradients
+        const attGradient = ctx.createLinearGradient(0, 0, 0, 400);
+        attGradient.addColorStop(0, 'rgba(59, 130, 246, 0.85)'); // Blue
+        attGradient.addColorStop(1, 'rgba(99, 102, 241, 0.25)'); // Indigo/Purple
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: years,
+                datasets: [
+                    {
+                        label: '主日聚會平均人數',
+                        data: attendances,
+                        backgroundColor: attGradient,
+                        borderColor: '#3b82f6',
+                        borderWidth: 1.5,
+                        borderRadius: 6,
+                        yAxisID: 'y'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#e2e8f0',
+                            font: {
+                                size: 12,
+                                weight: '600'
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleColor: '#ffffff',
+                        bodyColor: '#cbd5e1',
+                        borderColor: 'rgba(255,255,255,0.1)',
+                        borderWidth: 1,
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: true
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.05)'
+                        },
+                        ticks: {
+                            color: '#cbd5e1',
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    y: {
+                        position: 'left',
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.08)'
+                        },
+                        ticks: {
+                            color: '#cbd5e1'
+                        },
+                        title: {
+                            display: true,
+                            text: '聚會人數',
+                            color: '#e2e8f0'
+                        }
+                    }
+                }
+            }
+        });
+    });
+
+</script>
+{% endblock %}

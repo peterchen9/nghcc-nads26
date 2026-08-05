@@ -13,6 +13,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django import forms
 from django.db import connection, transaction
+from django.db.utils import OperationalError, ProgrammingError
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import redirect, render
 
@@ -41,8 +42,57 @@ STAFF_LEAVE_SHEET_GIDS = {
     '2026-11': '117424320',
     '2026-12': '1003563016',
 }
-LEAVE_CODES = {'補', '休', '特', '公', '其他'}
+LEAVE_CODES = {'補', '休', '特', '公', '其他', '病假', '事假', '陪/產假', '喪', '育嬰'}
 LEAVE_PARTS = {'am': '上午', 'pm': '下午'}
+STAFF_LEAVE_DISPLAY_ORDER = [
+    '明月',
+    '德官',
+    '明珠',
+    '玉筍',
+    '宜庭',
+    '仲甫',
+    '慕聖',
+    '沐恩',
+    '囿余',
+    '小慧',
+    '文正',
+    '美美',
+    '惠萍',
+    '依蓮',
+    '宗英',
+    '方正',
+    '慧芝',
+    '文秀',
+    '彼得陳',
+]
+STAFF_LEAVE_CANONICAL_NAMES = {
+    '林明月': '明月',
+    '董德官': '德官',
+    '德官 董': '德官',
+    '德官董': '德官',
+    '羅明珠': '明珠',
+    '周玉筍': '玉筍',
+    '何宜庭': '宜庭',
+    '鄭仲甫': '仲甫',
+    '張慕聖': '慕聖',
+    '趙沐恩': '沐恩',
+    '陳囿余': '囿余',
+    '謝淑慧': '小慧',
+    '林文正': '文正',
+    '黃美美': '美美',
+    '張惠萍': '惠萍',
+    '陳依蓮': '依蓮',
+    '楊宗英': '宗英',
+    '施方正': '方正',
+    '方正 施': '方正',
+    '方正施': '方正',
+    '郭慧芝': '慧芝',
+    '蔡文秀': '文秀',
+    'peterchen': '彼得陳',
+    '潘傳': '彼得陳',
+    '陳潘傳': '彼得陳',
+    '彼得 陳': '彼得陳',
+}
 LEGACY_HEADER_SKIP_NAMES = {'\u661f\u671f', '\u6559\u6703\u884c\u653f'}
 LEGACY_OTHER_CODE = '\u5176\u4ed6'
 LEGACY_CODE_PREFIXES = {'\u88dc', '\u4f11', '\u7279', '\u516c'}
@@ -164,57 +214,99 @@ def planned_page(request, unused_path=None):
 
 def _leave_ensure_table():
     with connection.cursor() as cursor:
-        cursor.execute(
-            f'''
-            CREATE TABLE IF NOT EXISTS {STAFF_LEAVE_TABLE} (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                staff_user VARCHAR(150) NOT NULL,
-                staff_name VARCHAR(200) NOT NULL DEFAULT '',
-                leave_date DATE NOT NULL,
-                day_part VARCHAR(8) NOT NULL,
-                code VARCHAR(16) NOT NULL,
-                description VARCHAR(500) NOT NULL DEFAULT '',
-                source VARCHAR(80) NOT NULL DEFAULT '',
-                created_at DATETIME NOT NULL,
-                updated_at DATETIME NOT NULL,
-                UNIQUE KEY uniq_staff_leave_slot (staff_user, leave_date, day_part),
-                INDEX idx_staff_leave_month (leave_date),
-                INDEX idx_staff_leave_user_month (staff_user, leave_date)
-            )
-            '''
-        )
-        cursor.execute(f'SHOW COLUMNS FROM {STAFF_LEAVE_TABLE} LIKE %s', ['source'])
-        if not cursor.fetchone():
+        if connection.vendor == 'sqlite':
             cursor.execute(
                 f'''
-                ALTER TABLE {STAFF_LEAVE_TABLE}
-                ADD COLUMN source VARCHAR(80) NOT NULL DEFAULT ''
-                AFTER description
+                CREATE TABLE IF NOT EXISTS {STAFF_LEAVE_TABLE} (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    staff_user VARCHAR(150) NOT NULL,
+                    staff_name VARCHAR(200) NOT NULL DEFAULT '',
+                    leave_date DATE NOT NULL,
+                    day_part VARCHAR(8) NOT NULL,
+                    code VARCHAR(16) NOT NULL,
+                    description VARCHAR(500) NOT NULL DEFAULT '',
+                    source VARCHAR(80) NOT NULL DEFAULT '',
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME NOT NULL,
+                    UNIQUE (staff_user, leave_date, day_part)
+                )
                 '''
             )
+            cursor.execute(f'CREATE INDEX IF NOT EXISTS idx_staff_leave_month ON {STAFF_LEAVE_TABLE} (leave_date)')
+            cursor.execute(f'CREATE INDEX IF NOT EXISTS idx_staff_leave_user_month ON {STAFF_LEAVE_TABLE} (staff_user, leave_date)')
+        else:
+            cursor.execute(
+                f'''
+                CREATE TABLE IF NOT EXISTS {STAFF_LEAVE_TABLE} (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    staff_user VARCHAR(150) NOT NULL,
+                    staff_name VARCHAR(200) NOT NULL DEFAULT '',
+                    leave_date DATE NOT NULL,
+                    day_part VARCHAR(8) NOT NULL,
+                    code VARCHAR(16) NOT NULL,
+                    description VARCHAR(500) NOT NULL DEFAULT '',
+                    source VARCHAR(80) NOT NULL DEFAULT '',
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME NOT NULL,
+                    UNIQUE KEY uniq_staff_leave_slot (staff_user, leave_date, day_part),
+                    INDEX idx_staff_leave_month (leave_date),
+                    INDEX idx_staff_leave_user_month (staff_user, leave_date)
+                )
+                '''
+            )
+            cursor.execute(f'SHOW COLUMNS FROM {STAFF_LEAVE_TABLE} LIKE %s', ['source'])
+            if not cursor.fetchone():
+                cursor.execute(
+                    f'''
+                    ALTER TABLE {STAFF_LEAVE_TABLE}
+                    ADD COLUMN source VARCHAR(80) NOT NULL DEFAULT ''
+                    AFTER description
+                    '''
+                )
 
 
 def _church_calendar_ensure_table():
     with connection.cursor() as cursor:
-        cursor.execute(
-            f'''
-            CREATE TABLE IF NOT EXISTS {CHURCH_CALENDAR_TABLE} (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                event_date DATE NOT NULL,
-                weekday VARCHAR(8) NOT NULL DEFAULT '',
-                church_activity TEXT NOT NULL,
-                work_plan TEXT NOT NULL,
-                staff_leave_note TEXT NOT NULL,
-                holiday_social TEXT NOT NULL,
-                note TEXT NOT NULL,
-                source VARCHAR(80) NOT NULL DEFAULT '',
-                created_at DATETIME NOT NULL,
-                updated_at DATETIME NOT NULL,
-                UNIQUE KEY uniq_staff_church_calendar_date (event_date),
-                INDEX idx_staff_church_calendar_month (event_date)
+        if connection.vendor == 'sqlite':
+            cursor.execute(
+                f'''
+                CREATE TABLE IF NOT EXISTS {CHURCH_CALENDAR_TABLE} (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    event_date DATE NOT NULL,
+                    weekday VARCHAR(8) NOT NULL DEFAULT '',
+                    church_activity TEXT NOT NULL,
+                    work_plan TEXT NOT NULL,
+                    staff_leave_note TEXT NOT NULL,
+                    holiday_social TEXT NOT NULL,
+                    note TEXT NOT NULL,
+                    source VARCHAR(80) NOT NULL DEFAULT '',
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME NOT NULL,
+                    UNIQUE (event_date)
+                )
+                '''
             )
-            '''
-        )
+            cursor.execute(f'CREATE INDEX IF NOT EXISTS idx_staff_church_calendar_month ON {CHURCH_CALENDAR_TABLE} (event_date)')
+        else:
+            cursor.execute(
+                f'''
+                CREATE TABLE IF NOT EXISTS {CHURCH_CALENDAR_TABLE} (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    event_date DATE NOT NULL,
+                    weekday VARCHAR(8) NOT NULL DEFAULT '',
+                    church_activity TEXT NOT NULL,
+                    work_plan TEXT NOT NULL,
+                    staff_leave_note TEXT NOT NULL,
+                    holiday_social TEXT NOT NULL,
+                    note TEXT NOT NULL,
+                    source VARCHAR(80) NOT NULL DEFAULT '',
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME NOT NULL,
+                    UNIQUE KEY uniq_staff_church_calendar_date (event_date),
+                    INDEX idx_staff_church_calendar_month (event_date)
+                )
+                '''
+            )
 
 
 def _month_start(day):
@@ -264,8 +356,63 @@ def _staff_display_name(user):
 
 
 def _staff_user_aliases(user):
-    aliases = [user.get_username(), _staff_display_name(user)]
+    alias_map = _staff_name_aliases()
+    username = user.get_username()
+    display_name = _staff_display_name(user)
+    canonical_name = _canonical_staff_name(username, alias_map)
+    if canonical_name == username:
+        canonical_name = _canonical_staff_name(display_name, alias_map)
+    aliases = [username, display_name, canonical_name]
+    aliases.extend(
+        alias
+        for alias, canonical in alias_map.items()
+        if canonical == canonical_name
+    )
     return [alias for index, alias in enumerate(aliases) if alias and alias not in aliases[:index]]
+
+
+def _compact_staff_name(name):
+    return ''.join(str(name or '').split())
+
+
+def _canonical_staff_name(name, alias_map=None):
+    alias_map = alias_map or STAFF_LEAVE_CANONICAL_NAMES
+    text = str(name or '').strip()
+    compact = _compact_staff_name(text)
+    return alias_map.get(text, alias_map.get(compact, text))
+
+
+def _staff_name_aliases():
+    aliases = dict(STAFF_LEAVE_CANONICAL_NAMES)
+    for alias, canonical in list(aliases.items()):
+        aliases.setdefault(_compact_staff_name(alias), canonical)
+    try:
+        from modules.eureka.models import StaffInfo
+
+        staff_records = StaffInfo.objects.select_related('user').all()
+        for staff in staff_records:
+            canonical_name = _canonical_staff_name(staff.name, aliases)
+            aliases[staff.name] = canonical_name
+            aliases[_compact_staff_name(staff.name)] = canonical_name
+            if staff.user_id:
+                username = staff.user.get_username()
+                full_name = staff.user.get_full_name().strip()
+                aliases[username] = canonical_name
+                if full_name:
+                    aliases[full_name] = canonical_name
+                    aliases[_compact_staff_name(full_name)] = canonical_name
+
+        for user in get_user_model().objects.filter(is_active=True):
+            full_name = user.get_full_name().strip()
+            canonical_name = _canonical_staff_name(full_name, aliases)
+            if canonical_name not in STAFF_LEAVE_DISPLAY_ORDER:
+                continue
+            aliases.setdefault(user.get_username(), canonical_name)
+            aliases.setdefault(full_name, canonical_name)
+            aliases.setdefault(_compact_staff_name(full_name), canonical_name)
+    except (OperationalError, ProgrammingError):
+        pass
+    return aliases
 
 
 def _month_options(today):
@@ -619,13 +766,43 @@ def church_calendar_page(request):
     return render(request, 'staff/calendar.html', context)
 
 
-def _staff_names_for_month(month_start, entries):
-    names = _legacy_staff_names_for_month(month_start)
+def _staff_names_for_month(month_start, entries, alias_map=None):
+    alias_map = alias_map or _staff_name_aliases()
+    names = []
+    candidates = [
+        *STAFF_LEAVE_DISPLAY_ORDER,
+        *_legacy_staff_names_for_month(month_start),
+    ]
     for entry in entries:
-        name = entry.get('staff_name') or entry.get('staff_user') or ''
+        candidates.append(entry.get('staff_name') or entry.get('staff_user') or '')
+    for candidate in candidates:
+        name = _canonical_staff_name(candidate, alias_map)
         if name and name not in names:
             names.append(name)
     return names
+
+
+def _get_used_annual_leave_days(user):
+    aliases = _staff_user_aliases(user)
+    with connection.cursor() as cursor:
+        placeholders = ', '.join(['%s'] * len(aliases))
+        query = f"""
+            SELECT COUNT(*) 
+            FROM {STAFF_LEAVE_TABLE} 
+            WHERE (staff_user IN ({placeholders}) OR staff_name IN ({placeholders}))
+              AND STRFTIME('%%Y', leave_date) = %s
+              AND code = '特'
+        """ if connection.vendor == 'sqlite' else f"""
+            SELECT COUNT(*) 
+            FROM {STAFF_LEAVE_TABLE} 
+            WHERE (staff_user IN ({placeholders}) OR staff_name IN ({placeholders}))
+              AND YEAR(leave_date) = %s
+              AND code = '特'
+        """
+        params = list(aliases) + list(aliases) + [str(STAFF_LEAVE_YEAR)]
+        cursor.execute(query, params)
+        count = cursor.fetchone()[0]
+    return float(count) * 0.5
 
 
 def _save_leave_entry(request, selected_month):
@@ -648,6 +825,34 @@ def _save_leave_entry(request, selected_month):
     username = request.user.get_username()
     staff_name = _staff_display_name(request.user)
     aliases = _staff_user_aliases(request.user)
+
+    if code == '特':
+        with connection.cursor() as cursor:
+            placeholders = ', '.join(['%s'] * len(aliases))
+            cursor.execute(
+                f"SELECT code FROM {STAFF_LEAVE_TABLE} WHERE staff_user IN ({placeholders}) AND leave_date = %s AND day_part = %s",
+                list(aliases) + [leave_day, day_part]
+            )
+            row = cursor.fetchone()
+            was_special = row and row[0] == '特'
+            
+        if not was_special:
+            annual_leave_quota = 0.0
+            try:
+                from modules.eureka.models import StaffInfo
+                staff_info = StaffInfo.objects.filter(user=request.user).first()
+                if not staff_info:
+                    staff_info = StaffInfo.objects.filter(name=staff_name).first()
+                if staff_info:
+                    annual_leave_quota = staff_info.annual_leave_quota
+            except Exception:
+                pass
+                
+            used_days = _get_used_annual_leave_days(request.user)
+            if used_days + 0.5 > annual_leave_quota:
+                messages.error(request, f"您的特休已達上限 ({annual_leave_quota} 天)，無法再新增特休。")
+                return leave_day
+
     now = datetime.now()
     with connection.cursor() as cursor:
         cursor.execute(
@@ -738,8 +943,22 @@ def leave_calendar_page(request):
     today = date.today()
     entries = _leave_entries(selected_month)
     church_calendar_entries = _church_calendar_entries(selected_month)
-    staff_names = _staff_names_for_month(selected_month, entries)
+    staff_name_aliases = _staff_name_aliases()
+    staff_names = _staff_names_for_month(selected_month, entries, staff_name_aliases)
     current_user = request.user.get_username()
+
+    annual_leave_quota = 0.0
+    try:
+        from modules.eureka.models import StaffInfo
+        staff_info = StaffInfo.objects.filter(user=request.user).first()
+        if not staff_info:
+            staff_info = StaffInfo.objects.filter(name=_staff_display_name(request.user)).first()
+        if staff_info:
+            annual_leave_quota = staff_info.annual_leave_quota
+    except Exception:
+        pass
+    used_leave_days = _get_used_annual_leave_days(request.user)
+
     context = {
         'month_options': _month_options(today),
         'selected_month': selected_month,
@@ -747,14 +966,17 @@ def leave_calendar_page(request):
         'calendar_weeks': _calendar_weeks(selected_month),
         'entries_json': json.dumps(entries, ensure_ascii=False),
         'staff_names_json': json.dumps(staff_names, ensure_ascii=False),
+        'staff_name_aliases_json': json.dumps(staff_name_aliases, ensure_ascii=False),
         'church_calendar_entries': church_calendar_entries,
         'church_calendar_entries_json': json.dumps(church_calendar_entries, ensure_ascii=False),
         'current_user': current_user,
         'current_staff_name': _staff_display_name(request.user),
         'current_user_aliases_json': json.dumps(_staff_user_aliases(request.user), ensure_ascii=False),
-        'leave_codes': ['補', '休', '特', '公', '其他'],
+        'leave_codes': ['補', '休', '特', '公', '其他', '病假', '事假', '陪/產假', '喪', '育嬰'],
         'leave_parts': LEAVE_PARTS,
         'is_locked': _is_leave_month_locked(selected_month, today),
         'lock_note': '每月5日鎖住前一個月；已鎖定月份只能閱讀。',
+        'annual_leave_quota': annual_leave_quota,
+        'used_leave_days': used_leave_days,
     }
     return render(request, 'staff/leaves.html', context)
