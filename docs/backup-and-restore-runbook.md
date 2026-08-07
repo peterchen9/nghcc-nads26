@@ -1,5 +1,17 @@
 # 備份與還原手冊
 
+## 選單權限安全閘門
+
+使用者權限以 `MenuItem` primary key 關聯。應用程式更新不得刪除後重建選單；選單同步必須原地更新既有資料，並保留未列於同步清單的自訂選單。
+
+任何選單相關部署前後，都要以唯讀查詢記錄並比對：
+
+- `MenuItem` 總數；
+- `UserProfile.allowed_menu_items` 關聯總數；
+- 沒有任何選單權限的非 superuser 人數。
+
+部署前必須完成正常資料庫備份。若權限關聯數量非預期減少，立即停止，不得自動修復或繼續部署。
+
 ## 備份原則
 
 1. 全程 `umask 077`，備份目錄只允許擁有者存取。
@@ -7,7 +19,7 @@
 3. 程式、media、static、其他持久化資料、legacy/log 與 MySQL live file copy 分開封包。既有完整備份目錄不再嵌套進新備份，以免重複占用空間；各代備份應各自保留與驗證。
 4. `mysql-data-live-copy` 是執行中資料檔副本，可能不一致，只作次要災難復原參考；SQL dump 才是標準還原來源。
 5. 保存 Docker/Compose/container/image/network/volume inspect、Nginx vhost、檔案清單、數量、大小與 SHA-256。
-6. 遠端備份完成後複製到本機獨立 `backups/`，不得先刪除任何來源。
+6. 遠端備份完成後複製到本機 `D:\backups\nghcc-nads26\` 的獨立日期時間目錄，不得先刪除任何來源。
 
 ## 建議備份目錄結構
 

@@ -1,6 +1,7 @@
 import os
 import sys
 import django
+from django.db import transaction
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
@@ -9,9 +10,6 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'nads26.settings')
 django.setup()
 
 from modules.menu.models import MenuItem
-
-# Clear existing items to avoid duplicates or order issues
-MenuItem.objects.all().delete()
 
 items = [
     {
@@ -111,11 +109,33 @@ items = [
     },
 ]
 
-for item_data in items:
-    children_data = item_data.pop('children', [])
-    parent_item = MenuItem.objects.create(**item_data)
-    print(f"Created parent menu: {parent_item.title}")
-    for child_data in children_data:
-        child_data['parent'] = parent_item
-        child_item = MenuItem.objects.create(**child_data)
-        print(f"  └── Created child menu: {child_item.title}")
+@transaction.atomic
+def sync_menu(menu_items=items):
+    """Synchronize declared menus without deleting permission relations."""
+    for item in menu_items:
+        parent_defaults = {
+            key: value for key, value in item.items() if key != 'children'
+        }
+        parent_title = parent_defaults.pop('title')
+        parent_item, parent_created = MenuItem.objects.update_or_create(
+            title=parent_title,
+            parent=None,
+            defaults=parent_defaults,
+        )
+        action = 'Created' if parent_created else 'Updated'
+        print(f"{action} parent menu: {parent_item.title}")
+
+        for child in item.get('children', []):
+            child_defaults = dict(child)
+            route = child_defaults.pop('route')
+            child_defaults['parent'] = parent_item
+            child_item, child_created = MenuItem.objects.update_or_create(
+                route=route,
+                defaults=child_defaults,
+            )
+            action = 'Created' if child_created else 'Updated'
+            print(f"  └── {action} child menu: {child_item.title}")
+
+
+if __name__ == '__main__':
+    sync_menu()
