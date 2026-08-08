@@ -1,3 +1,7 @@
+import os
+
+os.environ.setdefault('DJANGO_SECRET_KEY', 'test-only-not-for-production')
+
 from .settings import *  # noqa: F401,F403
 
 INSTALLED_APPS = [

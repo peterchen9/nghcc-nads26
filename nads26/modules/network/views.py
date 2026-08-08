@@ -27,7 +27,10 @@ TZ = ZoneInfo('Asia/Taipei')
 UTC = ZoneInfo('UTC')
 DEVICE_BASE_URL = getattr(settings, 'NU840_BASE_URL', 'https://app.nghcc.org.tw:8443')
 DEVICE_USERNAME = getattr(settings, 'NU840_USERNAME', 'peter')
-DEVICE_PASSWORD = getattr(settings, 'NU840_PASSWORD', '***REMOVED***')
+DEVICE_PASSWORD = os.environ.get(
+    'NU840_PASSWORD',
+    getattr(settings, 'NU840_PASSWORD', ''),
+)
 LAN_HOST_TABLE = 'network_lan_host'
 LAN_SNAPSHOT_TABLE = 'network_lan_snapshot'
 SCAN_MAX_AGE = timedelta(hours=1)

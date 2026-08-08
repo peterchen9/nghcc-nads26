@@ -4,6 +4,11 @@ import django
 import pymysql
 from datetime import datetime
 
+from env_utils import load_app_env, require_env
+
+
+load_app_env()
+
 # Setup django environment
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
@@ -37,7 +42,7 @@ def sync():
         'host': '172.20.60.241',
         'port': 3306,
         'user': 'peter',
-        'password': '***REMOVED***',
+        'password': require_env('NADS25_DB_PASSWORD'),
         'database': 'nads25db_raw',
         'charset': 'utf8mb4',
         'cursorclass': pymysql.cursors.DictCursor

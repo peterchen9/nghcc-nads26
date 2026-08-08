@@ -66,6 +66,8 @@ from modules.eureka.models import StaffInfo
 from rest_framework.test import APIRequestFactory
 from modules.accounts.views import identity_permissions_detail
 import json
+import runpy
+from pathlib import Path
 
 class IncrementalPermissionsTests(TestCase):
     def setUp(self):
@@ -154,3 +156,34 @@ class IncrementalPermissionsTests(TestCase):
         self.assertIn(self.custom_item.id, allowed_ids_updated)
         self.assertNotIn(self.standard_items[0].id, allowed_ids_updated)
         self.assertIn(self.standard_items[1].id, allowed_ids_updated)
+
+
+class MenuSyncSafetyTests(TestCase):
+    def test_init_menu_preserves_ids_permissions_and_custom_items(self):
+        user = User.objects.create_user(username='menu-sync-worker', password='test')
+        existing = MenuItem.objects.create(
+            title='舊休假表名稱',
+            route='/staff/leaves/',
+            order=99,
+        )
+        custom = MenuItem.objects.create(
+            title='自訂選單',
+            route='/custom/preserved/',
+            order=999,
+        )
+        user.profile.allowed_menu_items.set([existing, custom])
+        original_id = existing.id
+
+        script_path = Path(__file__).resolve().parents[2] / 'scripts' / 'init_menu.py'
+        runpy.run_path(str(script_path), run_name='__main__')
+        runpy.run_path(str(script_path), run_name='__main__')
+
+        existing.refresh_from_db()
+        allowed_ids = set(
+            user.profile.allowed_menu_items.values_list('id', flat=True)
+        )
+        self.assertEqual(existing.id, original_id)
+        self.assertEqual(existing.title, '休假表')
+        self.assertIn(original_id, allowed_ids)
+        self.assertIn(custom.id, allowed_ids)
+        self.assertTrue(MenuItem.objects.filter(id=custom.id).exists())
