@@ -1,12 +1,17 @@
 import pymysql
 
+from env_utils import load_app_env, require_env
+
+
+load_app_env()
+
 def sync():
     # Source: host's local datacenter DB on port 3306
     src_config = {
         'host': '127.0.0.1',
         'port': 3306,
         'user': 'peter',
-        'password': '***REMOVED***',
+        'password': require_env('DATACENTER_DB_PASSWORD'),
         'database': 'datacenter',
         'charset': 'utf8mb4',
         'cursorclass': pymysql.cursors.DictCursor
@@ -17,7 +22,7 @@ def sync():
         'host': '127.0.0.1',
         'port': 33069,
         'user': 'root',
-        'password': '***REMOVED***',
+        'password': require_env('MYSQL_ROOT_PASSWORD'),
         'database': 'nads26db',
         'charset': 'utf8mb4',
         'cursorclass': pymysql.cursors.DictCursor
