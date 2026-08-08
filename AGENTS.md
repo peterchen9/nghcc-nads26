@@ -15,3 +15,5 @@
 - 不得在正式環境執行會批次刪除 `MenuItem` 的腳本或命令。
 - 選單修改前後必須備份並核對 `MenuItem` 數量、使用者權限關聯總數，以及零權限的一般使用者數量；若權限關聯減少，立即停止部署並調查。
 - 發現敏感資料時只報告，不自行修改、刪除或輪替。
+- Compose、settings、腳本與測試不得包含正式 secret/password literal 或秘密 fallback；只允許環境變數與明確的測試 placeholder。
+- GitHub 發布前必須掃描目前 tree 與全部可達 Git 歷史；若秘密曾進入歷史，須先建立 D 槽 Git bundle，再經明確授權改寫歷史。
