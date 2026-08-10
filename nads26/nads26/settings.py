@@ -33,13 +33,22 @@ ALLOWED_HOSTS = [
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    'http://192.168.16.240:26001',
-    'http://192.168.16.240',
+    origin.strip()
+    for origin in os.getenv('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',')
+    if origin.strip()
 ]
 
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SECURE = False
+# Production defaults are secure. Local HTTP development must explicitly set
+# DJANGO_SECURE_COOKIES=False in its untracked environment file.
+SECURE_COOKIES = os.getenv('DJANGO_SECURE_COOKIES', 'True').lower() in {
+    '1', 'true', 'yes', 'on'
+}
+CSRF_COOKIE_SECURE = SECURE_COOKIES
+SESSION_COOKIE_SECURE = SECURE_COOKIES
+SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = False
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
 
 
 # Application definition
@@ -70,11 +79,10 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'nads26.middleware.DisableCSRFMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'nads26.middleware.MenuPermissionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -188,10 +196,15 @@ LOGIN_URL = '/accounts/login/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Hikvision Device Configuration
+# External service credentials must never have source-controlled fallbacks.
 HIKVISION_HOST = os.getenv('HIKVISION_HOST', '')
 HIKVISION_USER = os.getenv('HIKVISION_USER', '')
 HIKVISION_PASS = os.getenv('HIKVISION_PASS', '')
+
+NAS_MEDIA_HOST = os.getenv('NAS_MEDIA_HOST', '')
+NAS_MEDIA_PORT = int(os.getenv('NAS_MEDIA_PORT', '22'))
+NAS_MEDIA_USER = os.getenv('NAS_MEDIA_USER', '')
+NAS_MEDIA_PASSWORD = os.getenv('NAS_MEDIA_PASSWORD', '')
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 

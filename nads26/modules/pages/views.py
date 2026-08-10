@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.conf import settings
 from .models import Page, BaptismSession, BaptismPerson, FuneralService
 
 def page_detail(request, slug='home'):
@@ -58,6 +59,18 @@ class SFTPFileWrapper:
             finally:
                 self.transport.close()
 
+
+def _nas_connection_settings():
+    config = {
+        'host': settings.NAS_MEDIA_HOST,
+        'port': settings.NAS_MEDIA_PORT,
+        'username': settings.NAS_MEDIA_USER,
+        'password': settings.NAS_MEDIA_PASSWORD,
+    }
+    if not all((config['host'], config['username'], config['password'])):
+        raise RuntimeError('NAS media connection environment variables are not configured.')
+    return config
+
 @login_required
 def media_collection(request):
     query = request.GET.get('q', '').strip()
@@ -81,8 +94,9 @@ def media_collection(request):
 def media_download(request, pk):
     media = get_object_or_404(MediaCollection, pk=pk)
     try:
-        transport = paramiko.Transport(('192.168.16.127', 22))
-        transport.connect(username='peter', password='Gala1051#')
+        nas = _nas_connection_settings()
+        transport = paramiko.Transport((nas['host'], nas['port']))
+        transport.connect(username=nas['username'], password=nas['password'])
         sftp = paramiko.SFTPClient.from_transport(transport)
         sftp_file = sftp.open(media.path, 'rb')
         wrapped_file = SFTPFileWrapper(sftp_file, sftp, transport)
@@ -113,8 +127,9 @@ def media_edit_download(request, pk):
             custom_name += orig_ext
 
     try:
-        transport = paramiko.Transport(('192.168.16.127', 22))
-        transport.connect(username='peter', password='Gala1051#')
+        nas = _nas_connection_settings()
+        transport = paramiko.Transport((nas['host'], nas['port']))
+        transport.connect(username=nas['username'], password=nas['password'])
         sftp = paramiko.SFTPClient.from_transport(transport)
         
         temp_dir = tempfile.mkdtemp()
@@ -839,7 +854,6 @@ def board_minutes_view(request):
         'available_years': available_years,
     }
     return render(request, 'pages/board_minutes.html', context)
-
 
 
 

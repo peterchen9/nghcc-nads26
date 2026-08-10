@@ -1253,7 +1253,9 @@ from .models import StaffInfo
 def staff_list_view(request):
     """同工基本資料與特休額度列表視圖"""
     can_view_staff = request.user.is_superuser or request.user.has_perm('eureka.view_staffinfo')
+    can_add_staff = request.user.is_superuser or request.user.has_perm('eureka.add_staffinfo')
     can_edit_staff = request.user.is_superuser or request.user.has_perm('eureka.change_staffinfo')
+    can_delete_staff = request.user.is_superuser or request.user.has_perm('eureka.delete_staffinfo')
     if not can_view_staff:
         messages.error(request, "只有管理員可以存取同工資料。")
         return redirect('home')
@@ -1283,8 +1285,70 @@ def staff_list_view(request):
         'query': query,
         'users': users,
         'shifts': shifts,
+        'can_add_staff': can_add_staff,
         'can_edit_staff': can_edit_staff,
+        'can_delete_staff': can_delete_staff,
     })
+
+
+@login_required
+def add_staff_view(request):
+    """Create a staff record from the staff administration page."""
+    if not (request.user.is_superuser or request.user.has_perm('eureka.add_staffinfo')):
+        messages.error(request, "您沒有新增同工資料的權限。")
+        return redirect('eureka:staff-list')
+
+    if request.method != 'POST':
+        return redirect('eureka:staff-list')
+
+    try:
+        staff_id = int(request.POST.get('staff_id', '').strip())
+        if staff_id <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        messages.error(request, "同工編號必須是大於零的整數。")
+        return redirect('eureka:staff-list')
+
+    name = request.POST.get('name', '').strip()
+    if not name:
+        messages.error(request, "姓名為必填欄位。")
+        return redirect('eureka:staff-list')
+    if StaffInfo.objects.filter(pk=staff_id).exists():
+        messages.error(request, f"同工編號 {staff_id} 已存在。")
+        return redirect('eureka:staff-list')
+
+    try:
+        user_id = request.POST.get('user_id', '').strip()
+        shift_id = request.POST.get('shift_id', '').strip()
+        onboard_date = request.POST.get('onboard_date', '').strip() or None
+        try:
+            annual_leave_quota = float(request.POST.get('annual_leave_quota', '0') or 0)
+        except ValueError:
+            annual_leave_quota = 0.0
+
+        staff = StaffInfo.objects.create(
+            staff_id=staff_id,
+            name=name,
+            identity_code=request.POST.get('identity_code', '').strip(),
+            employee_no=request.POST.get('employee_no', '').strip(),
+            mobile=request.POST.get('mobile', '').strip(),
+            seat=request.POST.get('seat', '').strip(),
+            locker_no=request.POST.get('locker_no', '').strip(),
+            bank_branch=request.POST.get('bank_branch', '').strip(),
+            bank_account=request.POST.get('bank_account', '').strip(),
+            user_id=int(user_id) if user_id else None,
+            shift_id=int(shift_id) if shift_id else None,
+            annual_leave_quota=max(annual_leave_quota, 0.0),
+            onboard_date=onboard_date,
+            is_active=request.POST.get('is_active', 'true') == 'true',
+            email=request.POST.get('email', '').strip(),
+            cc_email=request.POST.get('cc_email', '').strip(),
+        )
+        messages.success(request, f"已新增同工：{staff.name}。")
+    except Exception:
+        messages.error(request, "新增同工資料失敗，請檢查帳號、班表及欄位格式。")
+
+    return redirect('eureka:staff-list')
 
 
 @login_required
@@ -1758,8 +1822,6 @@ def shift_delete_view(request, shift_id):
         messages.error(request, f"刪除班表失敗: {e}")
         
     return redirect('eureka:shift-list')
-
-
 
 
 

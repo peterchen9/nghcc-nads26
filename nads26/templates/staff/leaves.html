@@ -4,6 +4,9 @@
 
 {% block extra_css %}
 <style>
+    .content-area:has(> .leave-page) {
+        padding-top: 14px;
+    }
     .leave-page {
         display: grid;
         gap: 14px;
@@ -18,7 +21,7 @@
     }
     .leave-toolbar {
         position: sticky;
-        top: 70px;
+        top: 0;
         z-index: 80;
         padding: 14px;
         backdrop-filter: blur(10px);
@@ -32,6 +35,13 @@
         justify-content: space-between;
         gap: 14px;
         flex-wrap: wrap;
+    }
+    .leave-toolbar-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        min-width: 0;
     }
     .leave-toolbar h2,
     .leave-panel h3 {
@@ -150,13 +160,52 @@
         scrollbar-gutter: stable;
     }
     .team-month-table {
-        --team-date-column-width: 60px;
-        --team-staff-column-width: 40px;
+        --team-date-column-width: 80px;
         width: max-content;
         border-collapse: separate;
         border-spacing: 0;
         color: var(--text-primary);
         font-size: 0.78rem;
+    }
+    .hr-summary-table {
+        margin-top: 14px;
+        border-top: 3px solid rgba(94,234,212,0.7);
+    }
+    .hr-summary-table caption {
+        padding: 10px 8px;
+        background: #22364b;
+        color: var(--accent-color);
+        font-size: 1rem;
+        font-weight: 900;
+        text-align: left;
+    }
+    .hr-summary-table .hr-summary-label {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        width: var(--team-date-column-width);
+        min-width: var(--team-date-column-width);
+        max-width: var(--team-date-column-width);
+        padding: 7px 4px;
+        background: #2c4056;
+        color: var(--accent-color);
+        font-weight: 900;
+        text-align: center;
+        white-space: nowrap;
+    }
+    .hr-summary-table td {
+        width: 60px;
+        min-width: 60px;
+        max-width: 60px;
+        padding: 7px 3px;
+        background: rgba(255,255,255,0.025);
+        font-weight: 800;
+        text-align: center;
+    }
+    .hr-summary-table tbody tr:first-child td,
+    .hr-summary-table tbody tr:first-child .hr-summary-label {
+        background: #365f68;
+        color: #d5fff8;
     }
     .team-month-table th,
     .team-month-table td {
@@ -193,23 +242,22 @@
         background: #2c4056;
         font-weight: 800;
         text-align: center;
+        white-space: nowrap;
     }
     .team-date-weekday {
-        display: block;
-        margin-left: 0;
+        display: inline;
+        margin-left: 4px;
         color: var(--text-secondary);
         font-size: 0.62rem;
     }
     .team-staff-head {
-        width: var(--team-staff-column-width);
-        min-width: var(--team-staff-column-width);
-        max-width: var(--team-staff-column-width);
-        padding-right: 1px !important;
-        padding-left: 1px !important;
-        overflow: hidden;
-        overflow-wrap: anywhere;
-        text-overflow: ellipsis;
-        white-space: normal !important;
+        width: 60px;
+        min-width: 60px;
+        max-width: 60px;
+        padding-right: 4px !important;
+        padding-left: 4px !important;
+        overflow: visible;
+        white-space: nowrap !important;
         line-height: 1.08;
     }
     .team-staff-head.current {
@@ -217,11 +265,16 @@
         color: #d5fff8;
     }
     .team-schedule-cell {
-        width: var(--team-staff-column-width);
-        min-width: var(--team-staff-column-width);
-        max-width: var(--team-staff-column-width);
+        width: 60px;
+        min-width: 60px;
+        max-width: 60px;
         padding: 0;
         background: rgba(255,255,255,0.018);
+    }
+    .team-slots {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
     }
     .team-month-table tr.weekend .team-date-cell {
         background: #493b46;
@@ -230,21 +283,37 @@
     .team-month-table tr.weekend .team-schedule-cell {
         background: rgba(248,113,113,0.035);
     }
+    .team-month-table tr.national-holiday .team-date-cell,
+    .team-month-table tr.national-holiday .team-schedule-cell {
+        background: #70464d;
+    }
+    .team-month-table tr.national-holiday .team-date-cell {
+        color: #ffe4e6;
+    }
+    .team-month-table tr.sunday .team-date-cell,
+    .team-month-table tr.sunday .team-schedule-cell {
+        background: #9f2537;
+    }
+    .team-month-table tr.sunday .team-date-cell {
+        color: #fff1f2;
+    }
     .team-slot {
         display: grid;
         min-height: 24px;
+        min-width: 0;
         place-items: center;
-        padding: 2px 4px;
+        padding: 2px 1px;
         overflow: hidden;
         color: #102033;
-        font-size: 0.74rem;
+        font-size: 0.66rem;
         font-weight: 900;
         line-height: 1;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
     .team-slot + .team-slot {
-        border-top: 1px solid rgba(255,255,255,0.1);
+        border-top: 0;
+        border-left: 1px solid rgba(255,255,255,0.1);
     }
     .team-slot.empty {
         color: transparent;
@@ -280,17 +349,6 @@
     .team-slot.unfilled-slot {
         background: #64748b !important;
         color: #000000 !important;
-    }
-    .team-slot.present-dot {
-        background: transparent !important;
-    }
-    .team-slot.present-dot::after {
-        content: '';
-        width: 5px;
-        height: 5px;
-        background-color: #ffffff;
-        border-radius: 50%;
-        display: block;
     }
     .leave-code-options {
         display: grid;
@@ -373,6 +431,38 @@
         gap: 10px;
         margin-bottom: 12px;
     }
+    .personal-leave-summary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+    }
+    .personal-leave-stat {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        align-items: baseline;
+        gap: 4px;
+        padding: 9px 10px;
+        border: 1px solid rgba(255,255,255,0.09);
+        border-radius: 6px;
+        background: rgba(8, 13, 20, 0.18);
+        font-size: 0.86rem;
+    }
+    .personal-leave-stat strong {
+        color: #60a5fa;
+        font-size: 1.05rem;
+    }
+    .personal-leave-stat small {
+        color: var(--text-secondary);
+    }
+    .personal-leave-stat.featured,
+    .personal-leave-stat.total {
+        grid-column: span 3;
+    }
+    .personal-leave-stat.featured strong,
+    .personal-leave-stat.total strong {
+        color: var(--accent-color);
+        font-size: 1.1rem;
+    }
     .muted {
         color: var(--text-secondary);
         font-size: 0.88rem;
@@ -449,6 +539,10 @@
         outline: 2px solid rgba(94,234,212,0.9);
         outline-offset: -2px;
     }
+    .calendar-table .day-cell.national-holiday {
+        background: #9f2537 !important;
+        color: #fff1f2;
+    }
     .day-number {
         display: flex;
         justify-content: space-between;
@@ -520,20 +614,6 @@
     .code-chip.code-陪\/產假 { background: #5eead4; }
     .code-chip.code-喪 { background: #cbd5e1; }
     .code-chip.code-育嬰 { background: #67e8f9; }
-    .code-chip.present-dot {
-        background: transparent !important;
-        border: none !important;
-        display: grid;
-        place-items: center;
-    }
-    .code-chip.present-dot::after {
-        content: '';
-        width: 6px;
-        height: 6px;
-        background-color: #ffffff;
-        border-radius: 50%;
-        display: block;
-    }
     .code-chip.unfilled-slot {
         background: #64748b !important;
         color: #000000 !important;
@@ -717,6 +797,8 @@
     }
     .leave-modal {
         width: min(500px, 100%);
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
         background: #2f4156;
         border: 1px solid rgba(255,255,255,0.14);
         border-radius: 8px;
@@ -742,6 +824,81 @@
         background: rgba(255,255,255,0.06);
         color: #fff;
         cursor: pointer;
+    }
+    .batch-calendar {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 2px;
+        margin-bottom: 6px;
+    }
+    .batch-calendar-weekday {
+        padding: 2px 1px;
+        color: var(--accent-color);
+        font-size: 0.68rem;
+        font-weight: 900;
+        line-height: 1;
+        text-align: center;
+    }
+    .batch-calendar-day {
+        min-width: 0;
+        padding: 1px;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 4px;
+        background: rgba(8,13,20,0.2);
+    }
+    .batch-calendar-day.out-month {
+        opacity: 0.18;
+    }
+    .batch-calendar-day.national-holiday {
+        border-color: #fb7185;
+        background: #9f2537;
+        color: #fff1f2;
+    }
+    .content-area .leave-modal .batch-calendar-day.national-holiday .batch-slot-button {
+        border-color: rgba(255,241,242,0.48);
+        background: rgba(255,255,255,0.08);
+    }
+    .batch-calendar-date {
+        display: block;
+        margin-bottom: 0;
+        font-size: 0.62rem;
+        font-weight: 900;
+        line-height: 1;
+        text-align: center;
+    }
+    .batch-calendar-parts {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1px;
+    }
+    .content-area .leave-modal .batch-slot-button {
+        min-width: 0;
+        min-height: 20px;
+        height: 20px;
+        padding: 0;
+        border: 1px solid rgba(255,255,255,0.14);
+        border-radius: 4px;
+        background: rgba(255,255,255,0.04);
+        color: var(--text-secondary);
+        font: inherit;
+        font-size: 0.68rem;
+        font-weight: 900;
+        cursor: pointer;
+    }
+    .content-area .leave-modal .batch-slot-button.selected {
+        border-color: var(--accent-color);
+        background: var(--accent-color);
+        color: var(--sidebar-bg);
+        box-shadow: 0 0 0 1px var(--accent-color);
+    }
+    .content-area .leave-modal .batch-calendar-day.national-holiday .batch-slot-button.selected {
+        border-color: var(--accent-color);
+        background: var(--accent-color);
+        color: var(--sidebar-bg);
+    }
+    .batch-selection-summary {
+        color: var(--accent-color);
+        font-weight: 800;
     }
     .field {
         display: flex;
@@ -786,14 +943,15 @@
         .leave-grid {
             grid-template-columns: 1fr;
         }
-        .leave-toolbar {
-            top: 70px;
-        }
         .team-table-scroll {
             max-height: calc(100vh - 235px);
         }
     }
     @media (max-width: 620px) {
+        .leave-toolbar-actions {
+            width: 100%;
+            flex-wrap: wrap;
+        }
         .view-switch {
             width: 100%;
         }
@@ -832,19 +990,21 @@
                 <h2>同工休假表</h2>
                 <div class="muted">{{ selected_month|date:'Y年' }}，{{ current_staff_name }}</div>
             </div>
-            {% if is_locked %}
-                <div class="locked-note">{{ lock_note }}</div>
-            {% endif %}
+            <div class="leave-toolbar-actions">
+                <div class="view-switch" role="tablist" aria-label="休假表檢視">
+                    <button class="view-tab active" type="button" role="tab" aria-selected="true" data-view="team">全體月表</button>
+                    <button class="view-tab" type="button" role="tab" aria-selected="false" data-view="mine">我的休假</button>
+                </div>
+                {% if is_locked %}
+                    <div class="locked-note">{{ lock_note }}</div>
+                {% endif %}
+            </div>
         </div>
         <nav class="month-tabs" aria-label="月份">
             {% for month in month_options %}
                 <a class="month-tab {% if month.value == selected_month|date:'Y-m' %}active{% endif %} {% if month.is_locked %}locked{% endif %}" href="?month={{ month.value }}">{{ month.label }}</a>
             {% endfor %}
         </nav>
-        <div class="view-switch" role="tablist" aria-label="休假表檢視">
-            <button class="view-tab active" type="button" role="tab" aria-selected="true" data-view="team">全體月表</button>
-            <button class="view-tab" type="button" role="tab" aria-selected="false" data-view="mine">我的休假</button>
-        </div>
     </section>
 
     {% if messages %}
@@ -881,6 +1041,29 @@
                 <thead></thead>
                 <tbody></tbody>
             </table>
+            {% if can_view_hr_leave_summary %}
+                <table class="team-month-table hr-summary-table" aria-label="{{ selected_month|date:'Y年n月' }}人事休假總覽">
+                    <caption>人事休假總覽（每格以天數計）</caption>
+                    <thead>
+                        <tr>
+                            <th class="team-date-head" scope="col">假別</th>
+                            {% for column in hr_leave_overview.columns %}
+                                <th class="team-staff-head" scope="col">{{ column.name }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in hr_leave_overview.rows %}
+                            <tr>
+                                <th class="hr-summary-label" scope="row">{{ row.label }}</th>
+                                {% for value in row.values %}
+                                    <td>{{ value|floatformat:"-1" }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
         </div>
     </section>
 
@@ -983,11 +1166,22 @@
 
             <section class="leave-panel">
                 <div class="panel-head">
-                    <h3>我的特休狀況</h3>
+                    <h3>個人休假瀏覽表</h3>
+                    <span class="muted">{{ selected_month|date:'Y年n月' }}</span>
                 </div>
-                <div style="padding: 12px; font-size: 0.92rem; border: 1px solid rgba(255,255,255,0.09); border-radius: 6px; background: rgba(8, 13, 20, 0.18); display: grid; gap: 8px;">
-                    <div>年度特休：<strong style="color: var(--accent-color); font-size: 1.1rem;">{{ annual_leave_quota }}</strong> 天</div>
-                    <div>已休特休：<strong style="color: #60a5fa; font-size: 1.1rem;">{{ used_leave_days }}</strong> 天</div>
+                <div class="personal-leave-summary">
+                    <div class="personal-leave-stat featured"><span>年度特休天數</span><strong>{{ annual_leave_quota|floatformat:"-1" }}</strong><small>天</small></div>
+                    <div class="personal-leave-stat featured"><span>已休特休天數</span><strong>{{ used_leave_days|floatformat:"-1" }}</strong><small>天</small></div>
+                    <div class="personal-leave-stat"><span>例休</span><strong>{{ monthly_leave_summary.休|floatformat:"-1" }}</strong><small>天</small></div>
+                    <div class="personal-leave-stat"><span>特休</span><strong>{{ monthly_leave_summary.特|floatformat:"-1" }}</strong><small>天</small></div>
+                    <div class="personal-leave-stat"><span>補休</span><strong>{{ monthly_leave_summary.補|floatformat:"-1" }}</strong><small>天</small></div>
+                    <div class="personal-leave-stat"><span>公假</span><strong>{{ monthly_leave_summary.公|floatformat:"-1" }}</strong><small>天</small></div>
+                    <div class="personal-leave-stat"><span>其他</span><strong>{{ monthly_leave_summary.其他|floatformat:"-1" }}</strong><small>天</small></div>
+                    <div class="personal-leave-stat"><span>病假</span><strong>{{ monthly_leave_summary.病|floatformat:"-1" }}</strong><small>天</small></div>
+                    <div class="personal-leave-stat"><span>陪產</span><strong>{{ monthly_leave_summary.陪產|floatformat:"-1" }}</strong><small>天</small></div>
+                    <div class="personal-leave-stat"><span>育嬰</span><strong>{{ monthly_leave_summary.育嬰|floatformat:"-1" }}</strong><small>天</small></div>
+                    <div class="personal-leave-stat"><span>喪假</span><strong>{{ monthly_leave_summary.喪|floatformat:"-1" }}</strong><small>天</small></div>
+                    <div class="personal-leave-stat total"><span>當月總計</span><strong>{{ monthly_leave_summary.total|floatformat:"-1" }}</strong><small>天</small></div>
                 </div>
             </section>
         </div>
@@ -1006,16 +1200,35 @@
             <input type="hidden" name="month" value="{{ selected_month|date:'Y-m' }}">
             <input type="hidden" name="leave_date" id="leaveDate">
             <input type="hidden" name="day_part" id="leavePart">
+            <input type="hidden" name="leave_slots" id="leaveSlots">
 
             <div class="field">
-                <label for="leaveSlot">日期</label>
-                <input id="leaveSlot" type="text" readonly>
+                <label>日期與時段（可複選）</label>
+                <div class="batch-calendar" id="batchLeaveCalendar">
+                    {% for weekday in '日一二三四五六' %}
+                        <div class="batch-calendar-weekday">{{ weekday }}</div>
+                    {% endfor %}
+                    {% for week in calendar_weeks %}
+                        {% for day in week %}
+                            <div class="batch-calendar-day {% if not day.in_month %}out-month{% endif %}" data-batch-day="{{ day.iso }}">
+                                <span class="batch-calendar-date">{{ day.day }}</span>
+                                {% if day.in_month %}
+                                    <div class="batch-calendar-parts">
+                                        <button type="button" class="batch-slot-button" data-batch-date="{{ day.iso }}" data-batch-part="am" aria-label="{{ day.iso }} 上午" title="上午"></button>
+                                        <button type="button" class="batch-slot-button" data-batch-date="{{ day.iso }}" data-batch-part="pm" aria-label="{{ day.iso }} 下午" title="下午"></button>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+                <div class="batch-selection-summary" id="leaveSlot">尚未選擇時段</div>
             </div>
             <div class="field">
                 <label>假別</label>
                 <div class="leave-code-options" role="radiogroup" aria-label="選擇假別">
-                    {% for code in leave_codes %}
-                        <button type="button" class="leave-code-option code-{{ code }}" data-code="{{ code }}">{{ code }}</button>
+                    {% for option in leave_code_options %}
+                        <button type="button" class="leave-code-option code-{{ option.code }}" data-code="{{ option.code }}">{{ option.label }}</button>
                     {% endfor %}
                 </div>
                 <input type="hidden" name="code" id="leaveCode" required>
@@ -1043,6 +1256,7 @@
     const entries = JSON.parse('{{ entries_json|escapejs }}');
     const staffNames = JSON.parse('{{ staff_names_json|escapejs }}');
     const staffNameAliases = JSON.parse('{{ staff_name_aliases_json|escapejs }}');
+    const staffFullNames = JSON.parse('{{ staff_full_names_json|escapejs }}');
     const churchEntries = JSON.parse('{{ church_calendar_entries_json|escapejs }}');
     const currentUser = '{{ current_user|escapejs }}';
     const currentStaffName = '{{ current_staff_name|escapejs }}';
@@ -1065,6 +1279,7 @@
     const actionInput = document.getElementById('leaveAction');
     const dateInput = document.getElementById('leaveDate');
     const partInput = document.getElementById('leavePart');
+    const slotsInput = document.getElementById('leaveSlots');
     const slotInput = document.getElementById('leaveSlot');
     const codeInput = document.getElementById('leaveCode');
     const descriptionInput = document.getElementById('leaveDescription');
@@ -1078,6 +1293,7 @@
     const viewTabs = document.querySelectorAll('.view-tab[data-view]');
     const viewPanels = document.querySelectorAll('[data-view-panel]');
     const weekdayLabels = ['日', '一', '二', '三', '四', '五', '六'];
+    const selectedLeaveSlots = new Map();
 
     function entryKey(entry) {
         return `${entry.leave_date}:${entry.day_part}`;
@@ -1093,6 +1309,35 @@
 
     function canonicalStaffName(staffName) {
         return staffNameAliases[staffName] || staffName;
+    }
+
+    function fullStaffName(staffName) {
+        const canonicalName = canonicalStaffName(staffName);
+        return staffFullNames[canonicalName] || canonicalName;
+    }
+
+    function isNationalHoliday(date) {
+        const holidayPattern = /元旦|春節|除夕|和平紀念日|兒童節|民族掃墓節|清明節|勞動節|端午節|中秋節|教師節|國慶日|光復節|行憲紀念日/;
+        const extendedHolidayPattern = /連假|補假|調整放假|彈性放假/;
+        return churchEntries.some((entry) => {
+            const holidayText = String(entry.holiday_social || '');
+            return entry.event_date === date
+                && holidayPattern.test(holidayText)
+                && !extendedHolidayPattern.test(holidayText);
+        });
+    }
+
+    function applyNationalHolidayBackgrounds() {
+        document.querySelectorAll('.calendar-table .day-cell[data-date]').forEach((cell) => {
+            cell.classList.toggle('national-holiday', isNationalHoliday(cell.dataset.date));
+        });
+        document.querySelectorAll('.batch-calendar-day[data-batch-day]').forEach((cell) => {
+            cell.classList.toggle('national-holiday', isNationalHoliday(cell.dataset.batchDay));
+        });
+    }
+
+    function teamLeaveCodeLabel(code) {
+        return code === '陪/產假' ? '陪產' : code;
     }
 
     function isCurrentStaffName(staffName) {
@@ -1127,15 +1372,10 @@
 
     function setChip(chip, entry) {
         chip.className = 'code-chip';
-        chip.classList.remove('present-dot', 'unfilled-slot', 'empty');
+        chip.classList.remove('unfilled-slot', 'empty');
         
-        const isCurrentUserFilled = filledStaff.has(canonicalStaffName(currentStaffName));
-        
-        if (!isCurrentUserFilled) {
-            chip.classList.add('unfilled-slot');
-            chip.textContent = '?';
-        } else if (!entry) {
-            chip.classList.add('present-dot');
+        if (!entry) {
+            chip.classList.add('empty');
             chip.textContent = '';
         } else {
             chip.classList.add(`code-${entry.code}`);
@@ -1174,11 +1414,12 @@
 
         teamStaffNames.forEach((staffName) => {
             const header = document.createElement('th');
+            const displayName = fullStaffName(staffName);
             header.className = 'team-staff-head';
             if (isCurrentStaffName(staffName)) header.classList.add('current');
             header.scope = 'col';
-            header.textContent = staffName;
-            header.title = staffName;
+            header.textContent = displayName;
+            header.title = displayName;
             headerRow.appendChild(header);
         });
         teamMonthTable.tHead.replaceChildren(headerRow);
@@ -1189,6 +1430,8 @@
             const weekday = new Date(`${date}T00:00:00`).getDay();
             const row = document.createElement('tr');
             if (weekday === 0 || weekday === 6) row.classList.add('weekend');
+            if (isNationalHoliday(date)) row.classList.add('national-holiday');
+            if (weekday === 0) row.classList.add('sunday');
 
             const dateCell = document.createElement('th');
             dateCell.className = 'team-date-cell';
@@ -1199,7 +1442,8 @@
             teamStaffNames.forEach((staffName) => {
                 const cell = document.createElement('td');
                 cell.className = 'team-schedule-cell';
-                const isFilled = filledStaff.has(canonicalStaffName(staffName));
+                const slots = document.createElement('div');
+                slots.className = 'team-slots';
                 ['am', 'pm'].forEach((part) => {
                     const entry = leaveForStaff(date, staffName, part);
                     const slot = document.createElement('div');
@@ -1208,21 +1452,16 @@
                     slot.dataset.date = date;
                     slot.dataset.part = part;
                     slot.dataset.staff = staffName;
-                    if (!isFilled) {
-                        slot.classList.add('unfilled-slot');
-                        slot.textContent = '?';
-                    } else if (entry) {
+                    if (entry) {
                         slot.classList.add(`code-${entry.code}`);
-                        slot.textContent = entry.code;
+                        slot.textContent = teamLeaveCodeLabel(entry.code);
                     } else {
-                        slot.classList.add('present-dot');
+                        slot.classList.add('empty');
                         slot.textContent = '';
                     }
 
                     let titleText = '上班';
-                    if (!isFilled) {
-                        titleText = '尚未填寫';
-                    } else if (entry) {
+                    if (entry) {
                         titleText = `${entry.code}${entry.description ? `－${entry.description}` : ''}`;
                     }
                     slot.title = `${staffName} ${date} ${partLabels[part]}：${titleText}`;
@@ -1241,8 +1480,9 @@
                             }
                         });
                     }
-                    cell.appendChild(slot);
+                    slots.appendChild(slot);
                 });
+                cell.appendChild(slots);
                 row.appendChild(cell);
             });
             rows.appendChild(row);
@@ -1347,6 +1587,62 @@
         updateDescriptionRequirement();
     }
 
+    function leaveSlotKey(date, part) {
+        return `${date}:${part}`;
+    }
+
+    function selectedSpecialAdditionalDays() {
+        let additionalSlots = 0;
+        selectedLeaveSlots.forEach(({ date, part }) => {
+            const entry = currentUserEntry(date, part);
+            if (!entry || entry.code !== '特') additionalSlots += 1;
+        });
+        return additionalSlots * 0.5;
+    }
+
+    function updateSpecialAvailability() {
+        const specialOption = document.querySelector('.leave-code-option[data-code="特"]');
+        if (!specialOption || isLocked) return;
+        const exceedsQuota = usedLeaveDays + selectedSpecialAdditionalDays() > annualLeaveQuota;
+        specialOption.disabled = exceedsQuota;
+        specialOption.title = exceedsQuota ? '所選時段將超過特休額度' : '';
+        specialOption.style.opacity = exceedsQuota ? '0.35' : '';
+        specialOption.style.cursor = exceedsQuota ? 'not-allowed' : '';
+        if (exceedsQuota && codeInput.value === '特') selectLeaveCode('休');
+    }
+
+    function syncSelectedLeaveSlots() {
+        const slots = Array.from(selectedLeaveSlots.values()).sort((a, b) => {
+            return a.date.localeCompare(b.date) || a.part.localeCompare(b.part);
+        });
+        slotsInput.value = JSON.stringify(slots);
+        dateInput.value = slots[0]?.date || '';
+        partInput.value = slots[0]?.part || '';
+        slotInput.textContent = slots.length
+            ? `已選 ${slots.length} 個時段，共 ${slots.length * 0.5} 天`
+            : '尚未選擇時段';
+        document.querySelectorAll('.batch-slot-button').forEach((button) => {
+            const key = leaveSlotKey(button.dataset.batchDate, button.dataset.batchPart);
+            button.classList.toggle('selected', selectedLeaveSlots.has(key));
+            button.setAttribute('aria-pressed', selectedLeaveSlots.has(key) ? 'true' : 'false');
+        });
+        deleteButton.style.display = !isLocked && slots.some(({ date, part }) => currentUserEntry(date, part))
+            ? 'inline-flex'
+            : 'none';
+        updateSpecialAvailability();
+    }
+
+    document.querySelectorAll('.batch-slot-button').forEach((button) => {
+        button.addEventListener('click', () => {
+            if (isLocked) return;
+            const slot = {date: button.dataset.batchDate, part: button.dataset.batchPart};
+            const key = leaveSlotKey(slot.date, slot.part);
+            if (selectedLeaveSlots.has(key)) selectedLeaveSlots.delete(key);
+            else selectedLeaveSlots.set(key, slot);
+            syncSelectedLeaveSlots();
+        });
+    });
+
     document.querySelectorAll('.leave-code-option').forEach((opt) => {
         opt.addEventListener('click', () => {
             if (isLocked || opt.disabled) return;
@@ -1357,30 +1653,12 @@
     function openModal(date, part) {
         const entry = currentUserEntry(date, part);
         actionInput.value = 'save';
-        dateInput.value = date;
-        partInput.value = part;
-        slotInput.value = `${date} ${partLabels[part]}`;
-
-        const specialOption = document.querySelector('.leave-code-option[data-code="特"]');
-        if (specialOption) {
-            const isCurrentSpecial = entry && entry.code === '特';
-            if (!isCurrentSpecial && (usedLeaveDays + 0.5 > annualLeaveQuota)) {
-                specialOption.disabled = true;
-                specialOption.title = '已無特休額度，無法新增特休';
-                specialOption.style.opacity = '0.35';
-                specialOption.style.cursor = 'not-allowed';
-            } else {
-                specialOption.disabled = false;
-                specialOption.title = '';
-                specialOption.style.opacity = '';
-                specialOption.style.cursor = '';
-            }
-        }
+        selectedLeaveSlots.clear();
+        selectedLeaveSlots.set(leaveSlotKey(date, part), {date, part});
 
         selectLeaveCode(entry ? entry.code : '休');
 
         descriptionInput.value = entry ? (entry.description || '') : '';
-        deleteButton.style.display = !isLocked && entry ? 'inline-flex' : 'none';
         saveButton.style.display = isLocked ? 'none' : 'inline-flex';
 
         document.querySelectorAll('.leave-code-option').forEach((opt) => {
@@ -1396,6 +1674,7 @@
         });
 
         descriptionInput.readOnly = isLocked;
+        syncSelectedLeaveSlots();
         modal.classList.add('open');
         modal.setAttribute('aria-hidden', 'false');
         renderDayStatus(date);
@@ -1479,7 +1758,7 @@
     }
 
     deleteButton.addEventListener('click', (event) => {
-        if (!confirm('確定要刪除這筆休假資料？')) {
+        if (!confirm('確定要刪除所選時段中的休假資料？')) {
             event.preventDefault();
             return;
         }
@@ -1490,10 +1769,14 @@
     form.addEventListener('submit', (event) => {
         if (document.activeElement !== deleteButton) {
             actionInput.value = 'save';
+            if (!selectedLeaveSlots.size) {
+                alert('請至少選擇一個日期時段。');
+                event.preventDefault();
+                return;
+            }
             const selectedCode = codeInput.value;
-            const entry = currentUserEntry(dateInput.value, partInput.value);
-            const isCurrentSpecial = entry && entry.code === '特';
-            if (selectedCode === '特' && !isCurrentSpecial && (usedLeaveDays + 0.5 > annualLeaveQuota)) {
+            const additionalSpecialDays = selectedSpecialAdditionalDays();
+            if (selectedCode === '特' && usedLeaveDays + additionalSpecialDays > annualLeaveQuota) {
                 alert(`您的特休已達上限 (${annualLeaveQuota} 天)，無法再新增特休。`);
                 event.preventDefault();
                 return;
@@ -1510,6 +1793,7 @@
     });
 
     renderCalendarBadges();
+    applyNationalHolidayBackgrounds();
     renderTeamMonthTable();
     renderMonthlyNotes();
     renderChurchMonthCalendar();

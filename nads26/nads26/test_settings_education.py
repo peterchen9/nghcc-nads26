@@ -4,6 +4,9 @@ os.environ.setdefault('DJANGO_SECRET_KEY', 'test-only-not-for-production')
 
 from .settings import *  # noqa: F401,F403
 
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+
 INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',

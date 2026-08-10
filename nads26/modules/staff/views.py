@@ -44,6 +44,29 @@ STAFF_LEAVE_SHEET_GIDS = {
 }
 LEAVE_CODES = {'補', '休', '特', '公', '其他', '病假', '事假', '陪/產假', '喪', '育嬰'}
 LEAVE_PARTS = {'am': '上午', 'pm': '下午'}
+LEAVE_EDITOR_CODE_OPTIONS = [
+    ('休', '例休'),
+    ('特', '特休'),
+    ('補', '補休'),
+    ('公', '公假'),
+    ('其他', '其他'),
+    ('病假', '病假'),
+    ('陪/產假', '陪產'),
+    ('育嬰', '育嬰'),
+    ('喪', '喪假'),
+]
+HR_LEAVE_SUMMARY_METRICS = [
+    ('當月總計', None),
+    ('例休', '休'),
+    ('特休', '特'),
+    ('補休', '補'),
+    ('公假', '公'),
+    ('其他', '其他'),
+    ('病假', '病假'),
+    ('陪產', '陪/產假'),
+    ('育嬰', '育嬰'),
+    ('喪假', '喪'),
+]
 STAFF_LEAVE_DISPLAY_ORDER = [
     '明月',
     '德官',
@@ -65,6 +88,27 @@ STAFF_LEAVE_DISPLAY_ORDER = [
     '文秀',
     '彼得陳',
 ]
+STAFF_LEAVE_FULL_NAMES = {
+    '明月': '林明月',
+    '德官': '董德官',
+    '明珠': '羅明珠',
+    '玉筍': '周玉筍',
+    '宜庭': '何宜庭',
+    '仲甫': '鄭仲甫',
+    '慕聖': '張慕聖',
+    '沐恩': '趙沐恩',
+    '囿余': '陳囿余',
+    '小慧': '謝淑慧',
+    '文正': '林文正',
+    '美美': '黃美美',
+    '惠萍': '張惠萍',
+    '依蓮': '陳依蓮',
+    '宗英': '楊宗英',
+    '方正': '施方正',
+    '慧芝': '郭慧芝',
+    '文秀': '蔡文秀',
+    '彼得陳': '陳潘傳',
+}
 STAFF_LEAVE_CANONICAL_NAMES = {
     '林明月': '明月',
     '董德官': '德官',
@@ -413,6 +457,26 @@ def _staff_name_aliases():
     except (OperationalError, ProgrammingError):
         pass
     return aliases
+
+
+def _staff_full_name_map(alias_map=None):
+    alias_map = alias_map or _staff_name_aliases()
+    full_names = dict(STAFF_LEAVE_FULL_NAMES)
+    try:
+        from modules.eureka.models import StaffInfo
+
+        for staff in StaffInfo.objects.exclude(name=''):
+            staff_name = staff.name.strip()
+            canonical_name = _canonical_staff_name(staff_name, alias_map)
+            if (
+                canonical_name in STAFF_LEAVE_DISPLAY_ORDER
+                and staff_name != canonical_name
+                and len(staff_name) >= len(full_names.get(canonical_name, canonical_name))
+            ):
+                full_names[canonical_name] = staff_name
+    except (OperationalError, ProgrammingError):
+        pass
+    return full_names
 
 
 def _month_options(today):
@@ -787,13 +851,13 @@ def _get_used_annual_leave_days(user):
     with connection.cursor() as cursor:
         placeholders = ', '.join(['%s'] * len(aliases))
         query = f"""
-            SELECT COUNT(*) 
+            SELECT leave_date, day_part
             FROM {STAFF_LEAVE_TABLE} 
             WHERE (staff_user IN ({placeholders}) OR staff_name IN ({placeholders}))
               AND STRFTIME('%%Y', leave_date) = %s
               AND code = '特'
         """ if connection.vendor == 'sqlite' else f"""
-            SELECT COUNT(*) 
+            SELECT leave_date, day_part
             FROM {STAFF_LEAVE_TABLE} 
             WHERE (staff_user IN ({placeholders}) OR staff_name IN ({placeholders}))
               AND YEAR(leave_date) = %s
@@ -801,42 +865,165 @@ def _get_used_annual_leave_days(user):
         """
         params = list(aliases) + list(aliases) + [str(STAFF_LEAVE_YEAR)]
         cursor.execute(query, params)
-        count = cursor.fetchone()[0]
-    return float(count) * 0.5
+        unique_slots = {
+            (str(leave_date), day_part)
+            for leave_date, day_part in cursor.fetchall()
+        }
+    return float(len(unique_slots)) * 0.5
+
+
+def _monthly_leave_summary(user, entries):
+    aliases = set(_staff_user_aliases(user))
+    alias_map = _staff_name_aliases()
+    canonical_aliases = {
+        _canonical_staff_name(alias, alias_map)
+        for alias in aliases
+    }
+    code_days = {code: 0.0 for code in LEAVE_CODES}
+    total_days = 0.0
+    seen_slots = set()
+
+    for entry in entries:
+        entry_names = {
+            entry.get('staff_user') or '',
+            entry.get('staff_name') or '',
+        }
+        canonical_entry_names = {
+            _canonical_staff_name(name, alias_map)
+            for name in entry_names
+            if name
+        }
+        if not (entry_names & aliases or canonical_entry_names & canonical_aliases):
+            continue
+        slot = (str(entry.get('leave_date') or ''), entry.get('day_part') or '')
+        if slot in seen_slots:
+            continue
+        seen_slots.add(slot)
+        code = entry.get('code') or ''
+        total_days += 0.5
+        if code in code_days:
+            code_days[code] += 0.5
+
+    return {
+        'total': total_days,
+        '休': code_days['休'],
+        '特': code_days['特'],
+        '補': code_days['補'],
+        '公': code_days['公'],
+        '其他': code_days['其他'],
+        '病': code_days['病假'],
+        '陪產': code_days['陪/產假'],
+        '喪': code_days['喪'],
+        '育嬰': code_days['育嬰'],
+    }
+
+
+def _hr_monthly_leave_overview(staff_names, entries, alias_map, full_names):
+    canonical_names = [
+        _canonical_staff_name(name, alias_map)
+        for name in staff_names
+    ]
+    summaries = {
+        name: {'total': 0.0, **{code: 0.0 for code in LEAVE_CODES}}
+        for name in canonical_names
+    }
+    seen_slots = set()
+
+    for entry in entries:
+        entry_name = entry.get('staff_name') or entry.get('staff_user') or ''
+        canonical_name = _canonical_staff_name(entry_name, alias_map)
+        if canonical_name not in summaries:
+            continue
+        slot = (
+            canonical_name,
+            str(entry.get('leave_date') or ''),
+            entry.get('day_part') or '',
+        )
+        if slot in seen_slots:
+            continue
+        seen_slots.add(slot)
+        code = entry.get('code') or ''
+        summaries[canonical_name]['total'] += 0.5
+        if code in LEAVE_CODES:
+            summaries[canonical_name][code] += 0.5
+
+    columns = [
+        {'name': full_names.get(name, name)}
+        for name in canonical_names
+    ]
+    rows = []
+    for label, code in HR_LEAVE_SUMMARY_METRICS:
+        key = code or 'total'
+        rows.append({
+            'label': label,
+            'values': [summaries[name][key] for name in canonical_names],
+        })
+    return {'columns': columns, 'rows': rows}
 
 
 def _save_leave_entry(request, selected_month):
-    leave_day = _parse_leave_date(request.POST.get('leave_date'), selected_month)
-    month_start = _month_start(leave_day)
-    if _is_leave_month_locked(month_start):
+    raw_slots = request.POST.get('leave_slots') or ''
+    try:
+        submitted_slots = json.loads(raw_slots) if raw_slots else []
+    except (TypeError, ValueError):
+        submitted_slots = []
+    if not submitted_slots:
+        submitted_slots = [{
+            'date': request.POST.get('leave_date'),
+            'part': request.POST.get('day_part'),
+        }]
+    slots = []
+    for submitted in submitted_slots:
+        if not isinstance(submitted, dict):
+            continue
+        try:
+            leave_day = date.fromisoformat(str(submitted.get('date') or ''))
+        except ValueError:
+            continue
+        day_part = submitted.get('part') or ''
+        slot = (leave_day, day_part)
+        if (
+            leave_day.year != selected_month.year
+            or leave_day.month != selected_month.month
+            or day_part not in LEAVE_PARTS
+            or slot in slots
+        ):
+            continue
+        slots.append(slot)
+    if not slots:
+        messages.error(request, '請至少選擇一個正確的日期與時段。')
+        return selected_month
+    if _is_leave_month_locked(selected_month):
         messages.error(request, '此月份已鎖定，只能閱讀。')
-        return leave_day
+        return slots[0][0]
 
-    day_part = request.POST.get('day_part') or ''
     code = request.POST.get('code') or ''
     description = (request.POST.get('description') or '').strip()
-    if day_part not in LEAVE_PARTS or code not in LEAVE_CODES:
+    if code not in LEAVE_CODES:
         messages.error(request, '請選擇正確的日期、上午/下午與假別。')
-        return leave_day
+        return slots[0][0]
     if code in {'公', '其他'} and not description:
         messages.error(request, '選擇「公」或「其他」時，請填寫文字說明。')
-        return leave_day
+        return slots[0][0]
 
     username = request.user.get_username()
     staff_name = _staff_display_name(request.user)
     aliases = _staff_user_aliases(request.user)
 
     if code == '特':
+        additional_special_slots = 0
         with connection.cursor() as cursor:
             placeholders = ', '.join(['%s'] * len(aliases))
-            cursor.execute(
-                f"SELECT code FROM {STAFF_LEAVE_TABLE} WHERE staff_user IN ({placeholders}) AND leave_date = %s AND day_part = %s",
-                list(aliases) + [leave_day, day_part]
-            )
-            row = cursor.fetchone()
-            was_special = row and row[0] == '特'
-            
-        if not was_special:
+            for leave_day, day_part in slots:
+                cursor.execute(
+                    f'''SELECT code FROM {STAFF_LEAVE_TABLE}
+                        WHERE (staff_user IN ({placeholders}) OR staff_name IN ({placeholders}))
+                          AND leave_date = %s AND day_part = %s''',
+                    list(aliases) + list(aliases) + [leave_day, day_part],
+                )
+                if not any(row[0] == '特' for row in cursor.fetchall()):
+                    additional_special_slots += 1
+        if additional_special_slots:
             annual_leave_quota = 0.0
             try:
                 from modules.eureka.models import StaffInfo
@@ -849,58 +1036,80 @@ def _save_leave_entry(request, selected_month):
                 pass
                 
             used_days = _get_used_annual_leave_days(request.user)
-            if used_days + 0.5 > annual_leave_quota:
-                messages.error(request, f"您的特休已達上限 ({annual_leave_quota} 天)，無法再新增特休。")
-                return leave_day
+            requested_days = additional_special_slots * 0.5
+            if used_days + requested_days > annual_leave_quota:
+                messages.error(request, f"本次需要 {requested_days:g} 天特休，將超過年度上限 {annual_leave_quota:g} 天。")
+                return slots[0][0]
 
     now = datetime.now()
-    with connection.cursor() as cursor:
-        cursor.execute(
-            f'''
-            DELETE FROM {STAFF_LEAVE_TABLE}
-            WHERE staff_user IN ({', '.join(['%s'] * len(aliases))})
-              AND leave_date = %s
-              AND day_part = %s
-            ''',
-            aliases + [leave_day, day_part],
-        )
-        cursor.execute(
-            f'''
-            INSERT INTO {STAFF_LEAVE_TABLE}
-                (staff_user, staff_name, leave_date, day_part, code, description, source, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, '', %s, %s)
-            ''',
-            [username, staff_name, leave_day, day_part, code, description, now, now],
-        )
-    messages.success(request, '休假資料已更新。')
-    return leave_day
+    placeholders = ', '.join(['%s'] * len(aliases))
+    with transaction.atomic(), connection.cursor() as cursor:
+        for leave_day, day_part in slots:
+            cursor.execute(
+                f'''DELETE FROM {STAFF_LEAVE_TABLE}
+                    WHERE (staff_user IN ({placeholders}) OR staff_name IN ({placeholders}))
+                      AND leave_date = %s AND day_part = %s''',
+                aliases + aliases + [leave_day, day_part],
+            )
+            cursor.execute(
+                f'''INSERT INTO {STAFF_LEAVE_TABLE}
+                    (staff_user, staff_name, leave_date, day_part, code, description, source, created_at, updated_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, '', %s, %s)''',
+                [username, staff_name, leave_day, day_part, code, description, now, now],
+            )
+    messages.success(request, f'已完成 {len(slots)} 個時段的休假登記。')
+    return slots[0][0]
 
 
 def _delete_leave_entry(request, selected_month):
-    leave_day = _parse_leave_date(request.POST.get('leave_date'), selected_month)
-    month_start = _month_start(leave_day)
-    if _is_leave_month_locked(month_start):
+    raw_slots = request.POST.get('leave_slots') or ''
+    try:
+        submitted_slots = json.loads(raw_slots) if raw_slots else []
+    except (TypeError, ValueError):
+        submitted_slots = []
+    if not submitted_slots:
+        submitted_slots = [{
+            'date': request.POST.get('leave_date'),
+            'part': request.POST.get('day_part'),
+        }]
+    slots = []
+    for submitted in submitted_slots:
+        if not isinstance(submitted, dict):
+            continue
+        try:
+            leave_day = date.fromisoformat(str(submitted.get('date') or ''))
+        except ValueError:
+            continue
+        day_part = submitted.get('part') or ''
+        slot = (leave_day, day_part)
+        if (
+            leave_day.year == selected_month.year
+            and leave_day.month == selected_month.month
+            and day_part in LEAVE_PARTS
+            and slot not in slots
+        ):
+            slots.append(slot)
+    if not slots:
+        messages.error(request, '請至少選擇一個正確的日期與時段。')
+        return selected_month
+    if _is_leave_month_locked(selected_month):
         messages.error(request, '此月份已鎖定，只能閱讀。')
-        return leave_day
-
-    day_part = request.POST.get('day_part') or ''
-    if day_part not in LEAVE_PARTS:
-        messages.error(request, '請選擇正確的上午/下午。')
-        return leave_day
+        return slots[0][0]
 
     aliases = _staff_user_aliases(request.user)
-    with connection.cursor() as cursor:
-        cursor.execute(
-            f'''
-            DELETE FROM {STAFF_LEAVE_TABLE}
-            WHERE staff_user IN ({', '.join(['%s'] * len(aliases))})
-              AND leave_date = %s
-              AND day_part = %s
-            ''',
-            aliases + [leave_day, day_part],
-        )
-    messages.success(request, '休假資料已刪除。')
-    return leave_day
+    placeholders = ', '.join(['%s'] * len(aliases))
+    deleted_count = 0
+    with transaction.atomic(), connection.cursor() as cursor:
+        for leave_day, day_part in slots:
+            cursor.execute(
+                f'''DELETE FROM {STAFF_LEAVE_TABLE}
+                    WHERE (staff_user IN ({placeholders}) OR staff_name IN ({placeholders}))
+                      AND leave_date = %s AND day_part = %s''',
+                aliases + aliases + [leave_day, day_part],
+            )
+            deleted_count += cursor.rowcount
+    messages.success(request, f'已刪除 {deleted_count} 筆休假資料。')
+    return slots[0][0]
 
 
 @login_required
@@ -945,6 +1154,7 @@ def leave_calendar_page(request):
     church_calendar_entries = _church_calendar_entries(selected_month)
     staff_name_aliases = _staff_name_aliases()
     staff_names = _staff_names_for_month(selected_month, entries, staff_name_aliases)
+    staff_full_names = _staff_full_name_map(staff_name_aliases)
     current_user = request.user.get_username()
 
     annual_leave_quota = 0.0
@@ -958,6 +1168,18 @@ def leave_calendar_page(request):
     except Exception:
         pass
     used_leave_days = _get_used_annual_leave_days(request.user)
+    monthly_leave_summary = _monthly_leave_summary(request.user, entries)
+    can_view_hr_leave_summary = request.user.has_perm(
+        'eureka.view_staff_leave_summary'
+    )
+    hr_leave_overview = None
+    if can_view_hr_leave_summary:
+        hr_leave_overview = _hr_monthly_leave_overview(
+            staff_names,
+            entries,
+            staff_name_aliases,
+            staff_full_names,
+        )
 
     context = {
         'month_options': _month_options(today),
@@ -967,16 +1189,23 @@ def leave_calendar_page(request):
         'entries_json': json.dumps(entries, ensure_ascii=False),
         'staff_names_json': json.dumps(staff_names, ensure_ascii=False),
         'staff_name_aliases_json': json.dumps(staff_name_aliases, ensure_ascii=False),
+        'staff_full_names_json': json.dumps(staff_full_names, ensure_ascii=False),
         'church_calendar_entries': church_calendar_entries,
         'church_calendar_entries_json': json.dumps(church_calendar_entries, ensure_ascii=False),
         'current_user': current_user,
         'current_staff_name': _staff_display_name(request.user),
         'current_user_aliases_json': json.dumps(_staff_user_aliases(request.user), ensure_ascii=False),
-        'leave_codes': ['補', '休', '特', '公', '其他', '病假', '事假', '陪/產假', '喪', '育嬰'],
+        'leave_code_options': [
+            {'code': code, 'label': label}
+            for code, label in LEAVE_EDITOR_CODE_OPTIONS
+        ],
         'leave_parts': LEAVE_PARTS,
         'is_locked': _is_leave_month_locked(selected_month, today),
         'lock_note': '每月5日鎖住前一個月；已鎖定月份只能閱讀。',
         'annual_leave_quota': annual_leave_quota,
         'used_leave_days': used_leave_days,
+        'monthly_leave_summary': monthly_leave_summary,
+        'can_view_hr_leave_summary': can_view_hr_leave_summary,
+        'hr_leave_overview': hr_leave_overview,
     }
     return render(request, 'staff/leaves.html', context)

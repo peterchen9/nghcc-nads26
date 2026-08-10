@@ -8,7 +8,6 @@ import tempfile
 import mimetypes
 
 from django.http import FileResponse, JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -245,4 +244,3 @@ from django.contrib.auth.decorators import login_required
 @login_required
 def humnos_page_view(request):
     return render(request, 'humnos/humnos_page.html')
-

@@ -629,6 +629,11 @@
                 {% endif %}
                 <button type="submit" title="搜尋">🔍</button>
             </form>
+            {% if can_add_staff %}
+                <button type="button" class="btn-premium" id="add-staff-button" onclick="openAddModal()">
+                    ＋ 新增同工
+                </button>
+            {% endif %}
             {% if can_edit_staff %}
                 <a href="{% url 'eureka:shift-list' %}" class="btn-premium">
                     📅 班表設定
@@ -735,10 +740,13 @@
                                         <button type="button" class="btn-action-edit" onclick="openEditModal({{ staff.staff_id }})">
                                             ✏️ 編輯
                                         </button>
+                                    {% endif %}
+                                    {% if can_delete_staff %}
                                         <a href="{% url 'eureka:staff-delete' staff.staff_id %}" class="btn-action-delete" onclick="return confirm('確定要刪除同工 {{ staff.name }} 嗎？此操作無法復原。')">
                                             🗑️ 刪除
                                         </a>
-                                    {% else %}
+                                    {% endif %}
+                                    {% if not can_edit_staff and not can_delete_staff %}
                                         <span style="color: var(--text-secondary); font-size: 0.74rem;">唯讀</span>
                                     {% endif %}
                                 </td>
@@ -761,12 +769,16 @@
 <div class="modal-backdrop" id="editStaffModal">
     <div class="modal-dialog">
         <div class="modal-header">
-            <h3 class="modal-title">編輯同工資料 (編號: <span id="edit-staff-id-display"></span>)</h3>
+            <h3 class="modal-title" id="staff-modal-title">編輯同工資料 (編號: <span id="edit-staff-id-display"></span>)</h3>
             <button type="button" class="modal-close" onclick="closeEditModal()">&times;</button>
         </div>
         <form id="edit-form" method="POST" action="">
             {% csrf_token %}
             <div class="form-grid">
+                <div class="form-group" id="staff-id-form-group" hidden>
+                    <label for="edit-staff-id">同工編號</label>
+                    <input type="number" id="edit-staff-id" name="staff_id" min="1" step="1">
+                </div>
                 <div class="form-group">
                     <label for="edit-name">姓名</label>
                     <input type="text" id="edit-name" name="name" required>
@@ -850,6 +862,19 @@
 </div>
 
 <script>
+    function openAddModal() {
+        const form = document.getElementById('edit-form');
+        form.reset();
+        form.action = "{% url 'eureka:staff-add' %}";
+        document.getElementById('staff-modal-title').textContent = '新增同工資料';
+        document.getElementById('staff-id-form-group').hidden = false;
+        document.getElementById('edit-staff-id').required = true;
+        document.getElementById('edit-annual-leave').value = '0';
+        document.getElementById('edit-is-active').value = 'true';
+        document.getElementById('editStaffModal').classList.add('show');
+        document.getElementById('edit-staff-id').focus();
+    }
+
     function openEditModal(staffId) {
         const row = document.getElementById('staff-row-' + staffId);
         if (!row) return;
@@ -879,7 +904,10 @@
         const ccEmail = row.querySelector('.td-cc-email').textContent.trim();
 
         // Populate modal inputs
+        document.getElementById('staff-modal-title').innerHTML = '編輯同工資料 (編號: <span id="edit-staff-id-display"></span>)';
         document.getElementById('edit-staff-id-display').textContent = staffId;
+        document.getElementById('staff-id-form-group').hidden = true;
+        document.getElementById('edit-staff-id').required = false;
         document.getElementById('edit-form').action = '/eureka/staff/edit/' + staffId + '/';
         document.getElementById('edit-name').value = name;
         document.getElementById('edit-identity-code').value = identityCode === '-' ? '' : identityCode;

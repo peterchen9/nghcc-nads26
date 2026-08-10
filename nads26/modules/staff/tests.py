@@ -1,10 +1,20 @@
 import datetime
+import json
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
+from django.contrib.auth.models import Permission
 from django.urls import reverse
 from django.db import connection
 from modules.eureka.models import StaffInfo
-from modules.staff.views import STAFF_LEAVE_TABLE, STAFF_LEAVE_YEAR
+from modules.staff.views import (
+    STAFF_LEAVE_TABLE,
+    STAFF_LEAVE_YEAR,
+    _get_used_annual_leave_days,
+    _hr_monthly_leave_overview,
+    _monthly_leave_summary,
+    _staff_name_aliases,
+    _staff_full_name_map,
+)
 
 class StaffLeaveTests(TestCase):
     def setUp(self):
@@ -53,6 +63,179 @@ class StaffLeaveTests(TestCase):
                 self.assertIsNotNone(row)
                 self.assertEqual(row[0], ltype)
                 self.assertEqual(row[1], f'Testing {ltype}')
+
+    def test_team_month_uses_full_staff_names(self):
+        full_names = _staff_full_name_map()
+
+        self.assertEqual(full_names['明月'], '林明月')
+        self.assertEqual(full_names['小慧'], '謝淑慧')
+        self.assertEqual(full_names['彼得陳'], '陳潘傳')
+
+        response = self.client.get(reverse('staff-leaves'))
+        self.assertContains(response, 'staffFullNames')
+        self.assertContains(response, 'national-holiday')
+        self.assertContains(response, 'sunday')
+        self.assertContains(response, '--team-date-column-width: 80px')
+        self.assertContains(response, 'width: 60px')
+        self.assertContains(response, 'team-slots')
+        self.assertContains(response, "code === '陪/產假' ? '陪產' : code")
+        self.assertContains(response, '個人休假瀏覽表')
+        self.assertContains(response, '年度特休天數')
+        self.assertContains(response, '已休特休天數')
+        self.assertContains(response, '當月總計')
+        self.assertContains(response, '日期與時段（可複選）')
+        self.assertContains(response, 'name="leave_slots"')
+        self.assertContains(response, 'width: min(500px, 100%)')
+        self.assertContains(response, 'min-height: 20px')
+        self.assertContains(response, '.content-area .leave-modal .batch-slot-button')
+        self.assertContains(response, 'height: 20px')
+        self.assertContains(response, 'applyNationalHolidayBackgrounds')
+        self.assertContains(response, 'const extendedHolidayPattern = /連假|補假|調整放假|彈性放假/;')
+        self.assertContains(response, '!extendedHolidayPattern.test(holidayText)')
+        self.assertContains(response, 'data-batch-day=')
+        self.assertNotContains(response, 'data-batch-part="am">上</button>')
+        self.assertNotContains(response, 'data-batch-part="pm">下</button>')
+        for label in ['例休', '特休', '補休', '公假', '病假', '陪產', '育嬰', '喪假']:
+            self.assertContains(response, f'>{label}</button>')
+        self.assertContains(response, 'leave-toolbar-actions')
+        self.assertContains(response, '.content-area:has(> .leave-page)')
+        self.assertContains(response, 'top: 0')
+        self.assertNotContains(response, "slot.classList.add('present-dot')")
+        html = response.content.decode()
+        labels = [
+            '年度特休天數', '已休特休天數', '例休', '特休', '補休',
+            '公假', '其他', '病假', '陪產', '育嬰', '喪假', '當月總計',
+        ]
+        positions = [html.index(f'<span>{label}</span>') for label in labels]
+        self.assertEqual(positions, sorted(positions))
+
+    def test_monthly_leave_summary_counts_half_days(self):
+        entries = [
+            {
+                'staff_user': self.user.username,
+                'staff_name': self.user.get_full_name(),
+                'leave_date': '2026-08-03',
+                'day_part': 'am',
+                'code': '休',
+            },
+            {
+                'staff_user': self.user.username,
+                'staff_name': self.user.get_full_name(),
+                'leave_date': '2026-08-03',
+                'day_part': 'pm',
+                'code': '陪/產假',
+            },
+            {
+                'staff_user': self.user.get_full_name(),
+                'staff_name': self.user.get_full_name(),
+                'leave_date': '2026-08-03',
+                'day_part': 'am',
+                'code': '休',
+            },
+            {
+                'staff_user': 'someone-else',
+                'staff_name': '其他同工',
+                'leave_date': '2026-08-04',
+                'day_part': 'am',
+                'code': '病假',
+            },
+        ]
+
+        summary = _monthly_leave_summary(self.user, entries)
+
+        self.assertEqual(summary['total'], 1.0)
+        self.assertEqual(summary['休'], 0.5)
+        self.assertEqual(summary['特'], 0.0)
+        self.assertEqual(summary['陪產'], 0.5)
+        self.assertEqual(summary['病'], 0.0)
+
+    def test_batch_save_multiple_leave_slots_in_one_request(self):
+        slots = [
+            {'date': f'{STAFF_LEAVE_YEAR}-08-03', 'part': 'am'},
+            {'date': f'{STAFF_LEAVE_YEAR}-08-03', 'part': 'pm'},
+            {'date': f'{STAFF_LEAVE_YEAR}-08-03', 'part': 'am'},
+        ]
+        response = self.client.post(reverse('staff-leaves'), {
+            'action': 'save',
+            'month': f'{STAFF_LEAVE_YEAR}-08',
+            'leave_date': f'{STAFF_LEAVE_YEAR}-08-03',
+            'day_part': 'am',
+            'leave_slots': json.dumps(slots),
+            'code': '休',
+            'description': '',
+        })
+        self.assertEqual(response.status_code, 302)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f'''SELECT leave_date, day_part, code FROM {STAFF_LEAVE_TABLE}
+                    WHERE staff_user = %s AND leave_date = %s
+                    ORDER BY day_part''',
+                [self.user.username, f'{STAFF_LEAVE_YEAR}-08-03'],
+            )
+            rows = cursor.fetchall()
+        self.assertEqual(len(rows), 2)
+        self.assertEqual([row[1] for row in rows], ['am', 'pm'])
+        self.assertTrue(all(row[2] == '休' for row in rows))
+
+    def test_hr_leave_overview_requires_permission_and_expands_categories(self):
+        response = self.client.get(reverse('staff-leaves'))
+        self.assertNotContains(response, '人事休假總覽（每格以天數計）')
+
+        permission = Permission.objects.get(
+            content_type__app_label='eureka',
+            codename='view_staff_leave_summary',
+        )
+        self.user.user_permissions.add(permission)
+        response = self.client.get(reverse('staff-leaves'))
+        self.assertContains(response, '人事休假總覽（每格以天數計）')
+        self.assertContains(response, '<th class="hr-summary-label" scope="row">陪產</th>', html=True)
+        self.assertNotContains(response, '<th class="hr-summary-label" scope="row">事</th>', html=True)
+
+        overview = _hr_monthly_leave_overview(
+            ['美美'],
+            [
+                {
+                    'staff_user': '美美',
+                    'staff_name': '美美',
+                    'leave_date': '2026-08-03',
+                    'day_part': 'am',
+                    'code': '休',
+                },
+                {
+                    'staff_user': 'huangmeimei',
+                    'staff_name': '黃美美',
+                    'leave_date': '2026-08-03',
+                    'day_part': 'am',
+                    'code': '休',
+                },
+            ],
+            _staff_name_aliases(),
+            {'美美': '黃美美'},
+        )
+        row_values = {row['label']: row['values'][0] for row in overview['rows']}
+        self.assertEqual(overview['columns'][0]['name'], '黃美美')
+        self.assertEqual(len(overview['rows']), 10)
+        self.assertEqual(row_values['當月總計'], 0.5)
+        self.assertEqual(row_values['例休'], 0.5)
+
+    def test_used_annual_leave_days_deduplicates_alias_slots(self):
+        now = datetime.datetime.now()
+        rows = [
+            (self.user.username, self.user.get_full_name(), '2026-08-03', 'am'),
+            (self.user.get_full_name(), self.user.get_full_name(), '2026-08-03', 'am'),
+            (self.user.username, self.user.get_full_name(), '2026-08-03', 'pm'),
+        ]
+        with connection.cursor() as cursor:
+            for staff_user, staff_name, leave_date, day_part in rows:
+                cursor.execute(
+                    f'''INSERT INTO {STAFF_LEAVE_TABLE}
+                        (staff_user, staff_name, leave_date, day_part, code,
+                         description, source, created_at, updated_at)
+                        VALUES (%s, %s, %s, %s, '特', '', '', %s, %s)''',
+                    [staff_user, staff_name, leave_date, day_part, now, now],
+                )
+
+        self.assertEqual(_get_used_annual_leave_days(self.user), 1.0)
 
     def test_special_leave_quota_limit(self):
         """Verify that creating '特' leave entries is restricted by quota"""

@@ -165,6 +165,9 @@ class StaffInfo(models.Model):
         verbose_name = "同工資料"
         verbose_name_plural = "同工資料"
         ordering = ['staff_id']
+        permissions = [
+            ('view_staff_leave_summary', '可查看人事休假總覽'),
+        ]
 
     def __str__(self):
         return f"[{self.staff_id}] {self.name} ({self.identity_code})"
@@ -297,7 +300,6 @@ class PastoralGroup(models.Model):
 
     def __str__(self):
         return self.name
-
 
 
 

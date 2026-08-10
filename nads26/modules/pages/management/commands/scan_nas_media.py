@@ -1,17 +1,26 @@
 import json
 import paramiko
+from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.core.management.base import CommandError
 from modules.pages.models import MediaCollection
 
 class Command(BaseCommand):
-    help = 'Scans the NAS at 192.168.16.127 via SSH and updates MediaCollection records'
+    help = 'Scans the configured NAS via SSH and updates MediaCollection records'
 
     def handle(self, *args, **options):
-        self.stdout.write("Connecting to NAS 192.168.16.127 via SSH...")
+        host = settings.NAS_MEDIA_HOST
+        port = settings.NAS_MEDIA_PORT
+        username = settings.NAS_MEDIA_USER
+        password = settings.NAS_MEDIA_PASSWORD
+        if not all((host, username, password)):
+            raise CommandError('NAS media connection environment variables are not configured.')
+
+        self.stdout.write(f"Connecting to configured NAS {host} via SSH...")
         try:
             client = paramiko.SSHClient()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            client.connect('192.168.16.127', username='peter', password='Gala1051#', timeout=30)
+            client.connect(host, port=port, username=username, password=password, timeout=30)
         except Exception as e:
             self.stderr.write(f"Failed to connect to NAS: {e}")
             return
