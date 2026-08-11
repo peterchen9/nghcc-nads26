@@ -44,6 +44,8 @@ ROOM_PHOTO_FILES = None
 WEEKDAY_NAMES = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日']
 EXPENSE_CLAIM_TABLE = 'facility_expense_claim'
 EXPENSE_CLAIM_ITEM_TABLE = 'facility_expense_claim_item'
+EXPENSE_CLAIM_TYPE_STAFF = 'staff'
+EXPENSE_CLAIM_TYPE_AUTO_DEBIT = 'auto_debit'
 PASTORAL_REPORT_TABLE = 'care_pastoral_report'
 PASTORAL_REPORT_PHOTO_TABLE = 'care_pastoral_report_photo'
 PASTORAL_REPORT_PHOTO_DIR = Path(settings.MEDIA_ROOT if hasattr(settings, 'MEDIA_ROOT') and settings.MEDIA_ROOT else Path(settings.BASE_DIR) / 'media') / 'pastoral_reports'
@@ -1725,6 +1727,7 @@ def _expense_ensure_tables():
             CREATE TABLE IF NOT EXISTS {EXPENSE_CLAIM_TABLE} (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 claim_no VARCHAR(32) NOT NULL UNIQUE,
+                claim_type VARCHAR(32) NOT NULL DEFAULT 'staff',
                 applicant VARCHAR(120) NOT NULL,
                 request_date DATE NOT NULL,
                 payee VARCHAR(200) NOT NULL,
@@ -1744,6 +1747,12 @@ def _expense_ensure_tables():
         cursor.execute(f"SHOW COLUMNS FROM {EXPENSE_CLAIM_TABLE} LIKE 'accepted_at'")
         if not cursor.fetchone():
             cursor.execute(f"ALTER TABLE {EXPENSE_CLAIM_TABLE} ADD COLUMN accepted_at DATETIME NULL AFTER total_amount")
+        cursor.execute(f"SHOW COLUMNS FROM {EXPENSE_CLAIM_TABLE} LIKE 'claim_type'")
+        if not cursor.fetchone():
+            cursor.execute(
+                f"ALTER TABLE {EXPENSE_CLAIM_TABLE} "
+                "ADD COLUMN claim_type VARCHAR(32) NOT NULL DEFAULT 'staff' AFTER claim_no"
+            )
         cursor.execute(
             f'''
             CREATE TABLE IF NOT EXISTS {EXPENSE_CLAIM_ITEM_TABLE} (
@@ -1770,8 +1779,9 @@ def _expense_decimal(value):
     return amount.quantize(Decimal('0.01'))
 
 
-def _expense_claim_no(cursor, created_at):
-    prefix = f'EXP{created_at.strftime("%Y%m%d-%H%M%S")}'
+def _expense_claim_no(cursor, created_at, claim_type=EXPENSE_CLAIM_TYPE_STAFF):
+    claim_prefix = 'AUT' if claim_type == EXPENSE_CLAIM_TYPE_AUTO_DEBIT else 'EXP'
+    prefix = f'{claim_prefix}{created_at.strftime("%Y%m%d-%H%M%S")}'
     cursor.execute(f'SELECT COUNT(*) FROM {EXPENSE_CLAIM_TABLE} WHERE claim_no LIKE %s', [f'{prefix}-%'])
     sequence = int(cursor.fetchone()[0] or 0) + 1
     return f'{prefix}-{sequence:03d}'
@@ -1878,12 +1888,12 @@ def _expense_claim_from_post(request):
     return claim
 
 
-def _expense_create_claim(claim):
+def _expense_create_claim(claim, claim_type=EXPENSE_CLAIM_TYPE_STAFF):
     _expense_ensure_tables()
     created_at = datetime.now(TZ)
     with connection.cursor() as cursor:
-        claim_no = _expense_claim_no(cursor, created_at)
-        cursor.execute(f'''INSERT INTO {EXPENSE_CLAIM_TABLE} (claim_no, applicant, request_date, payee, payment_method, bank_name, bank_branch, bank_account, ministry_group, receipt_count, total_amount, created_by, created_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''', [claim_no, claim['applicant'], claim['request_date_obj'], claim['payee'], claim['payment_method'], claim['bank_name'], claim['bank_branch'], claim['bank_account'], claim['ministry_group'], claim['receipt_count'], claim['total_amount'], claim['created_by'], created_at.replace(tzinfo=None)])
+        claim_no = _expense_claim_no(cursor, created_at, claim_type)
+        cursor.execute(f'''INSERT INTO {EXPENSE_CLAIM_TABLE} (claim_no, claim_type, applicant, request_date, payee, payment_method, bank_name, bank_branch, bank_account, ministry_group, receipt_count, total_amount, created_by, created_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''', [claim_no, claim_type, claim['applicant'], claim['request_date_obj'], claim['payee'], claim['payment_method'], claim['bank_name'], claim['bank_branch'], claim['bank_account'], claim['ministry_group'], claim['receipt_count'], claim['total_amount'], claim['created_by'], created_at.replace(tzinfo=None)])
         cursor.execute('SELECT LAST_INSERT_ID()')
         claim_id = cursor.fetchone()[0]
         for index, item in enumerate(claim['items'], start=1):
@@ -1891,10 +1901,10 @@ def _expense_create_claim(claim):
     return claim_no
 
 
-def _expense_get_claim(claim_no):
+def _expense_get_claim(claim_no, claim_type=EXPENSE_CLAIM_TYPE_STAFF):
     _expense_ensure_tables()
     with connection.cursor() as cursor:
-        cursor.execute(f'''SELECT id, claim_no, applicant, request_date, payee, payment_method, bank_name, bank_branch, bank_account, ministry_group, receipt_count, total_amount, accepted_at, created_by, created_at FROM {EXPENSE_CLAIM_TABLE} WHERE claim_no = %s''', [claim_no])
+        cursor.execute(f'''SELECT id, claim_no, claim_type, applicant, request_date, payee, payment_method, bank_name, bank_branch, bank_account, ministry_group, receipt_count, total_amount, accepted_at, created_by, created_at FROM {EXPENSE_CLAIM_TABLE} WHERE claim_no = %s AND claim_type = %s''', [claim_no, claim_type])
         rows = _dictfetchall(cursor)
         if not rows:
             return None
@@ -1922,16 +1932,16 @@ def _expense_claim_for_form(claim):
     return form_claim
 
 
-def _expense_recent_claims():
+def _expense_recent_claims(claim_type=EXPENSE_CLAIM_TYPE_STAFF):
     _expense_ensure_tables()
     with connection.cursor() as cursor:
-        cursor.execute(f'''SELECT claim_no, applicant, request_date, total_amount, accepted_at, created_at FROM {EXPENSE_CLAIM_TABLE} ORDER BY created_at DESC, id DESC''')
+        cursor.execute(f'''SELECT claim_no, applicant, request_date, total_amount, accepted_at, created_at FROM {EXPENSE_CLAIM_TABLE} WHERE claim_type = %s ORDER BY created_at DESC, id DESC''', [claim_type])
         return _dictfetchall(cursor)
 
 
-def _expense_update_claim(claim_no, claim):
+def _expense_update_claim(claim_no, claim, claim_type=EXPENSE_CLAIM_TYPE_STAFF):
     _expense_ensure_tables()
-    existing = _expense_get_claim(claim_no)
+    existing = _expense_get_claim(claim_no, claim_type)
     if not existing:
         raise ValueError('\u627e\u4e0d\u5230\u8acb\u6b3e\u55ae')
     if existing.get('accepted_at'):
@@ -1943,9 +1953,9 @@ def _expense_update_claim(claim_no, claim):
             cursor.execute(f'''INSERT INTO {EXPENSE_CLAIM_ITEM_TABLE} (claim_id, item_name, budget_code, purpose, amount, sort_order) VALUES (%s, %s, %s, %s, %s, %s)''', [existing['id'], item['item_name'], item['budget_code'], item['purpose'], item['amount'], index])
 
 
-def _expense_delete_claim(claim_no):
+def _expense_delete_claim(claim_no, claim_type=EXPENSE_CLAIM_TYPE_STAFF):
     _expense_ensure_tables()
-    existing = _expense_get_claim(claim_no)
+    existing = _expense_get_claim(claim_no, claim_type)
     if not existing:
         raise ValueError('\u627e\u4e0d\u5230\u8acb\u6b3e\u55ae')
     if existing.get('accepted_at'):
@@ -1975,14 +1985,19 @@ def _expense_default_claim(request):
     return {'applicant': applicant_name, 'request_date': date.today().isoformat(), 'payee': applicant_name, 'payment_method': '\u532f\u6b3e', 'bank_name': bank_name, 'bank_branch': '', 'bank_account': bank_account, 'ministry_group': '', 'receipt_count': 0, 'items': [{'item_name': '', 'budget_code': '', 'purpose': '', 'amount': ''}]}
 
 
-def expense_claim_page(request):
+def _expense_claim_page(
+    request,
+    claim_type=EXPENSE_CLAIM_TYPE_STAFF,
+    claim_title='同工請款單',
+    base_path_fallback='/staff/expense-claims',
+):
     _expense_ensure_tables()
-    base_path = request.path.rstrip('/') or '/facility/expense-claims'
+    base_path = request.path.rstrip('/') or base_path_fallback
     edit_claim_no = request.GET.get('edit') or ''
     copy_claim_no = request.GET.get('copy') or ''
     new_claim = request.GET.get('new') == '1'
-    editing_claim = _expense_get_claim(edit_claim_no) if edit_claim_no else None
-    source_claim = _expense_get_claim(copy_claim_no) if copy_claim_no else None
+    editing_claim = _expense_get_claim(edit_claim_no, claim_type) if edit_claim_no else None
+    source_claim = _expense_get_claim(copy_claim_no, claim_type) if copy_claim_no else None
     form_modal_open = bool(new_claim or editing_claim or source_claim)
     if editing_claim:
         claim = _expense_claim_for_form(editing_claim)
@@ -2001,21 +2016,45 @@ def expense_claim_page(request):
             if action == 'delete':
                 if not form_claim_no:
                     raise ValueError('\u8acb\u5148\u9078\u64c7\u8acb\u6b3e\u55ae')
-                _expense_delete_claim(form_claim_no)
-                messages.success(request, f'\u5df2\u522a\u9664\u8acb\u6b3e\u55ae\uff1a{form_claim_no}')
+                _expense_delete_claim(form_claim_no, claim_type)
+                messages.success(request, f'已刪除{claim_title}：{form_claim_no}')
                 return redirect(f'{base_path}/')
             claim = _expense_claim_from_post(request)
             if form_claim_no:
-                _expense_update_claim(form_claim_no, claim)
-                messages.success(request, f'\u5df2\u66f4\u65b0\u8acb\u6b3e\u55ae\uff1a{form_claim_no}')
+                _expense_update_claim(form_claim_no, claim, claim_type)
+                messages.success(request, f'已更新{claim_title}：{form_claim_no}')
                 return redirect(f'{base_path}/')
-            claim_no = _expense_create_claim(claim)
+            claim_no = _expense_create_claim(claim, claim_type)
             messages.success(request, f'\u5df2\u6210\u7acb\u55ae\u865f\uff1a{claim_no}')
             return redirect(f'{base_path}/')
         except ValueError as exc:
             messages.error(request, str(exc))
-    claim_history = _expense_recent_claims()
-    return render(request, 'facility/expense_claim.html', {'claim': claim, 'editing_claim': editing_claim, 'source_claim': source_claim, 'form_modal_open': form_modal_open, 'claim_history': claim_history, 'expense_claim_base_path': base_path, 'budget_choices_json': _expense_budget_choices_json()})
+    claim_history = _expense_recent_claims(claim_type)
+    return render(request, 'facility/expense_claim.html', {
+        'claim': claim,
+        'editing_claim': editing_claim,
+        'source_claim': source_claim,
+        'form_modal_open': form_modal_open,
+        'claim_history': claim_history,
+        'expense_claim_base_path': base_path,
+        'expense_claim_title': claim_title,
+        'budget_choices_json': _expense_budget_choices_json(),
+    })
+
+
+@login_required
+def expense_claim_page(request):
+    return _expense_claim_page(request)
+
+
+@login_required
+def auto_debit_claim_page(request):
+    return _expense_claim_page(
+        request,
+        claim_type=EXPENSE_CLAIM_TYPE_AUTO_DEBIT,
+        claim_title='自動扣繳單',
+        base_path_fallback='/finance/auto-debit-claims',
+    )
 
 
 def _expense_register_pdf_font():
@@ -2058,8 +2097,13 @@ def _expense_pdf_text(canvas, text, x, y, max_chars=36, line_height=13):
     return y - max(len(lines[:3]), 1) * line_height
 
 
-def expense_claim_voucher_pdf(request, claim_no):
-    claim = _expense_get_claim(claim_no)
+def _expense_claim_voucher_pdf(
+    request,
+    claim_no,
+    claim_type=EXPENSE_CLAIM_TYPE_STAFF,
+    document_title='北門請款單',
+):
+    claim = _expense_get_claim(claim_no, claim_type)
     if not claim:
         return HttpResponseBadRequest('Expense claim not found')
 
@@ -2079,7 +2123,7 @@ def expense_claim_voucher_pdf(request, claim_no):
 
     margin_x = 18 * mm
     y = height - 18 * mm
-    title = '\u5317\u9580\u8acb\u6b3e\u55ae'
+    title = document_title
     page.setFont(font_name, 18)
     title_x = margin_x
     page.drawString(title_x, y, title)
@@ -2177,6 +2221,21 @@ def expense_claim_voucher_pdf(request, claim_no):
     response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="{claim_no}.pdf"'
     return response
+
+
+@login_required
+def expense_claim_voucher_pdf(request, claim_no):
+    return _expense_claim_voucher_pdf(request, claim_no)
+
+
+@login_required
+def auto_debit_claim_voucher_pdf(request, claim_no):
+    return _expense_claim_voucher_pdf(
+        request,
+        claim_no,
+        claim_type=EXPENSE_CLAIM_TYPE_AUTO_DEBIT,
+        document_title='北門自動扣繳單',
+    )
 
 
 # ==============================================================================

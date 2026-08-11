@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}同工請款單 - {{ site_name }}{% endblock %}
+{% block title %}{{ expense_claim_title }} - {{ site_name }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -74,7 +74,7 @@
 {% block content %}
 <div class="expense-page">
     <div class="expense-toolbar">
-        <h2>同工請款單</h2>
+        <h2>{{ expense_claim_title }}</h2>
     </div>
 
     <main class="expense-list-panel">
@@ -117,7 +117,7 @@
                             </td>
                         </tr>
                     {% empty %}
-                        <tr><td colspan="5">目前沒有已送出的請款單。</td></tr>
+                        <tr><td colspan="5">目前沒有已送出的{{ expense_claim_title }}。</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -129,7 +129,7 @@
     <section class="expense-modal" role="dialog" aria-modal="true" aria-labelledby="expenseModalTitle">
         <div class="modal-head">
             <h3 id="expenseModalTitle">
-                {% if editing_claim %}修改請款單：{{ editing_claim.claim_no }}{% elif source_claim %}複製請款單：{{ source_claim.claim_no }}{% else %}新增請款單{% endif %}
+                {% if editing_claim %}修改{{ expense_claim_title }}：{{ editing_claim.claim_no }}{% elif source_claim %}複製{{ expense_claim_title }}：{{ source_claim.claim_no }}{% else %}新增{{ expense_claim_title }}{% endif %}
             </h3>
             <div class="modal-head-actions">
                 {% if editing_claim %}
@@ -140,9 +140,9 @@
         </div>
         <div class="modal-body">
             {% if source_claim %}
-                <div class="message">已複製請款單 {{ source_claim.claim_no }} 的項目內容，日期與申請人資料已更新為目前登入者。</div>
+                <div class="message">已複製{{ expense_claim_title }} {{ source_claim.claim_no }} 的項目內容，日期與申請人資料已更新為目前登入者。</div>
             {% elif editing_claim and editing_claim.accepted_at %}
-                <div class="message error">此請款單已被後續流程接受，不能修改。</div>
+                <div class="message error">此{{ expense_claim_title }}已被後續流程接受，不能修改。</div>
             {% endif %}
 
             <form class="expense-form" method="post" id="expenseForm">
@@ -192,10 +192,10 @@
                     <button class="btn" type="button" id="addRow">新增項目</button>
                     <div class="right-actions">
                         {% if editing_claim %}
-                            <button class="btn danger" type="submit" name="action" value="delete" {% if editing_claim.accepted_at %}disabled{% endif %} onclick="return confirm('\u78ba\u5b9a\u522a\u9664\u6b64\u8acb\u6b3e\u55ae\uff1f')">刪除請款單</button>
+                            <button class="btn danger" type="submit" name="action" value="delete" {% if editing_claim.accepted_at %}disabled{% endif %} onclick="return confirm('確定刪除此{{ expense_claim_title }}？')">刪除{{ expense_claim_title }}</button>
                             <button class="btn primary" type="submit" name="action" value="save" {% if editing_claim.accepted_at %}disabled{% endif %}>儲存修改</button>
                         {% else %}
-                            <button class="btn primary" type="submit" name="action" value="save">送出請款單</button>
+                            <button class="btn primary" type="submit" name="action" value="save">送出{{ expense_claim_title }}</button>
                         {% endif %}
                     </div>
                 </div>

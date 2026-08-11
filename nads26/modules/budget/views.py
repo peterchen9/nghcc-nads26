@@ -11,6 +11,11 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from openpyxl import Workbook, load_workbook
 
+from modules.facility.views import (
+    auto_debit_claim_page,
+    auto_debit_claim_voucher_pdf,
+)
+
 from .models import BUDGET_PAGE_CHOICES, BudgetChangeLog, BudgetItem
 
 FIELDS = [

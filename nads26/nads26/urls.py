@@ -47,6 +47,7 @@ urlpatterns = [
     path('maintenance/', include('modules.maintenance.public_urls')),
     path('facility/', include('modules.facility.urls')),
     path('staff/', include('modules.staff.urls')),
+    path('finance/auto-debit-claims/', include('modules.budget.auto_debit_urls')),
     path('finance/budget/', include('modules.budget.urls')),
     path('finance/bank-balances/', include('modules.budget.bank_urls')),
     path('finance/fund-fellowship-balances/', include('modules.budget.fund_fellowship_urls')),
