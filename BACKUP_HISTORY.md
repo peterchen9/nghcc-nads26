@@ -61,3 +61,12 @@
 - Deployed files: `modules/facility/views.py`, `templates/facility/booking_daily_overview.html`, and `templates/facility/rooms.html`.
 - Database schema, existing bookings, media, menu items, and permission relationships: unchanged. Series identifiers apply only to newly created recurring bookings.
 - Verification: deployed SHA-256 values matched the local files; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; `/facility/booking/` and `/facility/rooms/` both returned HTTP 200; recent container logs contained no deployment error.
+
+## 2026-08-12 10:55:44 +08:00
+
+- Purpose: make the venue date picker navigate immediately, remove the redundant search and top-right new-booking buttons, and remove the legacy recurring-booking entry and modal from room administration.
+- GitHub commit: `692950b` on `main`.
+- Remote backup: `/home/peterchen/backups/nads26-pre-booking-ui-20260812-105544/`.
+- Deployed files: `templates/facility/booking_daily_overview.html` and `templates/facility/rooms.html`.
+- Database schema, existing bookings, media, menu items, and permission relationships: unchanged.
+- Verification: deployed SHA-256 values matched the local files; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; `/facility/booking/` and `/facility/rooms/` both returned HTTP 200.
