@@ -37,7 +37,7 @@ class StaffLeaveTests(TestCase):
 
     def test_save_new_leave_categories(self):
         """Verify that the new leave types can be saved successfully"""
-        new_types = ['病假', '事假', '陪/產假', '喪', '育嬰']
+        new_types = ['病假', '事假', '婚假', '陪/產假', '喪', '育嬰']
         today = datetime.date.today()
         month_str = today.strftime('%Y-%m')
         for idx, ltype in enumerate(new_types):
@@ -95,8 +95,11 @@ class StaffLeaveTests(TestCase):
         self.assertContains(response, 'data-batch-day=')
         self.assertNotContains(response, 'data-batch-part="am">上</button>')
         self.assertNotContains(response, 'data-batch-part="pm">下</button>')
-        for label in ['例休', '特休', '補休', '公假', '病假', '陪產', '育嬰', '喪假']:
+        for label in ['例休', '特休', '補休', '公假', '病假', '事假', '婚假', '陪產', '育嬰', '喪假']:
             self.assertContains(response, f'>{label}</button>')
+        self.assertContains(response, '左格：上午／右格：下午')
+        self.assertContains(response, '每年最多14天')
+        self.assertContains(response, "['公', '事假', '其他'].includes(codeInput.value)")
         self.assertContains(response, 'leave-toolbar-actions')
         self.assertContains(response, '.content-area:has(> .leave-page)')
         self.assertContains(response, 'top: 0')
@@ -104,7 +107,7 @@ class StaffLeaveTests(TestCase):
         html = response.content.decode()
         labels = [
             '年度特休天數', '已休特休天數', '例休', '特休', '補休',
-            '公假', '其他', '病假', '陪產', '育嬰', '喪假', '當月總計',
+            '公假', '其他', '病假', '事假', '婚假', '陪產', '育嬰', '喪假', '當月總計',
         ]
         positions = [html.index(f'<span>{label}</span>') for label in labels]
         self.assertEqual(positions, sorted(positions))
@@ -189,7 +192,8 @@ class StaffLeaveTests(TestCase):
         response = self.client.get(reverse('staff-leaves'))
         self.assertContains(response, '人事休假總覽（每格以天數計）')
         self.assertContains(response, '<th class="hr-summary-label" scope="row">陪產</th>', html=True)
-        self.assertNotContains(response, '<th class="hr-summary-label" scope="row">事</th>', html=True)
+        self.assertContains(response, '<th class="hr-summary-label" scope="row">事假</th>', html=True)
+        self.assertContains(response, '<th class="hr-summary-label" scope="row">婚假</th>', html=True)
 
         overview = _hr_monthly_leave_overview(
             ['美美'],
@@ -214,7 +218,7 @@ class StaffLeaveTests(TestCase):
         )
         row_values = {row['label']: row['values'][0] for row in overview['rows']}
         self.assertEqual(overview['columns'][0]['name'], '黃美美')
-        self.assertEqual(len(overview['rows']), 10)
+        self.assertEqual(len(overview['rows']), 12)
         self.assertEqual(row_values['當月總計'], 0.5)
         self.assertEqual(row_values['例休'], 0.5)
 

@@ -340,6 +340,8 @@
     .team-legend-swatch.code-病假 { background: #fca5a5; }
     .team-slot.code-事假,
     .team-legend-swatch.code-事假 { background: #fdba74; }
+    .team-slot.code-婚假,
+    .team-legend-swatch.code-婚假 { background: #f9a8d4; }
     .team-slot.code-陪\/產假,
     .team-legend-swatch.code-陪\/產假 { background: #5eead4; }
     .team-slot.code-喪,
@@ -389,6 +391,7 @@
     .leave-code-option.selected.code-其他 { background: #ddd6fe; color: #07111f; }
     .leave-code-option.selected.code-病假 { background: #fca5a5; color: #07111f; }
     .leave-code-option.selected.code-事假 { background: #fdba74; color: #07111f; }
+    .leave-code-option.selected.code-婚假 { background: #f9a8d4; color: #07111f; }
     .leave-code-option.selected.code-陪\/產假 { background: #5eead4; color: #07111f; }
     .leave-code-option.selected.code-喪 { background: #cbd5e1; color: #07111f; }
     .leave-code-option.selected.code-育嬰 { background: #67e8f9; color: #07111f; }
@@ -611,6 +614,7 @@
     .code-chip.code-其他 { background: #ddd6fe; }
     .code-chip.code-病假 { background: #fca5a5; }
     .code-chip.code-事假 { background: #fdba74; }
+    .code-chip.code-婚假 { background: #f9a8d4; }
     .code-chip.code-陪\/產假 { background: #5eead4; }
     .code-chip.code-喪 { background: #cbd5e1; }
     .code-chip.code-育嬰 { background: #67e8f9; }
@@ -794,6 +798,25 @@
     }
     .modal-backdrop.open {
         display: flex;
+    }
+    .leave-info-backdrop {
+        z-index: 700;
+    }
+    .leave-info-modal {
+        width: min(520px, 100%);
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+        background: #26394e;
+        border: 1px solid rgba(94, 234, 212, 0.5);
+        border-radius: 8px;
+        box-shadow: 0 24px 80px rgba(0,0,0,0.55);
+        padding: 18px;
+    }
+    .leave-info-text {
+        margin: 0;
+        color: var(--text-primary);
+        line-height: 1.75;
+        white-space: pre-line;
     }
     .leave-modal {
         width: min(500px, 100%);
@@ -1031,10 +1054,11 @@
             <span class="team-legend-item"><span class="team-legend-swatch code-其他"></span>其他</span>
             <span class="team-legend-item"><span class="team-legend-swatch code-病假"></span>病假</span>
             <span class="team-legend-item"><span class="team-legend-swatch code-事假"></span>事假</span>
+            <span class="team-legend-item"><span class="team-legend-swatch code-婚假"></span>婚假</span>
             <span class="team-legend-item"><span class="team-legend-swatch code-陪/產假"></span>陪/產假</span>
             <span class="team-legend-item"><span class="team-legend-swatch code-喪"></span>喪</span>
             <span class="team-legend-item"><span class="team-legend-swatch code-育嬰"></span>育嬰</span>
-            <span>上格：上午／下格：下午</span>
+            <span>左格：上午／右格：下午</span>
         </div>
         <div class="team-table-scroll" tabindex="0" aria-label="{{ selected_month|date:'Y年n月' }}全體同工休假月表">
             <table class="team-month-table" id="teamMonthTable">
@@ -1178,6 +1202,8 @@
                     <div class="personal-leave-stat"><span>公假</span><strong>{{ monthly_leave_summary.公|floatformat:"-1" }}</strong><small>天</small></div>
                     <div class="personal-leave-stat"><span>其他</span><strong>{{ monthly_leave_summary.其他|floatformat:"-1" }}</strong><small>天</small></div>
                     <div class="personal-leave-stat"><span>病假</span><strong>{{ monthly_leave_summary.病|floatformat:"-1" }}</strong><small>天</small></div>
+                    <div class="personal-leave-stat"><span>事假</span><strong>{{ monthly_leave_summary.事|floatformat:"-1" }}</strong><small>天</small></div>
+                    <div class="personal-leave-stat"><span>婚假</span><strong>{{ monthly_leave_summary.婚|floatformat:"-1" }}</strong><small>天</small></div>
                     <div class="personal-leave-stat"><span>陪產</span><strong>{{ monthly_leave_summary.陪產|floatformat:"-1" }}</strong><small>天</small></div>
                     <div class="personal-leave-stat"><span>育嬰</span><strong>{{ monthly_leave_summary.育嬰|floatformat:"-1" }}</strong><small>天</small></div>
                     <div class="personal-leave-stat"><span>喪假</span><strong>{{ monthly_leave_summary.喪|floatformat:"-1" }}</strong><small>天</small></div>
@@ -1248,6 +1274,16 @@
         </form>
     </div>
 </div>
+
+<div class="modal-backdrop leave-info-backdrop" id="leaveInfoModal" aria-hidden="true">
+    <div class="leave-info-modal" role="dialog" aria-modal="true" aria-labelledby="leaveInfoTitle">
+        <div class="modal-head">
+            <h2 id="leaveInfoTitle">假別說明</h2>
+            <button class="close-btn" type="button" id="closeLeaveInfoModal" aria-label="關閉假別說明">x</button>
+        </div>
+        <p class="leave-info-text" id="leaveInfoText"></p>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -1267,6 +1303,24 @@
     const annualLeaveQuota = parseFloat('{{ annual_leave_quota|escapejs }}') || 0;
     let usedLeaveDays = parseFloat('{{ used_leave_days|escapejs }}') || 0;
     const partLabels = { am: '上午', pm: '下午' };
+    const leaveCodeLabels = {
+        '休': '例休', '補': '補休', '特': '特休', '公': '公假',
+        '其他': '其他', '病假': '病假', '事假': '事假', '婚假': '婚假',
+        '喪': '喪假', '陪/產假': '陪/產假', '育嬰': '育嬰假',
+    };
+    const leaveCodeDescriptions = {
+        '休': '每月固定例休。',
+        '補': '每月因工時可補休1天，另每月固定參加晚崇可補休2天。',
+        '特': '入職滿半年3天，滿1年7天，滿2年10天，滿3年14天，滿5年15天，滿10年16天，滿10年以上每年加休1天，最後至30天為止。',
+        '公': '請說明原由。',
+        '事假': '請說明原由，每年最多14天，並每1天事假扣除月薪1/30金額。',
+        '其他': '請說明原由。',
+        '病假': '未住院，1年內合計不得超過30日；住院，2年內合計不得超過1年；未住院與住院，2年內合計不得超過1年。',
+        '婚假': '8天。',
+        '喪': '父母／養父母／繼父母／配偶喪亡者8日；祖父母／子女／配偶之父母、養父母、繼父母喪亡者6日；曾祖父母／兄弟姊妹／配偶之祖父母喪亡者3日。',
+        '陪/產假': '請與人事主管報備。',
+        '育嬰': '請與人事主管報備。',
+    };
 
     const filledStaff = new Set();
     entries.forEach((entry) => {
@@ -1284,6 +1338,10 @@
     const codeInput = document.getElementById('leaveCode');
     const descriptionInput = document.getElementById('leaveDescription');
     const descriptionField = document.getElementById('descriptionField');
+    const leaveInfoModal = document.getElementById('leaveInfoModal');
+    const leaveInfoTitle = document.getElementById('leaveInfoTitle');
+    const leaveInfoText = document.getElementById('leaveInfoText');
+    const closeLeaveInfoButton = document.getElementById('closeLeaveInfoModal');
     const deleteButton = document.getElementById('deleteLeaveButton');
     const saveButton = document.getElementById('saveLeaveButton');
     const statusList = document.getElementById('dayStatusList');
@@ -1553,7 +1611,7 @@
 
     function renderMonthlyNotes() {
         const notes = entries
-            .filter((entry) => isCurrentUserEntry(entry) && ['公', '其他'].includes(entry.code))
+            .filter((entry) => isCurrentUserEntry(entry) && ['公', '事假', '其他'].includes(entry.code))
             .sort((a, b) => entryKey(a).localeCompare(entryKey(b)));
         notesList.innerHTML = '';
         if (!notes.length) {
@@ -1573,7 +1631,7 @@
     }
 
     function updateDescriptionRequirement() {
-        const required = ['公', '其他'].includes(codeInput.value);
+        const required = ['公', '事假', '其他'].includes(codeInput.value);
         descriptionField.style.display = required ? '' : 'none';
         descriptionInput.required = required;
         if (!required) descriptionInput.value = '';
@@ -1585,6 +1643,21 @@
             opt.classList.toggle('selected', opt.dataset.code === code);
         });
         updateDescriptionRequirement();
+    }
+
+    function openLeaveInfo(code) {
+        leaveInfoTitle.textContent = `${leaveCodeLabels[code] || code}說明`;
+        leaveInfoText.textContent = leaveCodeDescriptions[code] || '目前沒有補充說明。';
+        leaveInfoModal.classList.add('open');
+        leaveInfoModal.setAttribute('aria-hidden', 'false');
+        closeLeaveInfoButton.focus();
+    }
+
+    function closeLeaveInfo() {
+        leaveInfoModal.classList.remove('open');
+        leaveInfoModal.setAttribute('aria-hidden', 'true');
+        const selectedOption = document.querySelector('.leave-code-option.selected');
+        if (selectedOption) selectedOption.focus();
     }
 
     function leaveSlotKey(date, part) {
@@ -1647,6 +1720,7 @@
         opt.addEventListener('click', () => {
             if (isLocked || opt.disabled) return;
             selectLeaveCode(opt.dataset.code);
+            openLeaveInfo(opt.dataset.code);
         });
     });
 
@@ -1785,11 +1859,17 @@
     });
     document.getElementById('closeLeaveModal').addEventListener('click', closeModal);
     document.getElementById('cancelLeaveModal').addEventListener('click', closeModal);
+    closeLeaveInfoButton.addEventListener('click', closeLeaveInfo);
+    leaveInfoModal.addEventListener('click', (event) => {
+        if (event.target === leaveInfoModal) closeLeaveInfo();
+    });
     modal.addEventListener('click', (event) => {
         if (event.target === modal) closeModal();
     });
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && modal.classList.contains('open')) closeModal();
+        if (event.key !== 'Escape') return;
+        if (leaveInfoModal.classList.contains('open')) closeLeaveInfo();
+        else if (modal.classList.contains('open')) closeModal();
     });
 
     renderCalendarBadges();

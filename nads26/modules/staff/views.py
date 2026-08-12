@@ -42,7 +42,7 @@ STAFF_LEAVE_SHEET_GIDS = {
     '2026-11': '117424320',
     '2026-12': '1003563016',
 }
-LEAVE_CODES = {'補', '休', '特', '公', '其他', '病假', '事假', '陪/產假', '喪', '育嬰'}
+LEAVE_CODES = {'補', '休', '特', '公', '其他', '病假', '事假', '婚假', '陪/產假', '喪', '育嬰'}
 LEAVE_PARTS = {'am': '上午', 'pm': '下午'}
 LEAVE_EDITOR_CODE_OPTIONS = [
     ('休', '例休'),
@@ -51,6 +51,8 @@ LEAVE_EDITOR_CODE_OPTIONS = [
     ('公', '公假'),
     ('其他', '其他'),
     ('病假', '病假'),
+    ('事假', '事假'),
+    ('婚假', '婚假'),
     ('陪/產假', '陪產'),
     ('育嬰', '育嬰'),
     ('喪', '喪假'),
@@ -63,6 +65,8 @@ HR_LEAVE_SUMMARY_METRICS = [
     ('公假', '公'),
     ('其他', '其他'),
     ('病假', '病假'),
+    ('事假', '事假'),
+    ('婚假', '婚假'),
     ('陪產', '陪/產假'),
     ('育嬰', '育嬰'),
     ('喪假', '喪'),
@@ -912,6 +916,8 @@ def _monthly_leave_summary(user, entries):
         '公': code_days['公'],
         '其他': code_days['其他'],
         '病': code_days['病假'],
+        '事': code_days['事假'],
+        '婚': code_days['婚假'],
         '陪產': code_days['陪/產假'],
         '喪': code_days['喪'],
         '育嬰': code_days['育嬰'],
@@ -1002,8 +1008,8 @@ def _save_leave_entry(request, selected_month):
     if code not in LEAVE_CODES:
         messages.error(request, '請選擇正確的日期、上午/下午與假別。')
         return slots[0][0]
-    if code in {'公', '其他'} and not description:
-        messages.error(request, '選擇「公」或「其他」時，請填寫文字說明。')
+    if code in {'公', '事假', '其他'} and not description:
+        messages.error(request, '選擇「公假」、「事假」或「其他」時，請填寫文字說明。')
         return slots[0][0]
 
     username = request.user.get_username()
