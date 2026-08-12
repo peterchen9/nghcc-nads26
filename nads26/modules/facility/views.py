@@ -1871,6 +1871,7 @@ def _expense_budget_choices():
             'code': item.budget_code,
             'category': item.category or '\u672a\u5206\u985e',
             'ministry': item.ministry or '',
+            'activityBudget': item.activity_budget or '',
             'ratio': ratio_text,
             'balance': str(balance),
             'balanceText': f'{balance:,.0f}',
@@ -2107,6 +2108,7 @@ def _expense_claim_page(
         'claim_history': claim_history,
         'expense_claim_base_path': base_path,
         'expense_claim_title': claim_title,
+        'show_activity_budget_in_options': claim_type == EXPENSE_CLAIM_TYPE_STAFF,
         'budget_choices_json': _expense_budget_choices_json(),
     })
 

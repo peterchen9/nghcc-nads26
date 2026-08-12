@@ -209,6 +209,7 @@
 <script>
 (() => {
     const budgetChoices = {{ budget_choices_json|safe }};
+    const showActivityBudgetInOptions = {{ show_activity_budget_in_options|yesno:'true,false' }};
     const categories = [...new Set(budgetChoices.map((item) => item.category || '\u672a\u5206\u985e'))].sort((a, b) => a.localeCompare(b, 'zh-Hant'));
     const body = document.getElementById('itemBody');
     const template = document.getElementById('itemRowTemplate');
@@ -241,7 +242,10 @@
         const category = categorySelect.value;
         const choices = choicesForCategory(category);
         budgetSelect.replaceChildren(option('', category ? '\u9078\u64c7\u9810\u7b97\u4ee3\u865f' : '\u5148\u9078\u5206\u985e'));
-        choices.forEach((item) => budgetSelect.appendChild(option(item.code, `${item.code} / ${item.ministry || '-'} / ${item.ratio} / \u9918\u984d ${item.balanceText}`)));
+        choices.forEach((item) => {
+            const detail = showActivityBudgetInOptions ? (item.activityBudget || '-') : item.ratio;
+            budgetSelect.appendChild(option(item.code, `${item.code} / ${item.ministry || '-'} / ${detail} / \u9918\u984d ${item.balanceText}`));
+        });
         if (code && choices.some((item) => item.code === code)) budgetSelect.value = code;
     }
     function initBudgetRow(row) {
