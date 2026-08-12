@@ -43,3 +43,12 @@
 - Deployed file: `templates/base.html`.
 - Database, media, menu items, and permission relationships: unchanged.
 - Verification: deployed SHA-256 `0ec3e78bc952d05addf10c84ae07721808f1487bb9cd389542131d71153d9853` matched the local file; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; the home page returned HTTP 200 and `/staff/leaves/` returned the expected unauthenticated HTTP 302 response. A transient HTTP 502 occurred during the first second of container startup and cleared once Django was listening.
+
+## 2026-08-12 09:40:45 +08:00
+
+- Purpose: integrate the complete recurring-booking fields and workflow into the main "新增場地登記" dialog while retaining the original recurring-booking entry point under room administration.
+- GitHub commit: `49f8219` on `main`.
+- Remote backup: `/home/peterchen/backups/nads26-pre-booking-integration-20260812-094045/`.
+- Deployed files: `modules/facility/views.py` and `templates/facility/booking_daily_overview.html`.
+- Database, existing bookings, media, menu items, and permission relationships: unchanged.
+- Verification: deployed SHA-256 values matched the local files; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; `/facility/booking/` returned HTTP 200 and the recent container log contained no deployment error.
