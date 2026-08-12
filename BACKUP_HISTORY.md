@@ -70,3 +70,12 @@
 - Deployed files: `templates/facility/booking_daily_overview.html` and `templates/facility/rooms.html`.
 - Database schema, existing bookings, media, menu items, and permission relationships: unchanged.
 - Verification: deployed SHA-256 values matched the local files; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; `/facility/booking/` and `/facility/rooms/` both returned HTTP 200.
+
+## 2026-08-12 11:47:26 +08:00
+
+- Purpose: prevent single, recurring, and edited venue bookings from overlapping existing bookings, and show every conflict with its requested time, venue, existing activity, existing time, and registrant.
+- GitHub commit: `4a46511` on `main`.
+- Remote backup: `/home/peterchen/backups/nads26-pre-booking-conflict-20260812-114622/`.
+- Deployed files: `modules/facility/views.py` and `templates/facility/booking_daily_overview.html`.
+- Database schema, existing bookings, media, menu items, and permission relationships: unchanged.
+- Verification: uploaded and deployed SHA-256 values matched the local files; 12 facility booking tests passed before deployment; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; `/facility/booking/` returned HTTP 200 and recent container logs contained no deployment error.
