@@ -1,4 +1,5 @@
 from decimal import Decimal
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -8,6 +9,15 @@ from . import views
 
 
 class ExpenseClaimBudgetChoiceTests(SimpleTestCase):
+    def test_expense_claim_template_wraps_activity_budget_details(self):
+        template = (
+            Path(views.settings.BASE_DIR) / 'templates' / 'facility' / 'expense_claim.html'
+        ).read_text(encoding='utf-8')
+
+        self.assertIn('white-space: pre-wrap', template)
+        self.assertIn('overflow-wrap: anywhere', template)
+        self.assertIn(r'\u6d3b\u52d5\u8207\u9810\u7b97\uff1a${choice.activityBudget', template)
+
     @patch('modules.facility.views._expense_budget_queryset')
     def test_budget_choice_includes_activity_budget(self, queryset_mock):
         queryset_mock.return_value = [SimpleNamespace(
@@ -23,4 +33,3 @@ class ExpenseClaimBudgetChoiceTests(SimpleTestCase):
 
         self.assertEqual(choices[0]['activityBudget'], '小組教材與活動費')
         self.assertEqual(choices[0]['balanceText'], '7,500')
-
