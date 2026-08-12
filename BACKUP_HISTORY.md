@@ -79,3 +79,12 @@
 - Deployed files: `modules/facility/views.py` and `templates/facility/booking_daily_overview.html`.
 - Database schema, existing bookings, media, menu items, and permission relationships: unchanged.
 - Verification: uploaded and deployed SHA-256 values matched the local files; 12 facility booking tests passed before deployment; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; `/facility/booking/` returned HTTP 200 and recent container logs contained no deployment error.
+
+## 2026-08-12 16:37:30 +08:00
+
+- Purpose: change the staff expense claim budget-code dropdown from usage percentage to activity and budget, while retaining code, ministry, and balance; the auto-debit claim dropdown remains unchanged.
+- GitHub commit: `3486f05` on `main`.
+- Remote backup: `/home/peterchen/backups/nads26-pre-expense-budget-option-20260812-163656/`.
+- Deployed files: `modules/facility/views.py` and `templates/facility/expense_claim.html`.
+- Database schema, claim records, budget records, menu items, and permission relationships: unchanged.
+- Verification: uploaded and deployed SHA-256 values matched the local files; 6 related tests passed before deployment; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; the unauthenticated `/staff/expense-claims/` check returned the expected HTTP 302 and recent container logs contained no deployment error.
