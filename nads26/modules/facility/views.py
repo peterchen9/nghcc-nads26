@@ -962,25 +962,56 @@ def _entries(day, room_id=None, current_username=''):
     return rows
 
 
-def _has_conflict(room_id, start_ts, end_ts, exclude_id=None):
+def _booking_conflicts(room_id, start_ts, end_ts, exclude_id=None):
     params = [room_id, end_ts, start_ts]
     exclude_filter = ''
     if exclude_id:
-        exclude_filter = 'AND id <> %s'
+        exclude_filter = 'AND e.id <> %s'
         params.append(exclude_id)
     with connection.cursor() as cursor:
         cursor.execute(
             f'''
-            SELECT COUNT(*)
-            FROM {MRBS_DB}.mrbs_entry
-            WHERE room_id = %s
-              AND start_time < %s
-              AND end_time > %s
+            SELECT e.id, e.start_time, e.end_time, e.name, e.create_by,
+                   e.room_id, r.room_name
+            FROM {MRBS_DB}.mrbs_entry e
+            JOIN {MRBS_DB}.mrbs_room r ON r.id = e.room_id
+            WHERE e.room_id = %s
+              AND e.start_time < %s
+              AND e.end_time > %s
               {exclude_filter}
+            ORDER BY e.start_time, e.end_time, e.id
             ''',
             params,
         )
-        return cursor.fetchone()[0] > 0
+        return _dictfetchall(cursor)
+
+
+def _has_conflict(room_id, start_ts, end_ts, exclude_id=None):
+    return bool(_booking_conflicts(room_id, start_ts, end_ts, exclude_id=exclude_id))
+
+
+def _conflict_detail(requested_start, requested_end, conflict):
+    existing_start = _from_ts(conflict['start_time'])
+    existing_end = _from_ts(conflict['end_time'])
+    requested_label = (
+        f'{requested_start:%Y-%m-%d %H:%M}–{requested_end:%H:%M}'
+        if requested_start.date() == requested_end.date()
+        else f'{requested_start:%Y-%m-%d %H:%M}–{requested_end:%Y-%m-%d %H:%M}'
+    )
+    existing_label = (
+        f'{existing_start:%Y-%m-%d %H:%M}–{existing_end:%H:%M}'
+        if existing_start.date() == existing_end.date()
+        else f'{existing_start:%Y-%m-%d %H:%M}–{existing_end:%Y-%m-%d %H:%M}'
+    )
+    return (
+        f'衝突：欲登記 {requested_label}／{conflict["room_name"]}；'
+        f'既有登記「{conflict["name"]}」{existing_label}，登記人：{conflict["create_by"] or "未註明"}。'
+    )
+
+
+def _show_conflicts(request, conflicts):
+    for requested_start, requested_end, conflict in conflicts:
+        messages.error(request, _conflict_detail(requested_start, requested_end, conflict))
 
 
 def _insert_entry(room_id, start_ts, end_ts, creator, name, use_unit, description, series_id=''):
@@ -1074,25 +1105,27 @@ def _create_entry(request, rooms_by_id):
 
     duration = end_dt - start_dt
     created = 0
-    skipped = 0
+    conflicts = []
     for repeat_day in _repeat_days(day, request):
         repeat_start = datetime.combine(repeat_day, start_dt.time(), tzinfo=TZ)
         repeat_end = repeat_start + duration
         start_ts = _to_ts(repeat_start)
         end_ts = _to_ts(repeat_end)
-        if _has_conflict(room_id, start_ts, end_ts):
-            skipped += 1
+        occurrence_conflicts = _booking_conflicts(room_id, start_ts, end_ts)
+        if occurrence_conflicts:
+            conflicts.extend((repeat_start, repeat_end, item) for item in occurrence_conflicts)
             continue
         _insert_entry(room_id, start_ts, end_ts, creator, name, use_unit, description)
         created += 1
 
     if created:
         message = f'場地登記已新增 {created} 筆。'
-        if skipped:
-            message += f'另有 {skipped} 筆因時段衝突未新增。'
+        if conflicts:
+            message += f'另有 {len(conflicts)} 筆衝突未新增。'
         messages.success(request, message)
     else:
-        messages.error(request, '所有週期登記時段皆已有預約，未新增資料。')
+        messages.error(request, '登記未建立，因為所選場地與既有登記衝突。')
+    _show_conflicts(request, conflicts)
     return day, room_id
 
 
@@ -1181,25 +1214,27 @@ def _create_recurring_admin_booking(request, rooms_by_id):
     duration = end_dt - start_dt
     series_id = f'nads26-series-{uuid.uuid4()}'
     created = 0
-    skipped = 0
+    conflicts = []
     for booking_day in days:
         booking_start = datetime.combine(booking_day, start_dt.time(), tzinfo=TZ)
         booking_end = booking_start + duration
         start_ts = _to_ts(booking_start)
         end_ts = _to_ts(booking_end)
-        if _has_conflict(room_id, start_ts, end_ts):
-            skipped += 1
+        occurrence_conflicts = _booking_conflicts(room_id, start_ts, end_ts)
+        if occurrence_conflicts:
+            conflicts.extend((booking_start, booking_end, item) for item in occurrence_conflicts)
             continue
         _insert_entry(room_id, start_ts, end_ts, creator, name, use_unit, description, series_id)
         created += 1
 
     if created:
         message = f'週期性登記已新增 {created} 筆。'
-        if skipped:
-            message += f'另有 {skipped} 筆因時段衝突未新增。'
+        if conflicts:
+            message += f'另有 {len(conflicts)} 筆衝突未新增。'
         messages.success(request, message)
     else:
-        messages.error(request, '所有週期性登記時段皆已有預約，未新增資料。')
+        messages.error(request, '週期性登記未建立，因為所有日期都與既有登記衝突。')
+    _show_conflicts(request, conflicts)
 
 
 def _update_entry(request, rooms_by_id):
@@ -1233,8 +1268,10 @@ def _update_entry(request, rooms_by_id):
 
     start_ts = _to_ts(start_dt)
     end_ts = _to_ts(end_dt)
-    if _has_conflict(room_id, start_ts, end_ts, exclude_id=entry_id):
-        messages.error(request, '此時段已有預約，請改選其他時間。')
+    occurrence_conflicts = _booking_conflicts(room_id, start_ts, end_ts, exclude_id=entry_id)
+    if occurrence_conflicts:
+        messages.error(request, '修改未儲存，因為所選場地與既有登記衝突。')
+        _show_conflicts(request, [(start_dt, end_dt, item) for item in occurrence_conflicts])
         return day, room_id
 
     with connection.cursor() as cursor:

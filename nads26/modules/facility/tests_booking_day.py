@@ -43,6 +43,44 @@ def sample_entries():
 
 
 class DailyOverviewHelperTests(SimpleTestCase):
+    def test_conflict_detail_identifies_requested_slot_and_existing_owner(self):
+        requested_start = datetime(2026, 8, 12, 9, 0, tzinfo=views.TZ)
+        requested_end = datetime(2026, 8, 12, 10, 0, tzinfo=views.TZ)
+        existing_start = datetime(2026, 8, 12, 9, 30, tzinfo=views.TZ)
+        existing_end = datetime(2026, 8, 12, 11, 0, tzinfo=views.TZ)
+
+        detail = views._conflict_detail(requested_start, requested_end, {
+            'start_time': views._to_ts(existing_start),
+            'end_time': views._to_ts(existing_end),
+            'room_name': '201',
+            'name': '同工會議',
+            'create_by': '王小明',
+        })
+
+        self.assertIn('欲登記 2026-08-12 09:00–10:00／201', detail)
+        self.assertIn('既有登記「同工會議」2026-08-12 09:30–11:00', detail)
+        self.assertIn('登記人：王小明', detail)
+
+    @patch('modules.facility.views.messages.error')
+    def test_show_conflicts_displays_every_conflicting_booking(self, error_mock):
+        requested_start = datetime(2026, 8, 12, 9, 0, tzinfo=views.TZ)
+        requested_end = datetime(2026, 8, 12, 12, 0, tzinfo=views.TZ)
+        conflicts = []
+        for name, owner, hour in [('會議一', '甲', 9), ('會議二', '乙', 10)]:
+            conflicts.append((requested_start, requested_end, {
+                'start_time': views._to_ts(datetime(2026, 8, 12, hour, 0, tzinfo=views.TZ)),
+                'end_time': views._to_ts(datetime(2026, 8, 12, hour + 1, 0, tzinfo=views.TZ)),
+                'room_name': '201',
+                'name': name,
+                'create_by': owner,
+            }))
+
+        views._show_conflicts(SimpleNamespace(), conflicts)
+
+        self.assertEqual(error_mock.call_count, 2)
+        self.assertIn('登記人：甲', error_mock.call_args_list[0].args[1])
+        self.assertIn('登記人：乙', error_mock.call_args_list[1].args[1])
+
     def test_weekly_recurring_days_accept_multiple_weekdays(self):
         data = QueryDict('', mutable=True)
         data.update({'range_start': '2026-07-20', 'range_end': '2026-07-26', 'recurrence_type': 'weekly'})
