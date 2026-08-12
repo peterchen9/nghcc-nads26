@@ -52,3 +52,12 @@
 - Deployed files: `modules/facility/views.py` and `templates/facility/booking_daily_overview.html`.
 - Database, existing bookings, media, menu items, and permission relationships: unchanged.
 - Verification: deployed SHA-256 values matched the local files; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; `/facility/booking/` returned HTTP 200 and the recent container log contained no deployment error.
+
+## 2026-08-12 10:31:05 +08:00
+
+- Purpose: allow new recurring venue bookings to select multiple weekdays and multiple monthly week numbers, and allow cancelling only one occurrence or that occurrence and all following occurrences in the same series.
+- GitHub commit: `8e30c84` on `main`.
+- Remote backup: `/home/peterchen/backups/nads26-pre-booking-series-20260812-103105/`.
+- Deployed files: `modules/facility/views.py`, `templates/facility/booking_daily_overview.html`, and `templates/facility/rooms.html`.
+- Database schema, existing bookings, media, menu items, and permission relationships: unchanged. Series identifiers apply only to newly created recurring bookings.
+- Verification: deployed SHA-256 values matched the local files; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; `/facility/booking/` and `/facility/rooms/` both returned HTTP 200; recent container logs contained no deployment error.
