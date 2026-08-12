@@ -34,3 +34,12 @@
 - Deployed files: `modules/staff/views.py` and `templates/staff/leaves.html`.
 - Database, media, menu items, and permission relationships: unchanged.
 - Verification: deployed SHA-256 values matched the local files; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; `/staff/leaves/` returned the expected unauthenticated HTTP 302 response.
+
+## 2026-08-12 09:20:01 +08:00
+
+- Purpose: preserve sidebar, page, and nested content scroll positions after confirmed actions and form submissions.
+- GitHub commit: `cdc3e4d` on `main`.
+- Remote backup: `/home/peterchen/backups/nads26-pre-scroll-restore-20260812-092001/`.
+- Deployed file: `templates/base.html`.
+- Database, media, menu items, and permission relationships: unchanged.
+- Verification: deployed SHA-256 `0ec3e78bc952d05addf10c84ae07721808f1487bb9cd389542131d71153d9853` matched the local file; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; the home page returned HTTP 200 and `/staff/leaves/` returned the expected unauthenticated HTTP 302 response. A transient HTTP 502 occurred during the first second of container startup and cleared once Django was listening.
