@@ -94,6 +94,13 @@ class DailyOverviewPageTests(TestCase):
         self.assertContains(response, 'class="day-overview-slot-button"')
         self.assertContains(response, 'class="day-overview-booked-button"')
         self.assertContains(response, 'class="day-overview-room-button"')
+        self.assertContains(response, 'id="dayOpenNewBooking"')
+        self.assertContains(response, '>新增場地登記</button>')
+        self.assertContains(response, 'id="dayModalRoomSelect"')
+        self.assertContains(response, '>週期性登記</option>')
+        self.assertContains(response, 'name="weekday"')
+        self.assertContains(response, 'name="range_start"')
+        self.assertContains(response, 'name="range_end"')
         self.assertContains(response, 'style="--booking-row-count: 3; z-index: 5;"')
         self.assertContains(response, 'height: calc(var(--booking-row-count, 1) * 27px)')
         self.assertContains(response, 'text-align: start')
@@ -148,6 +155,25 @@ class DailyOverviewPageTests(TestCase):
             'room_id': '1',
         })
 
+        self.assertRedirects(
+            response,
+            '/facility/booking/?date=2026-07-21',
+            fetch_redirect_response=False,
+        )
+
+    @patch('modules.facility.views._create_recurring_admin_booking')
+    @patch('modules.facility.views._rooms', return_value=sample_rooms())
+    def test_integrated_recurring_submission_uses_existing_admin_logic(self, _rooms_mock, recurring_mock):
+        response = self.client.post(reverse('facility-booking'), {
+            'action': 'create_recurring_booking',
+            'range_start': '2026-07-21',
+            'range_end': '2026-08-31',
+            'room_id': '1',
+            'recurrence_type': 'weekly',
+            'weekday': '1',
+        })
+
+        recurring_mock.assert_called_once()
         self.assertRedirects(
             response,
             '/facility/booking/?date=2026-07-21',

@@ -1679,6 +1679,9 @@ def booking_page(request):
     action = request.POST.get('action')
     if action == 'create':
         selected_date, selected_room_id = _create_entry(request, rooms_by_id)
+    elif action == 'create_recurring_booking':
+        _create_recurring_admin_booking(request, rooms_by_id)
+        selected_date = _parse_date(request.POST.get('range_start'))
     elif action == 'update':
         selected_date, selected_room_id = _update_entry(request, rooms_by_id)
     elif action == 'delete':
