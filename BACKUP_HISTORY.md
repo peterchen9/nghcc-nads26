@@ -97,3 +97,12 @@
 - Deployed file: `templates/facility/expense_claim.html`.
 - Database schema, claim records, budget records, menu items, and permission relationships: unchanged.
 - Verification: uploaded and deployed SHA-256 values matched the local file; 7 related tests passed before deployment; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; the unauthenticated `/staff/expense-claims/` check returned the expected HTTP 302 and recent container logs contained no deployment error.
+
+## 2026-08-12 17:16:06 +08:00
+
+- Purpose: replace the native staff expense-claim budget selector with a custom multiline selector that wraps long code, ministry, activity and budget, and balance content, while preserving submitted budget codes and over-budget validation.
+- GitHub commit: `86d2b0f` on `main`.
+- Remote backup: `/home/peterchen/backups/nads26-pre-expense-custom-picker-20260812-171538/`.
+- Deployed file: `templates/facility/expense_claim.html`.
+- Database schema, claim records, budget records, menu items, and permission relationships: unchanged.
+- Verification: uploaded and deployed SHA-256 values matched the local file; 7 related tests and a JavaScript syntax check passed before deployment; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; the unauthenticated `/staff/expense-claims/` check returned the expected HTTP 302 and recent container logs contained no deployment error.
