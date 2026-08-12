@@ -3,6 +3,7 @@ import hashlib
 import json
 import re
 import subprocess
+import uuid
 
 from decimal import Decimal, InvalidOperation
 from io import BytesIO, StringIO
@@ -937,6 +938,7 @@ def _entries(day, room_id=None, current_username=''):
             f'''
             SELECT e.id, e.start_time, e.end_time, e.room_id, e.create_by,
                    e.modified_by, e.name, e.use_unit, e.type, e.description, e.status,
+                   e.ical_uid,
                    r.room_name, r.sort_key, r.capacity
             FROM {MRBS_DB}.mrbs_entry e
             JOIN {MRBS_DB}.mrbs_room r ON r.id = e.room_id
@@ -981,7 +983,7 @@ def _has_conflict(room_id, start_ts, end_ts, exclude_id=None):
         return cursor.fetchone()[0] > 0
 
 
-def _insert_entry(room_id, start_ts, end_ts, creator, name, use_unit, description):
+def _insert_entry(room_id, start_ts, end_ts, creator, name, use_unit, description, series_id=''):
     with connection.cursor() as cursor:
         cursor.execute(
             f'''
@@ -992,9 +994,9 @@ def _insert_entry(room_id, start_ts, end_ts, creator, name, use_unit, descriptio
                ical_sequence, ical_recur_id)
             VALUES
               (%s, %s, 0, 0, %s, %s, %s, %s, %s, %s, %s, 0,
-               NULL, NULL, NULL, NULL, '', 0, '')
+               NULL, NULL, NULL, NULL, %s, 0, '')
             ''',
-            [start_ts, end_ts, room_id, creator, creator, name, use_unit, BOOKING_TYPE, description],
+            [start_ts, end_ts, room_id, creator, creator, name, use_unit, BOOKING_TYPE, description, series_id],
         )
 
 
@@ -1099,37 +1101,48 @@ def _recurring_admin_days(request):
     end_day = _parse_date(request.POST.get('range_end'))
     if end_day < start_day:
         return []
-    try:
-        weekday = int(request.POST.get('weekday') or start_day.weekday())
-    except ValueError:
-        weekday = start_day.weekday()
-    weekday = max(0, min(6, weekday))
+    weekday_values = request.POST.getlist('weekdays') or request.POST.getlist('weekday')
+    weekdays = set()
+    for value in weekday_values:
+        try:
+            weekdays.add(max(0, min(6, int(value))))
+        except (TypeError, ValueError):
+            continue
+    if not weekdays:
+        weekdays = {start_day.weekday()}
 
     repeat_type = request.POST.get('recurrence_type') or 'weekly'
     days = []
     if repeat_type == 'monthly_nth':
-        try:
-            week_number = int(request.POST.get('repeat_week') or 1)
-        except ValueError:
-            week_number = 1
-        week_number = max(1, min(5, week_number))
+        week_values = request.POST.getlist('repeat_weeks') or request.POST.getlist('repeat_week')
+        week_numbers = set()
+        for value in week_values:
+            try:
+                week_numbers.add(max(1, min(5, int(value))))
+            except (TypeError, ValueError):
+                continue
+        if not week_numbers:
+            week_numbers = {1}
         current = date(start_day.year, start_day.month, 1)
         while current <= end_day:
-            candidate = _month_week_date(current.year, current.month, weekday, week_number)
-            if candidate and start_day <= candidate <= end_day:
-                days.append(candidate)
+            for week_number in sorted(week_numbers):
+                for weekday in sorted(weekdays):
+                    candidate = _month_week_date(current.year, current.month, weekday, week_number)
+                    if candidate and start_day <= candidate <= end_day:
+                        days.append(candidate)
             if current.month == 12:
                 current = date(current.year + 1, 1, 1)
             else:
                 current = date(current.year, current.month + 1, 1)
-        return days
+        return sorted(set(days))
 
-    offset = (weekday - start_day.weekday()) % 7
-    current = start_day + timedelta(days=offset)
-    while current <= end_day:
-        days.append(current)
-        current += timedelta(days=7)
-    return days
+    for weekday in sorted(weekdays):
+        offset = (weekday - start_day.weekday()) % 7
+        current = start_day + timedelta(days=offset)
+        while current <= end_day:
+            days.append(current)
+            current += timedelta(days=7)
+    return sorted(set(days))
 
 
 def _create_recurring_admin_booking(request, rooms_by_id):
@@ -1166,6 +1179,7 @@ def _create_recurring_admin_booking(request, rooms_by_id):
         return
 
     duration = end_dt - start_dt
+    series_id = f'nads26-series-{uuid.uuid4()}'
     created = 0
     skipped = 0
     for booking_day in days:
@@ -1176,7 +1190,7 @@ def _create_recurring_admin_booking(request, rooms_by_id):
         if _has_conflict(room_id, start_ts, end_ts):
             skipped += 1
             continue
-        _insert_entry(room_id, start_ts, end_ts, creator, name, use_unit, description)
+        _insert_entry(room_id, start_ts, end_ts, creator, name, use_unit, description, series_id)
         created += 1
 
     if created:
@@ -1252,9 +1266,24 @@ def _delete_entry(request):
         messages.error(request, '只能刪除自己登記的資料。')
         return None
 
+    delete_scope = request.POST.get('delete_scope') or 'single'
     with connection.cursor() as cursor:
-        cursor.execute(f'DELETE FROM {MRBS_DB}.mrbs_entry WHERE id = %s', [entry_id])
-    messages.success(request, '場地登記已刪除。')
+        cursor.execute(
+            f'SELECT start_time, ical_uid, create_by FROM {MRBS_DB}.mrbs_entry WHERE id = %s',
+            [entry_id],
+        )
+        entry = cursor.fetchone()
+        if delete_scope == 'future' and entry and entry[1]:
+            cursor.execute(
+                f'''DELETE FROM {MRBS_DB}.mrbs_entry
+                    WHERE ical_uid = %s AND create_by = %s AND start_time >= %s''',
+                [entry[1], entry[2], entry[0]],
+            )
+            deleted = cursor.rowcount
+            messages.success(request, f'已取消當天及之後的週期活動，共 {deleted} 筆。')
+        else:
+            cursor.execute(f'DELETE FROM {MRBS_DB}.mrbs_entry WHERE id = %s', [entry_id])
+            messages.success(request, '已取消當天的場地登記。')
     return None
 
 

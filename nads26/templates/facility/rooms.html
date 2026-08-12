@@ -66,6 +66,11 @@
     }
     .field option,
     .room-table option { color: #111827; }
+    .field input[type="checkbox"] {
+        width: auto;
+        min-height: 0;
+        padding: 0;
+    }
     .btn {
         border: 1px solid rgba(188,220,255,0.35);
         background: rgba(188,220,255,0.12);
@@ -375,26 +380,12 @@
                 </select>
             </div>
             <div class="field" id="recurringWeekField">
-                <label for="recurringWeek">第 X 週</label>
-                <select id="recurringWeek" name="repeat_week">
-                    <option value="1">第 1 週</option>
-                    <option value="2">第 2 週</option>
-                    <option value="3">第 3 週</option>
-                    <option value="4">第 4 週</option>
-                    <option value="5">第 5 週</option>
-                </select>
+                <label>第 X 週（可複選）</label>
+                <div>{% for value in '12345' %}<label style="display:inline-flex;align-items:center;gap:4px;margin:4px 10px 4px 0;"><input type="checkbox" name="repeat_weeks" value="{{ value }}"{% if value == '1' %} checked{% endif %}>第 {{ value }} 週</label>{% endfor %}</div>
             </div>
             <div class="field">
-                <label for="recurringWeekday">星期幾</label>
-                <select id="recurringWeekday" name="weekday">
-                    <option value="0">星期一</option>
-                    <option value="1">星期二</option>
-                    <option value="2">星期三</option>
-                    <option value="3">星期四</option>
-                    <option value="4">星期五</option>
-                    <option value="5">星期六</option>
-                    <option value="6">星期日</option>
-                </select>
+                <label>星期幾（可複選）</label>
+                <div><label style="display:inline-flex;gap:4px;"><input type="checkbox" name="weekdays" value="0" checked>一</label> <label style="display:inline-flex;gap:4px;"><input type="checkbox" name="weekdays" value="1">二</label> <label style="display:inline-flex;gap:4px;"><input type="checkbox" name="weekdays" value="2">三</label> <label style="display:inline-flex;gap:4px;"><input type="checkbox" name="weekdays" value="3">四</label> <label style="display:inline-flex;gap:4px;"><input type="checkbox" name="weekdays" value="4">五</label> <label style="display:inline-flex;gap:4px;"><input type="checkbox" name="weekdays" value="5">六</label> <label style="display:inline-flex;gap:4px;"><input type="checkbox" name="weekdays" value="6">日</label></div>
             </div>
             <div class="field">
                 <label for="recurringRangeStart">開始日期</label>

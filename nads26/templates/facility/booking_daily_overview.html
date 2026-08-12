@@ -370,6 +370,23 @@
         border-radius: 7px;
         background: rgba(8, 13, 20, 0.34);
     }
+    .day-overview-multi-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+    }
+    .day-overview-check-option {
+        display: inline-flex !important;
+        align-items: center;
+        gap: 5px;
+        min-height: 34px;
+        padding: 5px 9px;
+        border: 1px solid rgba(255,255,255,0.14);
+        border-radius: 7px;
+        background: rgba(8,13,20,0.25);
+        cursor: pointer;
+    }
+    .day-overview-check-option input { width: auto; min-height: 0; margin: 0; }
     .day-overview-readonly-note {
         display: none;
         margin-top: 12px;
@@ -552,6 +569,7 @@
                                                 data-use-unit="{{ cell.booking.use_unit|default:'' }}"
                                                 data-create-by="{{ cell.booking.create_by }}"
                                                 data-description="{{ cell.booking.description|default:'' }}"
+                                                data-series-id="{{ cell.booking.ical_uid|default:'' }}"
                                                 data-can-edit="{% if cell.booking.can_edit %}1{% else %}0{% endif %}"
                                                 aria-label="查看 {{ cell.booking.name }} {{ cell.booking.start_label }} 到 {{ cell.booking.end_label }} 的場地登記">
                                             {% if not cell.skip_booking %}
@@ -596,6 +614,7 @@
             <input type="hidden" name="action" value="create" id="dayModalAction">
             <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
             <input type="hidden" name="entry_id" id="dayModalEntryId">
+            <input type="hidden" name="delete_scope" id="dayDeleteScope" value="single">
             <input type="hidden" name="room_id" id="dayModalRoomId">
             <div class="day-overview-modal-grid">
                 <div class="day-overview-field full" id="dayRoomSelectField">
@@ -615,8 +634,8 @@
                 <div class="day-overview-field full"><label for="dayModalDescription">備註</label><textarea id="dayModalDescription" name="description" rows="3"></textarea></div>
                 <div class="day-overview-field full day-recurrence-field"><label for="dayModalBookingMode">登記方式</label><select id="dayModalBookingMode"><option value="single">單次登記</option><option value="recurring">週期性登記</option></select></div>
                 <div class="day-overview-field full day-periodic-detail"><label for="dayModalRepeatType">週期</label><select id="dayModalRepeatType" name="recurrence_type"><option value="weekly">每週</option><option value="monthly_nth">每月第 X 週</option></select></div>
-                <div class="day-overview-field day-periodic-detail" id="dayRepeatWeekField"><label for="dayModalRepeatWeek">第 X 週</label><select id="dayModalRepeatWeek" name="repeat_week"><option value="1">第 1 週</option><option value="2">第 2 週</option><option value="3">第 3 週</option><option value="4">第 4 週</option><option value="5">第 5 週</option></select></div>
-                <div class="day-overview-field day-periodic-detail"><label for="dayModalWeekday">星期幾</label><select id="dayModalWeekday" name="weekday"><option value="0">星期一</option><option value="1">星期二</option><option value="2">星期三</option><option value="3">星期四</option><option value="4">星期五</option><option value="5">星期六</option><option value="6">星期日</option></select></div>
+                <div class="day-overview-field day-periodic-detail" id="dayRepeatWeekField"><label>第 X 週（可複選）</label><div class="day-overview-multi-options">{% for value in '12345' %}<label class="day-overview-check-option"><input type="checkbox" name="repeat_weeks" value="{{ value }}">第 {{ value }} 週</label>{% endfor %}</div></div>
+                <div class="day-overview-field day-periodic-detail"><label>星期幾（可複選）</label><div class="day-overview-multi-options" id="dayModalWeekdays"><label class="day-overview-check-option"><input type="checkbox" name="weekdays" value="0">一</label><label class="day-overview-check-option"><input type="checkbox" name="weekdays" value="1">二</label><label class="day-overview-check-option"><input type="checkbox" name="weekdays" value="2">三</label><label class="day-overview-check-option"><input type="checkbox" name="weekdays" value="3">四</label><label class="day-overview-check-option"><input type="checkbox" name="weekdays" value="4">五</label><label class="day-overview-check-option"><input type="checkbox" name="weekdays" value="5">六</label><label class="day-overview-check-option"><input type="checkbox" name="weekdays" value="6">日</label></div></div>
                 <div class="day-overview-field day-periodic-detail"><label for="dayModalRangeStart">開始日期</label><input id="dayModalRangeStart" type="date" name="range_start" value="{{ selected_date|date:'Y-m-d' }}"></div>
                 <div class="day-overview-field day-periodic-detail"><label for="dayModalRangeEnd">結束日期</label><input id="dayModalRangeEnd" type="date" name="range_end" value="{{ selected_date|date:'Y-m-d' }}"></div>
             </div>
@@ -627,6 +646,14 @@
                 <button class="btn primary" type="submit" id="daySaveBookingButton">新增登記</button>
             </div>
         </form>
+    </div>
+</div>
+
+<div class="day-overview-modal-backdrop" id="dayDeleteScopeModal" aria-hidden="true">
+    <div class="day-overview-modal" role="dialog" aria-modal="true" aria-labelledby="dayDeleteScopeTitle">
+        <div class="day-overview-modal-head"><h2 id="dayDeleteScopeTitle">取消週期活動</h2><button class="day-overview-close" type="button" id="dayCloseDeleteScope" aria-label="關閉">×</button></div>
+        <p>請選擇要取消的範圍：</p>
+        <div class="day-overview-modal-actions"><button class="btn" type="button" id="dayCancelDeleteScope">返回</button><button class="btn danger" type="button" id="dayDeleteSingle">只取消當天</button><button class="btn danger" type="button" id="dayDeleteFuture">取消當天及之後</button></div>
     </div>
 </div>
 
@@ -654,6 +681,7 @@
     const form = document.getElementById('dayBookingForm');
     const action = document.getElementById('dayModalAction');
     const entryId = document.getElementById('dayModalEntryId');
+    const deleteScope = document.getElementById('dayDeleteScope');
     const roomId = document.getElementById('dayModalRoomId');
     const roomName = document.getElementById('dayModalRoomName');
     const roomSelect = document.getElementById('dayModalRoomSelect');
@@ -673,10 +701,19 @@
     const bookingMode = document.getElementById('dayModalBookingMode');
     const repeatType = document.getElementById('dayModalRepeatType');
     const repeatWeekField = document.getElementById('dayRepeatWeekField');
-    const weekday = document.getElementById('dayModalWeekday');
+    const weekdayChecks = Array.from(document.querySelectorAll('input[name="weekdays"]'));
+    const repeatWeekChecks = Array.from(document.querySelectorAll('input[name="repeat_weeks"]'));
     const rangeStart = document.getElementById('dayModalRangeStart');
     const rangeEnd = document.getElementById('dayModalRangeEnd');
     const currentUser = '{{ default_creator|escapejs }}';
+    let currentSeriesId = '';
+    let deleteConfirmed = false;
+
+    function selectWeekdayForDate(value) {
+        const selected = new Date(`${value}T00:00:00`);
+        const weekdayValue = String(selected.getDay() === 0 ? 6 : selected.getDay() - 1);
+        weekdayChecks.forEach((checkbox) => { checkbox.checked = checkbox.value === weekdayValue; });
+    }
 
     function setReadonly(readonly) {
         [startTime, endTime, nameInput, useUnit, description].forEach((field) => { field.readOnly = readonly; });
@@ -709,7 +746,9 @@
         nameInput.value = ''; useUnit.value = ''; createBy.value = currentUser; description.value = '';
         bookingMode.value = 'single'; repeatType.value = 'weekly';
         rangeStart.value = '{{ selected_date|date:'Y-m-d' }}'; rangeEnd.value = '{{ selected_date|date:'Y-m-d' }}';
-        weekday.value = String(new Date(`${rangeStart.value}T00:00:00`).getDay() === 0 ? 6 : new Date(`${rangeStart.value}T00:00:00`).getDay() - 1);
+        selectWeekdayForDate(rangeStart.value);
+        repeatWeekChecks.forEach((checkbox) => { checkbox.checked = checkbox.value === '1'; });
+        currentSeriesId = ''; deleteScope.value = 'single'; deleteConfirmed = false;
         roomSelectField.style.display = ''; roomReadonlyField.style.display = 'none';
         setReadonly(false); setRecurrenceVisible(true);
         modal.classList.add('open'); modal.setAttribute('aria-hidden', 'false'); nameInput.focus();
@@ -725,11 +764,22 @@
         startTime.value = button.dataset.start; endTime.value = button.dataset.end;
         nameInput.value = button.dataset.name || ''; useUnit.value = button.dataset.useUnit || '';
         createBy.value = button.dataset.createBy || ''; description.value = button.dataset.description || '';
+        currentSeriesId = button.dataset.seriesId || ''; deleteScope.value = 'single'; deleteConfirmed = false;
         roomSelectField.style.display = 'none'; roomReadonlyField.style.display = '';
         saveButton.textContent = '儲存修改'; setReadonly(!canEdit); setRecurrenceVisible(false);
         modal.classList.add('open'); modal.setAttribute('aria-hidden', 'false');
     }
     function closeBooking() { modal.classList.remove('open'); modal.setAttribute('aria-hidden', 'true'); }
+
+    const deleteScopeModal = document.getElementById('dayDeleteScopeModal');
+    function closeDeleteScope() { deleteScopeModal.classList.remove('open'); deleteScopeModal.setAttribute('aria-hidden', 'true'); }
+    function submitDelete(scope) {
+        deleteScope.value = scope;
+        action.value = 'delete';
+        deleteConfirmed = true;
+        closeDeleteScope();
+        form.requestSubmit(deleteButton);
+    }
 
     const roomModal = document.getElementById('dayRoomModal');
     const roomModalTitle = document.getElementById('dayRoomModalTitle');
@@ -765,18 +815,38 @@
     repeatType.addEventListener('change', updatePeriodicFields);
     rangeStart.addEventListener('change', () => {
         if (rangeEnd.value < rangeStart.value) rangeEnd.value = rangeStart.value;
-        const selected = new Date(`${rangeStart.value}T00:00:00`);
-        weekday.value = String(selected.getDay() === 0 ? 6 : selected.getDay() - 1);
+        selectWeekdayForDate(rangeStart.value);
     });
-    deleteButton.addEventListener('click', (event) => { if (!confirm('確定要刪除這筆場地登記嗎？')) { event.preventDefault(); return; } action.value = 'delete'; });
-    form.addEventListener('submit', () => {
+    deleteButton.addEventListener('click', (event) => {
+        if (deleteConfirmed) return;
+        if (deleteScope.value !== 'single' || !currentSeriesId) {
+            if (!currentSeriesId && !confirm('確定要取消這筆場地登記嗎？')) event.preventDefault();
+            else action.value = 'delete';
+            return;
+        }
+        event.preventDefault();
+        deleteScopeModal.classList.add('open'); deleteScopeModal.setAttribute('aria-hidden', 'false');
+    });
+    document.getElementById('dayCloseDeleteScope').addEventListener('click', closeDeleteScope);
+    document.getElementById('dayCancelDeleteScope').addEventListener('click', closeDeleteScope);
+    document.getElementById('dayDeleteSingle').addEventListener('click', () => submitDelete('single'));
+    document.getElementById('dayDeleteFuture').addEventListener('click', () => submitDelete('future'));
+    form.addEventListener('submit', (event) => {
         if (document.activeElement === deleteButton) return;
+        if (action.value === 'delete') return;
         if (entryId.value) action.value = 'update';
-        else action.value = bookingMode.value === 'recurring' ? 'create_recurring_booking' : 'create';
+        else {
+            action.value = bookingMode.value === 'recurring' ? 'create_recurring_booking' : 'create';
+            if (bookingMode.value === 'recurring' && !weekdayChecks.some((checkbox) => checkbox.checked)) {
+                alert('週期性登記請至少選擇一個星期。');
+                event.preventDefault();
+            }
+        }
     });
     modal.addEventListener('click', (event) => { if (event.target === modal) closeBooking(); });
     roomModal.addEventListener('click', (event) => { if (event.target === roomModal) closeRoom(); });
-    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { closeBooking(); closeRoom(); } });
+    deleteScopeModal.addEventListener('click', (event) => { if (event.target === deleteScopeModal) closeDeleteScope(); });
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { closeDeleteScope(); closeBooking(); closeRoom(); } });
     setRecurrenceVisible(true);
 })();
 </script>

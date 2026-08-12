@@ -1,6 +1,8 @@
 from datetime import date, datetime
+from types import SimpleNamespace
 from unittest.mock import patch
 
+from django.http import QueryDict
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
@@ -35,11 +37,35 @@ def sample_entries():
         'use_unit': '測試單位',
         'create_by': 'tester',
         'description': '',
+        'ical_uid': 'nads26-series-test',
         'can_edit': False,
     }]
 
 
 class DailyOverviewHelperTests(SimpleTestCase):
+    def test_weekly_recurring_days_accept_multiple_weekdays(self):
+        data = QueryDict('', mutable=True)
+        data.update({'range_start': '2026-07-20', 'range_end': '2026-07-26', 'recurrence_type': 'weekly'})
+        data.setlist('weekdays', ['0', '2', '6'])
+        request = SimpleNamespace(POST=data)
+
+        self.assertEqual(
+            views._recurring_admin_days(request),
+            [date(2026, 7, 20), date(2026, 7, 22), date(2026, 7, 26)],
+        )
+
+    def test_monthly_recurring_days_accept_multiple_weeks_and_weekdays(self):
+        data = QueryDict('', mutable=True)
+        data.update({'range_start': '2026-08-01', 'range_end': '2026-08-31', 'recurrence_type': 'monthly_nth'})
+        data.setlist('repeat_weeks', ['1', '3'])
+        data.setlist('weekdays', ['0', '4'])
+        request = SimpleNamespace(POST=data)
+
+        self.assertEqual(
+            views._recurring_admin_days(request),
+            [date(2026, 8, 3), date(2026, 8, 7), date(2026, 8, 17), date(2026, 8, 21)],
+        )
+
     def test_floor_sections_follow_requested_order(self):
         rooms = [
             {
@@ -98,9 +124,13 @@ class DailyOverviewPageTests(TestCase):
         self.assertContains(response, '>新增場地登記</button>')
         self.assertContains(response, 'id="dayModalRoomSelect"')
         self.assertContains(response, '>週期性登記</option>')
-        self.assertContains(response, 'name="weekday"')
         self.assertContains(response, 'name="range_start"')
         self.assertContains(response, 'name="range_end"')
+        self.assertContains(response, 'name="weekdays"')
+        self.assertContains(response, 'name="repeat_weeks"')
+        self.assertContains(response, 'id="dayDeleteScopeModal"')
+        self.assertContains(response, '取消當天及之後')
+        self.assertContains(response, 'data-series-id="nads26-series-test"')
         self.assertContains(response, 'style="--booking-row-count: 3; z-index: 5;"')
         self.assertContains(response, 'height: calc(var(--booking-row-count, 1) * 27px)')
         self.assertContains(response, 'text-align: start')
