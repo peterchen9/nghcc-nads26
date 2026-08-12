@@ -88,3 +88,12 @@
 - Deployed files: `modules/facility/views.py` and `templates/facility/expense_claim.html`.
 - Database schema, claim records, budget records, menu items, and permission relationships: unchanged.
 - Verification: uploaded and deployed SHA-256 values matched the local files; 6 related tests passed before deployment; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; the unauthenticated `/staff/expense-claims/` check returned the expected HTTP 302 and recent container logs contained no deployment error.
+
+## 2026-08-12 17:03:25 +08:00
+
+- Purpose: allow long staff expense-claim budget descriptions to wrap and show the selected ministry, activity and budget, and balance on separate readable lines.
+- GitHub commit: `4665a90` on `main`.
+- Remote backup: `/home/peterchen/backups/nads26-pre-expense-wrap-20260812-170258/`.
+- Deployed file: `templates/facility/expense_claim.html`.
+- Database schema, claim records, budget records, menu items, and permission relationships: unchanged.
+- Verification: uploaded and deployed SHA-256 values matched the local file; 7 related tests passed before deployment; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; the unauthenticated `/staff/expense-claims/` check returned the expected HTTP 302 and recent container logs contained no deployment error.
