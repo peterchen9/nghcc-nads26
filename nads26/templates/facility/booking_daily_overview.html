@@ -506,13 +506,11 @@
             <form method="get" class="day-overview-date-form">
                 <label for="overview-date">查看日期
                     <span class="day-overview-date-input">
-                        <input id="overview-date" type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+                        <input id="overview-date" type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}" onchange="this.form.submit()">
                     </span>
                 </label>
-                <button class="btn primary" type="submit">查詢</button>
                 <a class="btn" href="?date={{ prev_day|date:'Y-m-d' }}">前一天</a>
                 <a class="btn" href="?date={{ next_day|date:'Y-m-d' }}">後一天</a>
-                <button class="btn primary" type="button" id="dayOpenNewBooking">新增場地登記</button>
             </form>
         </div>
     </section>
@@ -804,7 +802,6 @@
     function closeRoom() { roomModal.classList.remove('open'); roomModal.setAttribute('aria-hidden', 'true'); }
 
     document.querySelectorAll('.day-overview-slot-button').forEach((button) => button.addEventListener('click', () => openNew(button)));
-    document.getElementById('dayOpenNewBooking').addEventListener('click', () => openNewBooking());
     document.querySelectorAll('.day-overview-booked-button').forEach((button) => button.addEventListener('click', () => openExisting(button)));
     document.querySelectorAll('.day-overview-room-button').forEach((button) => button.addEventListener('click', () => openRoom(button)));
     document.getElementById('dayCloseBookingModal').addEventListener('click', closeBooking);

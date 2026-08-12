@@ -104,6 +104,14 @@ class DailyOverviewHelperTests(SimpleTestCase):
 
 
 class DailyOverviewPageTests(TestCase):
+    @patch('modules.facility.views._rooms', return_value=sample_rooms())
+    def test_room_admin_hides_legacy_recurring_booking_entry(self, _rooms_mock):
+        response = self.client.get(reverse('facility-rooms'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'id="openRecurringModal"')
+        self.assertNotContains(response, 'id="recurringModal"')
+
     @patch('modules.facility.views._entries', return_value=sample_entries())
     @patch('modules.facility.views._rooms', return_value=sample_rooms())
     def test_booking_page_renders_interactive_overview_as_single_entry(self, _rooms_mock, _entries_mock):
@@ -120,8 +128,9 @@ class DailyOverviewPageTests(TestCase):
         self.assertContains(response, 'class="day-overview-slot-button"')
         self.assertContains(response, 'class="day-overview-booked-button"')
         self.assertContains(response, 'class="day-overview-room-button"')
-        self.assertContains(response, 'id="dayOpenNewBooking"')
-        self.assertContains(response, '>新增場地登記</button>')
+        self.assertNotContains(response, 'id="dayOpenNewBooking"')
+        self.assertNotContains(response, '>查詢</button>')
+        self.assertContains(response, 'onchange="this.form.submit()"')
         self.assertContains(response, 'id="dayModalRoomSelect"')
         self.assertContains(response, '>週期性登記</option>')
         self.assertContains(response, 'name="range_start"')

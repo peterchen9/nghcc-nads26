@@ -218,7 +218,6 @@
         <h2>場地資料維護</h2>
         <div class="toolbar-actions">
             <button class="btn primary" type="button" id="openNewRoomModal">+新場地</button>
-            <button class="btn" type="button" id="openRecurringModal">週期性登記</button>
             <button class="btn" type="button" id="openExportModal">匯出登記報表</button>
         </div>
     </section>
@@ -346,74 +345,6 @@
     </div>
 </div>
 
-<div class="modal-backdrop" id="recurringModal" aria-hidden="true">
-    <div class="room-modal" role="dialog" aria-modal="true" aria-labelledby="recurringModalTitle">
-        <div class="modal-head">
-            <h2 id="recurringModalTitle">週期性登記</h2>
-            <button class="close-btn" type="button" data-close-modal aria-label="關閉">×</button>
-        </div>
-        <form method="post">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="create_recurring_booking">
-            <input type="hidden" name="create_by" value="{{ default_creator }}">
-            <div class="field">
-                <label for="recurringRoom">場地</label>
-                <select id="recurringRoom" name="room_id" required>
-                    {% for room in rooms %}
-                        <option value="{{ room.id }}">{{ room.floor }} · {{ room.room_name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="field">
-                <label for="recurringName">活動名稱</label>
-                <input id="recurringName" type="text" name="name" maxlength="80" required>
-            </div>
-            <div class="field">
-                <label for="recurringUseUnit">使用單位</label>
-                <input id="recurringUseUnit" type="text" name="use_unit" maxlength="120">
-            </div>
-            <div class="field">
-                <label for="recurringType">週期</label>
-                <select id="recurringType" name="recurrence_type">
-                    <option value="weekly">每週</option>
-                    <option value="monthly_nth">每月第 X 週</option>
-                </select>
-            </div>
-            <div class="field" id="recurringWeekField">
-                <label>第 X 週（可複選）</label>
-                <div>{% for value in '12345' %}<label style="display:inline-flex;align-items:center;gap:4px;margin:4px 10px 4px 0;"><input type="checkbox" name="repeat_weeks" value="{{ value }}"{% if value == '1' %} checked{% endif %}>第 {{ value }} 週</label>{% endfor %}</div>
-            </div>
-            <div class="field">
-                <label>星期幾（可複選）</label>
-                <div><label style="display:inline-flex;gap:4px;"><input type="checkbox" name="weekdays" value="0" checked>一</label> <label style="display:inline-flex;gap:4px;"><input type="checkbox" name="weekdays" value="1">二</label> <label style="display:inline-flex;gap:4px;"><input type="checkbox" name="weekdays" value="2">三</label> <label style="display:inline-flex;gap:4px;"><input type="checkbox" name="weekdays" value="3">四</label> <label style="display:inline-flex;gap:4px;"><input type="checkbox" name="weekdays" value="4">五</label> <label style="display:inline-flex;gap:4px;"><input type="checkbox" name="weekdays" value="5">六</label> <label style="display:inline-flex;gap:4px;"><input type="checkbox" name="weekdays" value="6">日</label></div>
-            </div>
-            <div class="field">
-                <label for="recurringRangeStart">開始日期</label>
-                <input id="recurringRangeStart" type="date" name="range_start" value="{% now 'Y-m-d' %}" required>
-            </div>
-            <div class="field">
-                <label for="recurringRangeEnd">結束日期</label>
-                <input id="recurringRangeEnd" type="date" name="range_end" value="{% now 'Y-m-d' %}" required>
-            </div>
-            <div class="field">
-                <label for="recurringStartTime">開始時間</label>
-                <input id="recurringStartTime" type="time" name="start_time" value="09:00" required>
-            </div>
-            <div class="field">
-                <label for="recurringEndTime">結束時間</label>
-                <input id="recurringEndTime" type="time" name="end_time" value="10:00" required>
-            </div>
-            <div class="field">
-                <label for="recurringDescription">備註</label>
-                <textarea id="recurringDescription" name="description" rows="3"></textarea>
-            </div>
-            <div class="modal-actions">
-                <button class="btn" type="button" data-close-modal>取消</button>
-                <button class="btn primary" type="submit">新增週期登記</button>
-            </div>
-        </form>
-    </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -421,12 +352,8 @@
 (function () {
     const newRoomModal = document.getElementById('newRoomModal');
     const exportModal = document.getElementById('exportModal');
-    const recurringModal = document.getElementById('recurringModal');
     const newRoomName = document.getElementById('newRoomName');
     const exportDate = document.getElementById('exportDate');
-    const recurringName = document.getElementById('recurringName');
-    const recurringType = document.getElementById('recurringType');
-    const recurringWeekField = document.getElementById('recurringWeekField');
 
     function openModal(modal, focusTarget) {
         modal.classList.add('open');
@@ -440,25 +367,18 @@
     }
 
     document.getElementById('openNewRoomModal').addEventListener('click', () => openModal(newRoomModal, newRoomName));
-    document.getElementById('openRecurringModal').addEventListener('click', () => openModal(recurringModal, recurringName));
     document.getElementById('openExportModal').addEventListener('click', () => openModal(exportModal, exportDate));
-    function updateRecurringWeekField() {
-        recurringWeekField.style.display = recurringType.value === 'monthly_nth' ? '' : 'none';
-    }
-    recurringType.addEventListener('change', updateRecurringWeekField);
-    updateRecurringWeekField();
-
     document.querySelectorAll('[data-close-modal]').forEach((button) => {
         button.addEventListener('click', () => closeModal(button.closest('.modal-backdrop')));
     });
-    [newRoomModal, exportModal, recurringModal].forEach((modal) => {
+    [newRoomModal, exportModal].forEach((modal) => {
         modal.addEventListener('click', (event) => {
             if (event.target === modal) closeModal(modal);
         });
     });
     document.addEventListener('keydown', (event) => {
         if (event.key !== 'Escape') return;
-        [newRoomModal, exportModal, recurringModal].forEach((modal) => {
+        [newRoomModal, exportModal].forEach((modal) => {
             if (modal.classList.contains('open')) closeModal(modal);
         });
     });
