@@ -1,5 +1,5 @@
 from django.contrib.auth.models import User
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory, SimpleTestCase, TestCase
 
 from modules.menu.context_processors import menu_processor
 from modules.menu.models import MenuItem
@@ -187,3 +187,20 @@ class MenuSyncSafetyTests(TestCase):
         self.assertIn(original_id, allowed_ids)
         self.assertIn(custom.id, allowed_ids)
         self.assertTrue(MenuItem.objects.filter(id=custom.id).exists())
+
+
+class BaseTemplateScrollRestorationTests(SimpleTestCase):
+    def test_base_template_preserves_scroll_after_confirmed_actions(self):
+        template_path = Path(__file__).resolve().parents[2] / 'templates' / 'base.html'
+        source = template_path.read_text(encoding='utf-8')
+
+        for marker in [
+            'PAGE_SCROLL_PENDING_KEY',
+            'preparePageScrollRestore',
+            'restorePageScroll',
+            "document.addEventListener('submit'",
+            'window.confirm = function',
+            "window.addEventListener('pagehide'",
+            'scrollableContentElements',
+        ]:
+            self.assertIn(marker, source)

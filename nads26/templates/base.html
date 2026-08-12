@@ -784,6 +784,133 @@
 
     <script>
         const SIDEBAR_SCROLL_KEY = 'sidebar_nav_scroll_top';
+        const PAGE_SCROLL_KEY_PREFIX = 'page_scroll_state:';
+        const PAGE_SCROLL_PENDING_KEY = 'page_scroll_restore_pending';
+        let preservePageScrollOnHide = false;
+
+        function safeSessionStorageGet(key) {
+            try {
+                return sessionStorage.getItem(key);
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function safeSessionStorageSet(key, value) {
+            try {
+                sessionStorage.setItem(key, value);
+            } catch (error) {
+                // Scroll restoration is optional when browser storage is unavailable.
+            }
+        }
+
+        function safeSessionStorageRemove(key) {
+            try {
+                sessionStorage.removeItem(key);
+            } catch (error) {
+                // Scroll restoration is optional when browser storage is unavailable.
+            }
+        }
+
+        function pageScrollStorageKey(pathname = window.location.pathname) {
+            return `${PAGE_SCROLL_KEY_PREFIX}${pathname}`;
+        }
+
+        function contentScrollElementKey(element) {
+            if (element.id) return `id:${element.id}`;
+            const contentArea = document.querySelector('.content-area');
+            if (!contentArea || element === contentArea) return 'content-area';
+
+            const path = [];
+            let current = element;
+            while (current && current !== contentArea) {
+                let position = 1;
+                let sibling = current.previousElementSibling;
+                while (sibling) {
+                    if (sibling.tagName === current.tagName) position += 1;
+                    sibling = sibling.previousElementSibling;
+                }
+                path.unshift(`${current.tagName.toLowerCase()}:nth-of-type(${position})`);
+                current = current.parentElement;
+            }
+            return `content-area>${path.join('>')}`;
+        }
+
+        function scrollableContentElements() {
+            const elements = new Map();
+            document.querySelectorAll('.content-area, .content-area *').forEach((element) => {
+                const style = window.getComputedStyle(element);
+                const canScrollY = element.scrollHeight > element.clientHeight + 1
+                    && ['auto', 'scroll', 'overlay'].includes(style.overflowY);
+                const canScrollX = element.scrollWidth > element.clientWidth + 1
+                    && ['auto', 'scroll', 'overlay'].includes(style.overflowX);
+                if (canScrollY || canScrollX) {
+                    elements.set(contentScrollElementKey(element), element);
+                }
+            });
+            return elements;
+        }
+
+        function savePageScroll() {
+            const nested = {};
+            scrollableContentElements().forEach((element, key) => {
+                if (element.scrollTop || element.scrollLeft) {
+                    nested[key] = {top: element.scrollTop, left: element.scrollLeft};
+                }
+            });
+            safeSessionStorageSet(pageScrollStorageKey(), JSON.stringify({
+                top: window.scrollY || document.documentElement.scrollTop || 0,
+                left: window.scrollX || document.documentElement.scrollLeft || 0,
+                nested,
+            }));
+        }
+
+        function preparePageScrollRestore() {
+            preservePageScrollOnHide = true;
+            savePageScroll();
+        }
+
+        function restorePageScroll() {
+            let pending = null;
+            try {
+                pending = JSON.parse(safeSessionStorageGet(PAGE_SCROLL_PENDING_KEY) || 'null');
+            } catch (error) {
+                pending = null;
+            }
+            if (!pending) return;
+            if (Date.now() - Number(pending.savedAt || 0) > 60000) {
+                safeSessionStorageRemove(PAGE_SCROLL_PENDING_KEY);
+                return;
+            }
+            if (pending.pathname !== window.location.pathname) return;
+            safeSessionStorageRemove(PAGE_SCROLL_PENDING_KEY);
+
+            let state = null;
+            try {
+                state = JSON.parse(safeSessionStorageGet(pageScrollStorageKey()) || 'null');
+            } catch (error) {
+                state = null;
+            }
+            if (!state) return;
+
+            if ('scrollRestoration' in window.history) {
+                window.history.scrollRestoration = 'manual';
+            }
+            const applySavedPosition = () => {
+                window.scrollTo(Number(state.left || 0), Number(state.top || 0));
+                const elements = scrollableContentElements();
+                Object.entries(state.nested || {}).forEach(([key, position]) => {
+                    const element = elements.get(key);
+                    if (!element) return;
+                    element.scrollTop = Number(position.top || 0);
+                    element.scrollLeft = Number(position.left || 0);
+                });
+            };
+            applySavedPosition();
+            requestAnimationFrame(applySavedPosition);
+            window.setTimeout(applySavedPosition, 120);
+            window.setTimeout(applySavedPosition, 400);
+        }
 
         function sidebarNavElement() {
             return document.querySelector('.sidebar nav');
@@ -792,19 +919,33 @@
         function saveSidebarScroll() {
             const nav = sidebarNavElement();
             if (!nav) return;
-            sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(nav.scrollTop || 0));
+            safeSessionStorageSet(SIDEBAR_SCROLL_KEY, String(nav.scrollTop || 0));
         }
 
         function restoreSidebarScroll() {
             const nav = sidebarNavElement();
             if (!nav) return;
-            const savedTop = parseInt(sessionStorage.getItem(SIDEBAR_SCROLL_KEY) || '0', 10);
+            const savedTop = parseInt(safeSessionStorageGet(SIDEBAR_SCROLL_KEY) || '0', 10);
             if (!Number.isFinite(savedTop) || savedTop <= 0) return;
             nav.scrollTop = savedTop;
             requestAnimationFrame(() => {
                 nav.scrollTop = savedTop;
             });
         }
+
+        const nativeConfirm = window.confirm.bind(window);
+        window.confirm = function(message) {
+            const confirmed = nativeConfirm(message);
+            if (confirmed) preparePageScrollRestore();
+            return confirmed;
+        };
+
+        document.addEventListener('submit', (event) => {
+            if (event.target && event.target.id === 'logoutForm') return;
+            queueMicrotask(() => {
+                if (!event.defaultPrevented) preparePageScrollRestore();
+            });
+        }, true);
 
         function toggleMenu(event, id, route) {
             saveSidebarScroll();
@@ -928,9 +1069,18 @@
             }
 
             restoreSidebarScroll();
+            restorePageScroll();
         });
 
-        window.addEventListener('pagehide', saveSidebarScroll);
+        window.addEventListener('pagehide', () => {
+            saveSidebarScroll();
+            if (!preservePageScrollOnHide) return;
+            savePageScroll();
+            safeSessionStorageSet(PAGE_SCROLL_PENDING_KEY, JSON.stringify({
+                pathname: window.location.pathname,
+                savedAt: Date.now(),
+            }));
+        });
 
         // User Dropdown Logic
         const btn = document.getElementById('userMenuBtn');
