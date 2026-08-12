@@ -25,3 +25,12 @@
 - Database SHA-256: `d92fb7025ca2528327032db772d4b547fbe6d0b660891dbcc914fb8b4d967c27`
 - Previous URL configuration SHA-256: `82e2a37267e541f985c683e5e71164d741b680a597623f125fe38e660cb8cd64`
 - Verification: SQL completion marker and SHA-256 checks passed; deployment changed only three URL registrations and did not modify finance data.
+
+## 2026-08-12 08:48:45 +08:00
+
+- Purpose: add personal/marriage leave options, require a personal-leave explanation, correct the monthly-table AM/PM legend, and add leave-type help dialogs.
+- GitHub commit: `ed09c19` on `main`.
+- Remote backup: `/home/peterchen/backups/nads26-pre-leave-update-20260812-084845/`.
+- Deployed files: `modules/staff/views.py` and `templates/staff/leaves.html`.
+- Database, media, menu items, and permission relationships: unchanged.
+- Verification: deployed SHA-256 values matched the local files; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; `/staff/leaves/` returned the expected unauthenticated HTTP 302 response.
