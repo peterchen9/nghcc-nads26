@@ -143,3 +143,12 @@
 - Deployed files: `modules/facility/views.py` and `templates/facility/expense_claim.html`.
 - Database schema, existing claim records, budget records, menu items, and permission relationships: unchanged.
 - Verification: uploaded and deployed SHA-256 values matched the local files; 9 related tests and a JavaScript syntax check passed before deployment; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; the unauthenticated `/staff/expense-claims/` check returned the expected HTTP 302 and recent container logs contained no deployment error.
+
+## 2026-08-13 09:42:11 +08:00
+
+- Purpose: apply the staff expense-claim budget selector design to the finance auto-debit claim, including activity-and-budget details instead of usage percentage.
+- GitHub commit: `0ae51bc` on `main`.
+- Remote backup: `/home/peterchen/backups/nads26-pre-auto-debit-design-20260813-094143/`.
+- Deployed file: `modules/facility/views.py`; the already deployed shared `templates/facility/expense_claim.html` remained unchanged.
+- Database schema, existing claim records, budget records, menu items, and permission relationships: unchanged.
+- Verification: the uploaded and deployed SHA-256 value matched the local file; 10 related tests passed before deployment; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; unauthenticated checks for `/finance/auto-debit-claims/` and `/staff/expense-claims/` both returned the expected HTTP 302 and recent container logs contained no deployment error.
