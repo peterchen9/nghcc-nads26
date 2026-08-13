@@ -124,3 +124,13 @@
 - Deployed file: `templates/facility/expense_claim.html`.
 - Database schema, claim records, budget records, menu items, and permission relationships: unchanged.
 - Verification: uploaded and deployed SHA-256 values matched the local file; 7 related tests and a JavaScript syntax check passed before deployment; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; the unauthenticated `/staff/expense-claims/` check returned the expected HTTP 302 and recent container logs contained no deployment error.
+
+## 2026-08-13 09:23:17 +08:00
+
+- Purpose: create a confirmed milestone backup after acceptance of the staff expense-claim budget selector.
+- GitHub baseline: `498d1a8c5b9cd568f6c8393c88dc62eb97c8b6cf` on `main`.
+- Remote backup: `/home/peterchen/backups/nads26-milestone-20260813-092316/`.
+- Local backup: `D:\backups\nghcc-nads26\nads26-milestone-20260813-092316\` (outside the Git working tree).
+- Contents: application archive excluding live data and secrets, consistent `nads26db` logical dump, protected `.env`, Docker and requirements files, Nginx configuration, runtime inventory, and SHA-256 manifest.
+- Backup size: 28,667,061 bytes across 11 files locally (about 28 MB on the remote host).
+- Verification: all remote and local SHA-256 checks passed; the database gzip passed and contained the mysqldump completion marker; the application archive opened successfully and contained 516 files; protected configuration files were present; the running services were not stopped and production data was not modified.
