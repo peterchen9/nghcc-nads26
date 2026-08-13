@@ -518,12 +518,23 @@ def serve_htm_resource(request, filename):
     raise Http404("HTM File not found")
 
 
+@login_required
+def serve_midi_resource(request, filename):
+    """提供既有 MIDI 伴奏檔，不依賴正式 Nginx 的 /media/ 設定。"""
+    clean_filename = os.path.basename(filename)
+    if clean_filename != filename or not clean_filename.lower().endswith(('.mid', '.midi')):
+        raise Http404("MIDI File not found")
+    filepath = os.path.join(MIDI_DIR, clean_filename)
+    if os.path.isfile(filepath):
+        return FileResponse(open(filepath, 'rb'), content_type='audio/midi')
+    raise Http404("MIDI File not found")
+
+
 from django.shortcuts import render
 
 @login_required
 def hymns_page_view(request):
     """渲染詩歌資料庫前端網頁"""
     return render(request, 'hymns/hymns_page.html')
-
 
 

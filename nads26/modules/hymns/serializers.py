@@ -1,5 +1,6 @@
 """詩歌資料庫 — API 序列化器"""
 from rest_framework import serializers
+from django.urls import reverse
 from .models import Hymn
 
 
@@ -101,7 +102,6 @@ class HymnDetailSerializer(NullToEmptyMixin, serializers.ModelSerializer):
     def get_midi_url(self, obj):
         if not obj.midi:
             return ''
-        return self._build_media_url(
-            self.context.get('request'),
-            obj.midi
-        )
+        path = reverse('serve-midi-resource', kwargs={'filename': obj.midi.split('/')[-1]})
+        request = self.context.get('request')
+        return request.build_absolute_uri(path) if request else path

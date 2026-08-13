@@ -1190,7 +1190,7 @@
             btn.appendChild(parseSVG(SVGS.midi));
             btn.onclick = (e) => {
                 e.stopPropagation();
-                playMIDI(`/media/hymns/midi/${encodeURIComponent(h.midi)}`, h.hymntitle);
+                playMIDI(`/hymn_resources/midi/${encodeURIComponent(h.midi)}`, h.hymntitle);
             };
             rightPart.appendChild(btn);
         } else {

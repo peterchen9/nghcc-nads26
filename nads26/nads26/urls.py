@@ -39,6 +39,7 @@ urlpatterns = [
     path('api/hymns/', include('modules.hymns.api_urls')),
     path('api/power/', include('modules.power.api_urls')),
     path('hymn_resources/htm/<str:filename>', hymns_views.serve_htm_resource, name='serve-htm-resource'),
+    path('hymn_resources/midi/<str:filename>', hymns_views.serve_midi_resource, name='serve-midi-resource'),
     path('worship/hymns/', hymns_views.hymns_page_view, name='hymns-page'),
     path('hymns/', hymns_views.hymns_page_view, name='hymns-page-direct'),
     path('webav/', humnos_views.humnos_page_view, name='webav'),
