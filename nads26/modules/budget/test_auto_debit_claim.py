@@ -53,6 +53,13 @@ class AutoDebitClaimViewTests(TestCase):
 
         self.assertEqual(claim_no, 'AUT20260811-093015-001')
 
+    def test_auto_debit_uses_activity_budget_dropdown_design(self):
+        self.assertTrue(
+            facility_views._expense_uses_activity_budget(
+                facility_views.EXPENSE_CLAIM_TYPE_AUTO_DEBIT
+            )
+        )
+
     @patch('modules.facility.views._expense_ensure_tables')
     @patch('modules.facility.views.connection.cursor')
     def test_recent_claims_are_filtered_by_claim_type(self, cursor_factory, ensure_tables):

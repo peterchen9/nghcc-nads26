@@ -1883,6 +1883,10 @@ def _expense_budget_choices_json():
     return json.dumps(_expense_budget_choices(), ensure_ascii=False)
 
 
+def _expense_uses_activity_budget(claim_type):
+    return claim_type in {EXPENSE_CLAIM_TYPE_STAFF, EXPENSE_CLAIM_TYPE_AUTO_DEBIT}
+
+
 def _expense_validate_budget_balances(items):
     totals = {}
     for item in items:
@@ -2109,7 +2113,7 @@ def _expense_claim_page(
         'claim_history': claim_history,
         'expense_claim_base_path': base_path,
         'expense_claim_title': claim_title,
-        'show_activity_budget_in_options': claim_type == EXPENSE_CLAIM_TYPE_STAFF,
+        'show_activity_budget_in_options': _expense_uses_activity_budget(claim_type),
         'budget_choices_json': _expense_budget_choices_json(),
     })
 
