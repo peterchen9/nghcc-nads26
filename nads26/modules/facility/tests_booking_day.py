@@ -1,4 +1,6 @@
 from datetime import date, datetime
+from pathlib import Path
+import tempfile
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -149,6 +151,22 @@ class DailyOverviewPageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'id="openRecurringModal"')
         self.assertNotContains(response, 'id="recurringModal"')
+
+    def test_room_photo_serves_existing_image_from_upload_directory(self):
+        with tempfile.TemporaryDirectory() as photo_dir:
+            image_path = Path(photo_dir) / '203.jpg'
+            image_path.write_bytes(b'room-photo')
+            with patch('modules.facility.views.ROOM_PHOTO_DIR', Path(photo_dir)):
+                response = self.client.get(reverse('facility-room-photo', args=['203.jpg']))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response['Content-Type'], 'image/jpeg')
+            self.assertEqual(b''.join(response.streaming_content), b'room-photo')
+
+    def test_room_photo_rejects_non_image_extension(self):
+        response = self.client.get(reverse('facility-room-photo', args=['notes.txt']))
+
+        self.assertEqual(response.status_code, 404)
 
     @patch('modules.facility.views._entries', return_value=sample_entries())
     @patch('modules.facility.views._rooms', return_value=sample_rooms())

@@ -6,6 +6,7 @@ urlpatterns = [
     path('booking/day/', views.booking_daily_overview, name='facility-booking-day'),
     path('booking/', views.booking_page, name='facility-booking'),
     path('rooms/', views.room_admin_page, name='facility-rooms'),
+    path('room-photo/<str:filename>/', views.room_photo, name='facility-room-photo'),
     path('maintenance/', views.maintenance_page, name='facility-maintenance'),
     path('booking/export/', views.export_bookings, name='facility-booking-export'),
     path('expense-claims/', views.expense_claim_page, name='facility-expense-claims'),

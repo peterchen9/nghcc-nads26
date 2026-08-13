@@ -1,6 +1,7 @@
 import csv
 import hashlib
 import json
+import mimetypes
 import re
 import subprocess
 import uuid
@@ -18,7 +19,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.mail import EmailMessage
 from django.db import connection
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, Http404, JsonResponse
+from django.http import FileResponse, HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, Http404, JsonResponse
 from django.urls import reverse
 from django.shortcuts import redirect, render
 from django.utils.html import format_html
@@ -39,7 +40,7 @@ SLOT_START_HOUR = 6
 SLOT_END_HOUR = 22
 SLOT_MINUTES = 30
 ROOM_PHOTO_DIR = Path(settings.BASE_DIR) / 'static' / 'facility' / 'rooms'
-ROOM_PHOTO_URL = '/static/facility/rooms/'
+ROOM_PHOTO_URL = '/facility/room-photo/'
 ROOM_PHOTO_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp'}
 ROOM_PHOTO_FILES = None
 WEEKDAY_NAMES = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日']
@@ -133,9 +134,19 @@ def _room_photo_urls(room):
             or (sort_key and stem.startswith(sort_key))
             or (digits and stem.startswith(digits))
         ):
-            matches.append(f'{ROOM_PHOTO_URL}{quote(filename)}')
+            matches.append(f'{ROOM_PHOTO_URL}{quote(filename)}/')
 
     return matches
+
+
+def room_photo(request, filename):
+    if Path(filename).name != filename or Path(filename).suffix.lower() not in ROOM_PHOTO_EXTENSIONS:
+        raise Http404('找不到場地照片。')
+    photo_path = ROOM_PHOTO_DIR / filename
+    if not photo_path.is_file():
+        raise Http404('找不到場地照片。')
+    content_type = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+    return FileResponse(photo_path.open('rb'), content_type=content_type)
 
 
 def _group_rooms_by_floor(rooms):
