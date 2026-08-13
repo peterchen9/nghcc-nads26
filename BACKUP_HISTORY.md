@@ -182,3 +182,13 @@
 - Deployed files: `modules/hymns/views.py`, `modules/hymns/serializers.py`, `modules/hymns/tests.py`, `nads26/urls.py`, and `templates/hymns/hymns_page.html`.
 - Database, hymn records, MIDI files, media, menu items, permission relationships, Nginx, and database container: unchanged.
 - Verification: 3 MIDI tests passed locally and on production; deployed SHA-256 values matched the local files; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; the unauthenticated MIDI endpoint returned the expected HTTP 302; an authenticated browser playback request for `100801_時刻近主.mid` returned HTTP 200 with 2,321 bytes instead of the previous 404.
+
+## 2026-08-13 11:44:59 +08:00
+
+- Purpose: restore MIDI playback from the individual hymn detail dialog by returning a relative `midi_url`, preventing HTTPS pages from being blocked when Django incorrectly inferred the reverse-proxy request scheme as HTTP.
+- GitHub commit: `776d251` on `main`.
+- Remote backup: `/home/peterchen/backups/nads26-pre-midi-detail-url-fix-20260813-114234/`.
+- Local backup: `D:\backups\nghcc-nads26\nads26-pre-midi-detail-url-fix-20260813-114234\` (outside the Git working tree).
+- Deployed files: `modules/hymns/serializers.py` and `modules/hymns/tests.py`.
+- Database, hymn records, MIDI files, media, menu items, permission relationships, Nginx, and database container: unchanged.
+- Verification: 4 MIDI tests passed locally and on production; deployed SHA-256 values matched the local files; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; `/` returned HTTP 200; the production detail API for hymn 1 now returns `/hymn_resources/midi/100801_%E6%99%82%E5%88%BB%E8%BF%91%E4%B8%BB.mid` instead of the blocked `http://` absolute URL.
