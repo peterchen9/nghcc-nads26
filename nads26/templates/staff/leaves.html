@@ -250,6 +250,16 @@
         color: var(--text-secondary);
         font-size: 0.62rem;
     }
+    .team-date-holiday {
+        display: block;
+        margin-top: 2px;
+        overflow: hidden;
+        color: #fff1f2;
+        font-size: 0.62rem;
+        line-height: 1.15;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
     .team-staff-head {
         width: 60px;
         min-width: 60px;
@@ -553,6 +563,17 @@
         margin-bottom: 5px;
         font-weight: 800;
         line-height: 1;
+    }
+    .day-holiday-name {
+        flex: 1;
+        overflow: hidden;
+        color: #fff1f2;
+        font-size: 0.68rem;
+        font-weight: 700;
+        line-height: 1.1;
+        text-align: right;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
     .day-markers {
         display: flex;
@@ -1117,6 +1138,7 @@
                                 <td class="day-cell {% if not day.in_month %}out-month{% endif %}" data-date="{{ day.iso }}">
                                     <div class="day-number">
                                         <span>{{ day.day }}</span>
+                                        <span class="day-holiday-name" data-holiday-name-for="{{ day.iso }}"></span>
                                         <span class="day-markers"></span>
                                     </div>
                                     <div class="part-buttons">
@@ -1374,15 +1396,20 @@
         return staffFullNames[canonicalName] || canonicalName;
     }
 
-    function isNationalHoliday(date) {
+    function nationalHolidayName(date) {
         const holidayPattern = /元旦|春節|除夕|和平紀念日|兒童節|民族掃墓節|清明節|勞動節|端午節|中秋節|教師節|國慶日|光復節|行憲紀念日/;
         const extendedHolidayPattern = /連假|補假|調整放假|彈性放假/;
-        return churchEntries.some((entry) => {
+        const holidayEntry = churchEntries.find((entry) => {
             const holidayText = String(entry.holiday_social || '');
             return entry.event_date === date
                 && holidayPattern.test(holidayText)
                 && !extendedHolidayPattern.test(holidayText);
         });
+        return holidayEntry ? String(holidayEntry.holiday_social || '').trim() : '';
+    }
+
+    function isNationalHoliday(date) {
+        return Boolean(nationalHolidayName(date));
     }
 
     function applyNationalHolidayBackgrounds() {
@@ -1391,6 +1418,11 @@
         });
         document.querySelectorAll('.batch-calendar-day[data-batch-day]').forEach((cell) => {
             cell.classList.toggle('national-holiday', isNationalHoliday(cell.dataset.batchDay));
+        });
+        document.querySelectorAll('[data-holiday-name-for]').forEach((label) => {
+            const holidayName = nationalHolidayName(label.dataset.holidayNameFor);
+            label.textContent = holidayName;
+            label.title = holidayName;
         });
     }
 
@@ -1494,7 +1526,21 @@
             const dateCell = document.createElement('th');
             dateCell.className = 'team-date-cell';
             dateCell.scope = 'row';
-            dateCell.innerHTML = `${String(day).padStart(2, '0')}<span class="team-date-weekday">週${weekdayLabels[weekday]}</span>`;
+            const dateLine = document.createElement('div');
+            dateLine.textContent = String(day).padStart(2, '0');
+            const weekdayLabel = document.createElement('span');
+            weekdayLabel.className = 'team-date-weekday';
+            weekdayLabel.textContent = `週${weekdayLabels[weekday]}`;
+            dateLine.appendChild(weekdayLabel);
+            dateCell.appendChild(dateLine);
+            const holidayName = nationalHolidayName(date);
+            if (holidayName) {
+                const holidayLabel = document.createElement('span');
+                holidayLabel.className = 'team-date-holiday';
+                holidayLabel.textContent = holidayName;
+                holidayLabel.title = holidayName;
+                dateCell.appendChild(holidayLabel);
+            }
             row.appendChild(dateCell);
 
             teamStaffNames.forEach((staffName) => {
