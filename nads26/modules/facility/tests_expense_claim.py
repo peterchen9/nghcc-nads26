@@ -14,12 +14,14 @@ class ExpenseClaimBudgetChoiceTests(SimpleTestCase):
             Path(views.settings.BASE_DIR) / 'templates' / 'facility' / 'expense_claim.html'
         ).read_text(encoding='utf-8')
 
-        self.assertIn('width: 380px', template)
-        self.assertIn('font-size: 0.72rem', template)
-        self.assertIn('white-space: nowrap', template)
+        self.assertIn('width: min(720px', template)
+        self.assertIn('font: inherit', template)
+        self.assertIn('white-space: normal', template)
         self.assertIn(r'\u6d3b\u52d5\u8207\u9810\u7b97\uff1a${choice.activityBudget', template)
-        self.assertIn('class="budget-code-select"', template)
-        self.assertNotIn('class="budget-picker-options"', template)
+        self.assertIn('class="budget-code-trigger"', template)
+        self.assertIn('class="budget-code-value"', template)
+        self.assertIn('selected?.code ||', template)
+        self.assertIn('positionBudgetDropdown(trigger)', template)
 
     @patch('modules.facility.views._expense_budget_queryset')
     def test_budget_choice_includes_activity_budget(self, queryset_mock):

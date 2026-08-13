@@ -50,10 +50,15 @@
     .money-cell { width: 140px; }
     .action-cell { width: 54px; text-align: center; }
     .budget-category-cell { width: 150px; }
-    .budget-code-cell { width: 380px; min-width: 380px; }
-    .budget-code-select { font-size: 0.72rem !important; white-space: nowrap; }
-    .budget-code-select option { font-size: 0.72rem; white-space: nowrap; }
-    .budget-meta { margin-top: 5px; color: var(--text-secondary); font-size: 0.7rem; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .budget-code-cell { width: 300px; min-width: 300px; }
+    .budget-code-trigger { width: 100%; min-height: 40px; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.14); border-radius: 6px; padding: 9px 32px 9px 10px; background: rgba(8,13,20,0.35); color: var(--text-primary); font: inherit; text-align: left; cursor: pointer; position: relative; }
+    .budget-code-trigger::after { content: '▾'; position: absolute; right: 10px; }
+    .budget-dropdown-panel { position: fixed; z-index: 1000; width: min(720px, calc(100vw - 32px)); max-height: min(420px, calc(100vh - 32px)); overflow-y: auto; padding: 6px; border: 1px solid rgba(188,220,255,0.5); border-radius: 8px; background: #26384d; box-shadow: 0 18px 50px rgba(0,0,0,0.5); }
+    .budget-dropdown-panel[hidden] { display: none; }
+    .budget-dropdown-option { display: block; width: 100%; border: 0; border-radius: 6px; padding: 10px 12px; background: transparent; color: var(--text-primary); font: inherit; line-height: 1.45; text-align: left; white-space: normal; overflow-wrap: anywhere; word-break: break-word; cursor: pointer; }
+    .budget-dropdown-option:hover, .budget-dropdown-option:focus, .budget-dropdown-option.selected { background: rgba(188,220,255,0.16); outline: none; }
+    .budget-dropdown-option strong { color: var(--accent-color); }
+    .budget-meta { margin-top: 5px; color: var(--text-secondary); font-size: 0.7rem; line-height: 1.35; white-space: normal; overflow-wrap: anywhere; }
     .budget-meta.over { color: #fecaca; font-weight: 700; }
     .summary-row, .form-actions { display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap; }
     .summary-row { justify-content: flex-end; color: var(--text-primary); font-weight: 800; }
@@ -178,7 +183,7 @@
                                 <tr>
                                     <td><input name="item_name" value="{{ item.item_name }}" required></td>
                                     <td class="budget-category-cell"><select class="budget-category" name="budget_category" data-selected-code="{{ item.budget_code }}" required><option value="">選擇分類</option></select></td>
-                                    <td class="budget-code-cell"><select class="budget-code-select" name="budget_code" data-selected="{{ item.budget_code }}" required><option value="">先選分類</option></select><div class="budget-meta"></div></td>
+                                    <td class="budget-code-cell"><input class="budget-code-value" name="budget_code" type="hidden" value="{{ item.budget_code }}"><button class="budget-code-trigger" type="button" data-selected="{{ item.budget_code }}" aria-expanded="false">先選分類</button><div class="budget-meta"></div></td>
                                     <td><input name="purpose" value="{{ item.purpose }}" required></td>
                                     <td><input class="amount-input" name="amount" type="number" min="1" step="1" value="{{ item.amount }}" required></td>
                                     <td class="action-cell"><button class="btn icon danger remove-row" type="button" title="移除此列">×</button></td>
@@ -206,7 +211,9 @@
     </section>
 </div>
 
-<template id="itemRowTemplate"><tr><td><input name="item_name" required></td><td class="budget-category-cell"><select class="budget-category" name="budget_category" required><option value="">選擇分類</option></select></td><td class="budget-code-cell"><select class="budget-code-select" name="budget_code" required><option value="">先選分類</option></select><div class="budget-meta"></div></td><td><input name="purpose" required></td><td><input class="amount-input" name="amount" type="number" min="1" step="1" required></td><td class="action-cell"><button class="btn icon danger remove-row" type="button" title="移除此列">×</button></td></tr></template>
+<template id="itemRowTemplate"><tr><td><input name="item_name" required></td><td class="budget-category-cell"><select class="budget-category" name="budget_category" required><option value="">選擇分類</option></select></td><td class="budget-code-cell"><input class="budget-code-value" name="budget_code" type="hidden"><button class="budget-code-trigger" type="button" aria-expanded="false">先選分類</button><div class="budget-meta"></div></td><td><input name="purpose" required></td><td><input class="amount-input" name="amount" type="number" min="1" step="1" required></td><td class="action-cell"><button class="btn icon danger remove-row" type="button" title="移除此列">×</button></td></tr></template>
+
+<div class="budget-dropdown-panel" id="budgetDropdownPanel" hidden></div>
 
 <script>
 (() => {
@@ -221,6 +228,8 @@
     const receiptCount = document.getElementById('receipt_count');
     const method = document.getElementById('payment_method');
     const backdrop = document.getElementById('expenseModalBackdrop');
+    const budgetDropdown = document.getElementById('budgetDropdownPanel');
+    let activeBudgetRow = null;
     const bankInputs = ['bank_name', 'bank_branch', 'bank_account'].map((id) => document.getElementById(id));
     function money(value) { return new Intl.NumberFormat('zh-TW').format(Number.parseFloat(value || '0') || 0); }
     function validItemRows() { return [...body.querySelectorAll('tr')].filter((row) => { const itemName = row.querySelector('[name="item_name"]')?.value.trim(); const budgetCode = row.querySelector('[name="budget_code"]')?.value.trim(); const purpose = row.querySelector('[name="purpose"]')?.value.trim(); const amount = Number.parseFloat(row.querySelector('[name="amount"]')?.value || '0') || 0; return itemName || budgetCode || purpose || amount > 0; }); }
@@ -239,19 +248,59 @@
     }
     function populateBudget(row, selectedCode = '') {
         const categorySelect = row.querySelector('.budget-category');
-        const budgetSelect = row.querySelector('.budget-code-select');
-        const code = selectedCode || budgetSelect.dataset.selected || budgetSelect.value || '';
+        const budgetValue = row.querySelector('.budget-code-value');
+        const trigger = row.querySelector('.budget-code-trigger');
+        const code = selectedCode || trigger.dataset.selected || budgetValue.value || '';
         const category = categorySelect.value;
         const choices = choicesForCategory(category);
-        budgetSelect.replaceChildren(option('', category ? '\u9078\u64c7\u9810\u7b97\u4ee3\u865f' : '\u5148\u9078\u5206\u985e'));
+        const selected = choices.find((item) => item.code === code);
+        budgetValue.value = selected?.code || '';
+        trigger.textContent = selected?.code || (category ? '\u9078\u64c7\u9810\u7b97\u4ee3\u865f' : '\u5148\u9078\u5206\u985e');
+        trigger.disabled = !category || !choices.length;
+        trigger.dataset.selected = '';
+    }
+    function closeBudgetDropdown() {
+        if (activeBudgetRow) activeBudgetRow.querySelector('.budget-code-trigger')?.setAttribute('aria-expanded', 'false');
+        activeBudgetRow = null;
+        budgetDropdown.hidden = true;
+        budgetDropdown.replaceChildren();
+    }
+    function positionBudgetDropdown(trigger) {
+        const rect = trigger.getBoundingClientRect();
+        const panelWidth = Math.min(720, window.innerWidth - 32);
+        const left = Math.max(16, Math.min(rect.left, window.innerWidth - panelWidth - 16));
+        budgetDropdown.style.width = `${panelWidth}px`;
+        budgetDropdown.style.left = `${left}px`;
+        budgetDropdown.style.top = `${rect.bottom + 5}px`;
+        const panelHeight = budgetDropdown.getBoundingClientRect().height;
+        if (rect.bottom + 5 + panelHeight > window.innerHeight - 16 && rect.top > panelHeight + 21) {
+            budgetDropdown.style.top = `${rect.top - panelHeight - 5}px`;
+        }
+    }
+    function openBudgetDropdown(row) {
+        const trigger = row.querySelector('.budget-code-trigger');
+        const category = row.querySelector('.budget-category').value;
+        const choices = choicesForCategory(category);
+        const selectedCode = row.querySelector('.budget-code-value').value;
+        closeBudgetDropdown();
+        activeBudgetRow = row;
         choices.forEach((item) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'budget-dropdown-option';
+            button.dataset.code = item.code;
+            button.classList.toggle('selected', item.code === selectedCode);
             const detail = showActivityBudgetInOptions ? (item.activityBudget || '-') : item.ratio;
-            budgetSelect.appendChild(option(item.code, `${item.code} / ${item.ministry || '-'} / ${detail} / \u9918\u984d ${item.balanceText}`));
+            button.textContent = `${item.code} ｜ ${item.ministry || '-'} ｜ ${detail} ｜ \u9918\u984d ${item.balanceText}`;
+            budgetDropdown.appendChild(button);
         });
-        if (code && choices.some((item) => item.code === code)) budgetSelect.value = code;
+        budgetDropdown.hidden = false;
+        trigger.setAttribute('aria-expanded', 'true');
+        positionBudgetDropdown(trigger);
+        budgetDropdown.querySelector('.selected, .budget-dropdown-option')?.focus();
     }
     function initBudgetRow(row) {
-        const selectedCode = row.querySelector('.budget-code-select')?.dataset.selected || row.querySelector('.budget-category')?.dataset.selectedCode || '';
+        const selectedCode = row.querySelector('.budget-code-trigger')?.dataset.selected || row.querySelector('.budget-category')?.dataset.selectedCode || row.querySelector('.budget-code-value')?.value || '';
         populateCategory(row, selectedCode);
         populateBudget(row, selectedCode);
         updateBudgetMeta(row);
@@ -259,7 +308,7 @@
     function updateBudgetMeta(targetRow) {
         const rows = targetRow ? [targetRow] : [...body.querySelectorAll('tr')];
         rows.forEach((row) => {
-            const code = row.querySelector('.budget-code-select')?.value || '';
+            const code = row.querySelector('.budget-code-value')?.value || '';
             const amount = Number.parseFloat(row.querySelector('.amount-input')?.value || '0') || 0;
             const meta = row.querySelector('.budget-meta');
             const choice = findChoice(code);
@@ -275,7 +324,7 @@
     function budgetOverMessage() {
         const totals = new Map();
         [...body.querySelectorAll('tr')].forEach((row) => {
-            const code = row.querySelector('.budget-code-select')?.value || '';
+            const code = row.querySelector('.budget-code-value')?.value || '';
             const amount = Number.parseFloat(row.querySelector('.amount-input')?.value || '0') || 0;
             if (!code) return;
             totals.set(code, (totals.get(code) || 0) + amount);
@@ -290,9 +339,15 @@
     function ensureOneRow() { if (!body.querySelector('tr')) { const row = template.content.firstElementChild.cloneNode(true); body.appendChild(row); initBudgetRow(row); } }
     addRow.addEventListener('click', () => { const row = template.content.firstElementChild.cloneNode(true); body.appendChild(row); initBudgetRow(row); updateTotal(); });
     body.addEventListener('input', updateTotal);
-    body.addEventListener('change', (event) => { const row = event.target.closest('tr'); if (!row) return; if (event.target.matches('.budget-category')) { populateBudget(row, ''); } updateBudgetMeta(row); });
+    body.addEventListener('change', (event) => { const row = event.target.closest('tr'); if (!row) return; if (event.target.matches('.budget-category')) { closeBudgetDropdown(); populateBudget(row, ''); } updateBudgetMeta(row); });
+    body.addEventListener('click', (event) => { const trigger = event.target.closest('.budget-code-trigger'); if (!trigger) return; const row = trigger.closest('tr'); if (activeBudgetRow === row && !budgetDropdown.hidden) closeBudgetDropdown(); else openBudgetDropdown(row); });
+    budgetDropdown.addEventListener('click', (event) => { const button = event.target.closest('.budget-dropdown-option'); if (!button || !activeBudgetRow) return; activeBudgetRow.querySelector('.budget-code-value').value = button.dataset.code; populateBudget(activeBudgetRow, button.dataset.code); updateBudgetMeta(activeBudgetRow); closeBudgetDropdown(); });
+    budgetDropdown.addEventListener('keydown', (event) => { const options = [...budgetDropdown.querySelectorAll('.budget-dropdown-option')]; const index = options.indexOf(document.activeElement); if (event.key === 'ArrowDown') { event.preventDefault(); options[(index + 1) % options.length]?.focus(); } if (event.key === 'ArrowUp') { event.preventDefault(); options[(index - 1 + options.length) % options.length]?.focus(); } if (event.key === 'Escape') { event.preventDefault(); const trigger = activeBudgetRow?.querySelector('.budget-code-trigger'); closeBudgetDropdown(); trigger?.focus(); } });
+    document.addEventListener('click', (event) => { if (!event.target.closest('.budget-code-trigger') && !event.target.closest('#budgetDropdownPanel')) closeBudgetDropdown(); });
+    window.addEventListener('resize', closeBudgetDropdown);
+    document.querySelector('.modal-body')?.addEventListener('scroll', closeBudgetDropdown);
     body.addEventListener('click', (event) => { const button = event.target.closest('.remove-row'); if (!button) return; button.closest('tr').remove(); ensureOneRow(); updateTotal(); });
-    form.addEventListener('submit', (event) => { const submitter = event.submitter; if (submitter && submitter.value === 'delete') return; updateReceiptCount(); if (!form.checkValidity()) { event.preventDefault(); form.reportValidity(); return; } if (!validItemRows().length) { event.preventDefault(); alert('\u8acb\u81f3\u5c11\u586b\u5beb\u4e00\u7b46\u8acb\u6b3e\u9805\u76ee\u3002'); return; } const overMessage = budgetOverMessage(); if (overMessage) { event.preventDefault(); alert(overMessage); } });
+    form.addEventListener('submit', (event) => { const submitter = event.submitter; if (submitter && submitter.value === 'delete') return; updateReceiptCount(); if (!form.checkValidity()) { event.preventDefault(); form.reportValidity(); return; } if (!validItemRows().length) { event.preventDefault(); alert('\u8acb\u81f3\u5c11\u586b\u5beb\u4e00\u7b46\u8acb\u6b3e\u9805\u76ee\u3002'); return; } const missingBudget = [...body.querySelectorAll('tr')].find((row) => !row.querySelector('.budget-code-value')?.value); if (missingBudget) { event.preventDefault(); alert('\u8acb\u9078\u64c7\u6bcf\u7b46\u8acb\u6b3e\u9805\u76ee\u7684\u9810\u7b97\u4ee3\u865f\u3002'); missingBudget.querySelector('.budget-code-trigger')?.focus(); return; } const overMessage = budgetOverMessage(); if (overMessage) { event.preventDefault(); alert(overMessage); } });
     backdrop.addEventListener('click', (event) => { if (event.target === backdrop) window.location.href = '{{ expense_claim_base_path }}/'; });
     method.addEventListener('change', updateBankRequired);
     [...body.querySelectorAll('tr')].forEach(initBudgetRow);
