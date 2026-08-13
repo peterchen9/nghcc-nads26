@@ -102,6 +102,4 @@ class HymnDetailSerializer(NullToEmptyMixin, serializers.ModelSerializer):
     def get_midi_url(self, obj):
         if not obj.midi:
             return ''
-        path = reverse('serve-midi-resource', kwargs={'filename': obj.midi.split('/')[-1]})
-        request = self.context.get('request')
-        return request.build_absolute_uri(path) if request else path
+        return reverse('serve-midi-resource', kwargs={'filename': obj.midi.split('/')[-1]})
