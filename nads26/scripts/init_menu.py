@@ -42,7 +42,7 @@ items = [
         'order': 40,
         'children': [
             {'title': '休假表', 'route': '/staff/leaves/', 'order': 1},
-            {'title': '出勤狀態', 'route': '/eureka/attendance/', 'order': 2},
+            {'title': '場地登記', 'route': '/facility/booking/', 'order': 2},
             {'title': '辦公室座位', 'route': '/eureka/seats/', 'order': 3},
             {'title': '請款單', 'route': '/staff/expense-claims/', 'order': 4},
             {'title': '行事曆', 'route': '/staff/calendar/', 'order': 5},
@@ -54,12 +54,11 @@ items = [
         'order': 70,
         'children': [
             {'title': '用電監測', 'route': '/facility/power/', 'order': 1},
-            {'title': '場地登記', 'route': '/facility/booking/', 'order': 2},
-            {'title': '場地資料維護', 'route': '/facility/rooms/', 'order': 3},
-            {'title': '日常維護', 'route': '/facility/maintenance/', 'order': 4},
-            {'title': '定期維護', 'route': '/facility/periodic-maintenance/', 'order': 5},
-            {'title': '定期維護回報', 'route': '/facility/periodic-maintenance/report/', 'order': 6},
-            {'title': '教室檢查', 'route': '/facility/classroom-inspection/', 'order': 7},
+            {'title': '場地資料維護', 'route': '/facility/rooms/', 'order': 2},
+            {'title': '日常維護', 'route': '/facility/maintenance/', 'order': 3},
+            {'title': '定期維護', 'route': '/facility/periodic-maintenance/', 'order': 4},
+            {'title': '定期維護回報', 'route': '/facility/periodic-maintenance/report/', 'order': 5},
+            {'title': '教室檢查', 'route': '/facility/classroom-inspection/', 'order': 6},
         ],
     },
     {
@@ -94,6 +93,7 @@ items = [
         'children': [
             {'title': '使用者管理', 'route': '/users/', 'order': 1},
             {'title': '同工資料', 'route': '/eureka/staff/', 'order': 2},
+            {'title': '出勤狀態', 'route': '/eureka/attendance/', 'order': 3},
         ]
     },
     {
@@ -105,6 +105,7 @@ items = [
             {'title': '銀行帳戶結餘表', 'route': '/finance/bank-balances/', 'order': 2},
             {'title': '基金與團契款餘額', 'route': '/finance/fund-fellowship-balances/', 'order': 3},
             {'title': '奉獻金額與人數統計', 'route': '/finance/offering-statistics/', 'order': 4},
+            {'title': '請款/自動扣繳單', 'route': '/finance/auto-debit-claims/', 'order': 5},
         ]
     },
 ]

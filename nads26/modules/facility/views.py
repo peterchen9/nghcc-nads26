@@ -2139,7 +2139,7 @@ def auto_debit_claim_page(request):
     return _expense_claim_page(
         request,
         claim_type=EXPENSE_CLAIM_TYPE_AUTO_DEBIT,
-        claim_title='自動扣繳單',
+        claim_title='請款/自動扣繳單',
         base_path_fallback='/finance/auto-debit-claims',
     )
 
@@ -2321,7 +2321,7 @@ def auto_debit_claim_voucher_pdf(request, claim_no):
         request,
         claim_no,
         claim_type=EXPENSE_CLAIM_TYPE_AUTO_DEBIT,
-        document_title='北門自動扣繳單',
+        document_title='北門請款/自動扣繳單',
     )
 
 

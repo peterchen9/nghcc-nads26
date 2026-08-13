@@ -37,7 +37,7 @@ class AutoDebitClaimViewTests(TestCase):
         common_page.assert_called_once_with(
             request,
             claim_type=facility_views.EXPENSE_CLAIM_TYPE_AUTO_DEBIT,
-            claim_title='自動扣繳單',
+            claim_title='請款/自動扣繳單',
             base_path_fallback='/finance/auto-debit-claims',
         )
 
@@ -58,6 +58,25 @@ class AutoDebitClaimViewTests(TestCase):
             facility_views._expense_uses_activity_budget(
                 facility_views.EXPENSE_CLAIM_TYPE_AUTO_DEBIT
             )
+        )
+
+    @patch('modules.facility.views._expense_claim_voucher_pdf')
+    def test_pdf_uses_request_and_auto_debit_title(self, common_pdf):
+        common_pdf.return_value = MagicMock(status_code=200)
+        request = self.factory.get(
+            '/finance/auto-debit-claims/AUT20260811-000001-001/voucher.pdf'
+        )
+        request.user = self.user
+
+        facility_views.auto_debit_claim_voucher_pdf(
+            request, 'AUT20260811-000001-001'
+        )
+
+        common_pdf.assert_called_once_with(
+            request,
+            'AUT20260811-000001-001',
+            claim_type=facility_views.EXPENSE_CLAIM_TYPE_AUTO_DEBIT,
+            document_title='北門請款/自動扣繳單',
         )
 
     @patch('modules.facility.views._expense_ensure_tables')
@@ -104,3 +123,35 @@ class AutoDebitMenuMigrationTests(TestCase):
         self.assertEqual(updated.title, '自動扣繳單')
         self.assertEqual(updated.parent_id, parent.id)
         self.assertTrue(user.profile.allowed_menu_items.filter(id=original_id).exists())
+
+    def test_reorganization_preserves_ids_and_permissions(self):
+        attendance = MenuItem.objects.get(route='/eureka/attendance/')
+        booking = MenuItem.objects.get(route='/facility/booking/')
+        auto_debit = MenuItem.objects.get(route='/finance/auto-debit-claims/')
+        admin = MenuItem.objects.get(title='管理員', parent=None)
+        user = get_user_model().objects.create_user(
+            username='menu-reorganization-user', password='test-only-password'
+        )
+        user.profile.allowed_menu_items.set([attendance, booking, auto_debit])
+        original_ids = {attendance.route: attendance.id, booking.route: booking.id,
+                        auto_debit.route: auto_debit.id}
+        migration = importlib.import_module(
+            'modules.menu.migrations.0007_reorganize_attendance_booking_auto_debit'
+        )
+        apps = SimpleNamespace(get_model=lambda app, model: MenuItem)
+
+        migration.reorganize_menu_items(apps, None)
+
+        attendance.refresh_from_db()
+        booking.refresh_from_db()
+        auto_debit.refresh_from_db()
+        self.assertEqual(attendance.id, original_ids[attendance.route])
+        self.assertEqual(attendance.parent_id, admin.id)
+        self.assertEqual(booking.id, original_ids[booking.route])
+        self.assertEqual(booking.parent.title, '同工')
+        self.assertEqual(auto_debit.id, original_ids[auto_debit.route])
+        self.assertEqual(auto_debit.title, '請款/自動扣繳單')
+        self.assertEqual(
+            set(user.profile.allowed_menu_items.values_list('id', flat=True)),
+            set(original_ids.values()),
+        )
