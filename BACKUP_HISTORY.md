@@ -152,3 +152,13 @@
 - Deployed file: `modules/facility/views.py`; the already deployed shared `templates/facility/expense_claim.html` remained unchanged.
 - Database schema, existing claim records, budget records, menu items, and permission relationships: unchanged.
 - Verification: the uploaded and deployed SHA-256 value matched the local file; 10 related tests passed before deployment; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; unauthenticated checks for `/finance/auto-debit-claims/` and `/staff/expense-claims/` both returned the expected HTTP 302 and recent container logs contained no deployment error.
+
+## 2026-08-13 10:27:10 +08:00
+
+- Purpose: show the national-holiday name beside the date in the personal leave calendar and on the second line beneath the date in the team monthly leave table.
+- GitHub commit: `d94c77b` on `main`.
+- Remote backup: `/home/peterchen/backups/nads26-pre-holiday-labels-20260813-101750/`.
+- Local backup: `D:\backups\nghcc-nads26\nads26-pre-holiday-labels-20260813-101750\` (outside the Git working tree).
+- Deployed files: `templates/staff/leaves.html` and `modules/staff/tests.py`.
+- Database, leave records, media, menu items, permission relationships, Nginx, and database container: unchanged.
+- Verification: 7 related tests passed before deployment; deployed SHA-256 values `e89aebdbea9829a426820c357530d86b51dcffe04f16eb5d1bc3e48658866574` and `fe483ea612e6bef493827b0ced8fb60357f7730d43f01d02e02cbf9cbd236428` matched the local files; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; `/` returned HTTP 200 and the unauthenticated `/staff/leaves/` check returned the expected HTTP 302.
