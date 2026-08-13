@@ -1886,8 +1886,8 @@ def _expense_budget_choices_json():
 def _expense_validate_budget_balances(items):
     totals = {}
     for item in items:
-        if not item.get('item_name') or not item.get('budget_code') or not item.get('purpose'):
-            raise ValueError('\u8acb\u78ba\u8a8d\u6bcf\u7b46\u8acb\u6b3e\u9805\u76ee\u7684\u8acb\u6b3e\u9805\u76ee\u3001\u9810\u7b97\u4ee3\u865f\u8207\u7528\u9014\u7686\u5df2\u586b\u5beb\u3002')
+        if not item.get('budget_code') or not item.get('purpose'):
+            raise ValueError('\u8acb\u78ba\u8a8d\u6bcf\u7b46\u8acb\u6b3e\u9805\u76ee\u7684\u9810\u7b97\u4ee3\u865f\u8207\u7528\u9014\u7686\u5df2\u586b\u5beb\u3002')
         if item['amount'] <= Decimal('0.00'):
             raise ValueError('\u8acb\u78ba\u8a8d\u6bcf\u7b46\u9805\u76ee\u7684\u91d1\u984d\u5fc5\u9808\u5927\u65bc 0\u3002')
         totals[item['budget_code']] = totals.get(item['budget_code'], Decimal('0.00')) + item['amount']
@@ -1904,20 +1904,21 @@ def _expense_validate_budget_balances(items):
 
 
 def _expense_items_from_post(post):
-    names = post.getlist('item_name')
     budget_codes = post.getlist('budget_code')
     purposes = post.getlist('purpose')
     amounts = post.getlist('amount')
     items = []
-    max_len = max(len(names), len(budget_codes), len(purposes), len(amounts), 0)
+    max_len = max(len(budget_codes), len(purposes), len(amounts), 0)
     for index in range(max_len):
+        purpose = (purposes[index] if index < len(purposes) else '').strip()
         item = {
-            'item_name': (names[index] if index < len(names) else '').strip(),
+            # Preserve the legacy column for existing exports and integrations.
+            'item_name': purpose,
             'budget_code': (budget_codes[index] if index < len(budget_codes) else '').strip(),
-            'purpose': (purposes[index] if index < len(purposes) else '').strip(),
+            'purpose': purpose,
             'amount': _expense_decimal(amounts[index] if index < len(amounts) else ''),
         }
-        if not item['item_name'] and not item['budget_code'] and not item['purpose'] and item['amount'] in (None, Decimal('0.00')):
+        if not item['budget_code'] and not item['purpose'] and item['amount'] in (None, Decimal('0.00')):
             continue
         if item['amount'] is None:
             raise ValueError('\u8acb\u78ba\u8a8d\u6bcf\u7b46\u9805\u76ee\u7684\u91d1\u984d\uff0c\u91d1\u984d\u4e0d\u53ef\u70ba\u8ca0\u6578\u3002')
