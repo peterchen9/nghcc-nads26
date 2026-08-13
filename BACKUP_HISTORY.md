@@ -172,3 +172,13 @@
 - Deployed files: `modules/facility/views.py`, `modules/facility/urls.py`, and `modules/facility/tests_booking_day.py`.
 - Database, room records, existing photo files, media, menu items, permission relationships, Nginx, and database container: unchanged.
 - Verification: 14 related tests passed before deployment; deployed SHA-256 values matched the local files; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; `/facility/rooms/`, `/facility/booking/`, and `/facility/room-photo/203.jpg/` returned HTTP 200; the photo response was `image/jpeg`; browser verification confirmed room-admin thumbnails had nonzero natural dimensions and the booking detail for room 203 loaded a 1920-by-1076 image.
+
+## 2026-08-13 11:29:43 +08:00
+
+- Purpose: restore hymn MIDI playback by serving the 2,907 existing MIDI files through an authenticated Django endpoint instead of the unavailable Nginx `/media/` path.
+- GitHub commit: `7e53aac` on `main`.
+- Remote backup: `/home/peterchen/backups/nads26-pre-midi-playback-fix-20260813-112546/`.
+- Local backup: `D:\backups\nghcc-nads26\nads26-pre-midi-playback-fix-20260813-112546\` (outside the Git working tree).
+- Deployed files: `modules/hymns/views.py`, `modules/hymns/serializers.py`, `modules/hymns/tests.py`, `nads26/urls.py`, and `templates/hymns/hymns_page.html`.
+- Database, hymn records, MIDI files, media, menu items, permission relationships, Nginx, and database container: unchanged.
+- Verification: 3 MIDI tests passed locally and on production; deployed SHA-256 values matched the local files; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; the unauthenticated MIDI endpoint returned the expected HTTP 302; an authenticated browser playback request for `100801_時刻近主.mid` returned HTTP 200 with 2,321 bytes instead of the previous 404.
