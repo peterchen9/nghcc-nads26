@@ -50,17 +50,10 @@
     .money-cell { width: 140px; }
     .action-cell { width: 54px; text-align: center; }
     .budget-category-cell { width: 150px; }
-    .budget-code-cell { width: 260px; max-width: 360px; }
-    .budget-picker { position: relative; min-width: 0; }
-    .budget-picker-toggle { width: 100%; min-height: 40px; border: 1px solid rgba(255,255,255,0.14); border-radius: 6px; padding: 9px 34px 9px 10px; background: rgba(8,13,20,0.35); color: var(--text-primary); font: inherit; text-align: left; white-space: normal; overflow-wrap: anywhere; cursor: pointer; }
-    .budget-picker-toggle::after { content: '▾'; position: absolute; right: 11px; top: 10px; color: var(--accent-color); }
-    .budget-picker-options { position: absolute; z-index: 240; top: calc(100% + 4px); left: 0; width: min(440px, calc(100vw - 48px)); max-height: 320px; overflow-y: auto; border: 1px solid rgba(188,220,255,0.45); border-radius: 7px; padding: 5px; background: #26384d; box-shadow: 0 14px 35px rgba(0,0,0,0.4); }
-    .budget-picker-options[hidden] { display: none; }
-    .budget-picker-option { display: grid; gap: 3px; width: 100%; border: 0; border-radius: 5px; padding: 9px 10px; background: transparent; color: var(--text-primary); font: inherit; text-align: left; cursor: pointer; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
-    .budget-picker-option:hover, .budget-picker-option:focus, .budget-picker-option.selected { background: rgba(188,220,255,0.16); outline: none; }
-    .budget-picker-option strong { color: var(--accent-color); }
-    .budget-picker-option span { font-size: 0.82rem; line-height: 1.35; }
-    .budget-meta { margin-top: 5px; color: var(--text-secondary); font-size: 0.78rem; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
+    .budget-code-cell { width: 380px; min-width: 380px; }
+    .budget-code-select { font-size: 0.72rem !important; white-space: nowrap; }
+    .budget-code-select option { font-size: 0.72rem; white-space: nowrap; }
+    .budget-meta { margin-top: 5px; color: var(--text-secondary); font-size: 0.7rem; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .budget-meta.over { color: #fecaca; font-weight: 700; }
     .summary-row, .form-actions { display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap; }
     .summary-row { justify-content: flex-end; color: var(--text-primary); font-weight: 800; }
@@ -185,7 +178,7 @@
                                 <tr>
                                     <td><input name="item_name" value="{{ item.item_name }}" required></td>
                                     <td class="budget-category-cell"><select class="budget-category" name="budget_category" data-selected-code="{{ item.budget_code }}" required><option value="">選擇分類</option></select></td>
-                                    <td class="budget-code-cell"><div class="budget-picker"><input class="budget-code-value" name="budget_code" type="hidden" value="{{ item.budget_code }}"><button class="budget-picker-toggle" type="button" aria-expanded="false">先選分類</button><div class="budget-picker-options" hidden></div></div><div class="budget-meta"></div></td>
+                                    <td class="budget-code-cell"><select class="budget-code-select" name="budget_code" data-selected="{{ item.budget_code }}" required><option value="">先選分類</option></select><div class="budget-meta"></div></td>
                                     <td><input name="purpose" value="{{ item.purpose }}" required></td>
                                     <td><input class="amount-input" name="amount" type="number" min="1" step="1" value="{{ item.amount }}" required></td>
                                     <td class="action-cell"><button class="btn icon danger remove-row" type="button" title="移除此列">×</button></td>
@@ -213,7 +206,7 @@
     </section>
 </div>
 
-<template id="itemRowTemplate"><tr><td><input name="item_name" required></td><td class="budget-category-cell"><select class="budget-category" name="budget_category" required><option value="">選擇分類</option></select></td><td class="budget-code-cell"><div class="budget-picker"><input class="budget-code-value" name="budget_code" type="hidden"><button class="budget-picker-toggle" type="button" aria-expanded="false">先選分類</button><div class="budget-picker-options" hidden></div></div><div class="budget-meta"></div></td><td><input name="purpose" required></td><td><input class="amount-input" name="amount" type="number" min="1" step="1" required></td><td class="action-cell"><button class="btn icon danger remove-row" type="button" title="移除此列">×</button></td></tr></template>
+<template id="itemRowTemplate"><tr><td><input name="item_name" required></td><td class="budget-category-cell"><select class="budget-category" name="budget_category" required><option value="">選擇分類</option></select></td><td class="budget-code-cell"><select class="budget-code-select" name="budget_code" required><option value="">先選分類</option></select><div class="budget-meta"></div></td><td><input name="purpose" required></td><td><input class="amount-input" name="amount" type="number" min="1" step="1" required></td><td class="action-cell"><button class="btn icon danger remove-row" type="button" title="移除此列">×</button></td></tr></template>
 
 <script>
 (() => {
@@ -235,13 +228,6 @@
     function updateTotal() { const sum = [...body.querySelectorAll('.amount-input')].reduce((acc, input) => acc + (Number.parseFloat(input.value || '0') || 0), 0); total.textContent = money(sum); updateReceiptCount(); updateBudgetMeta(); }
     function updateBankRequired() { const required = method.value === '\u532f\u6b3e'; bankInputs.forEach((input) => { input.required = required; }); }
     function option(value, text) { const opt = document.createElement('option'); opt.value = value; opt.textContent = text; return opt; }
-    function closeBudgetPickers(except = null) {
-        body.querySelectorAll('.budget-picker').forEach((picker) => {
-            if (picker === except) return;
-            picker.querySelector('.budget-picker-options').hidden = true;
-            picker.querySelector('.budget-picker-toggle').setAttribute('aria-expanded', 'false');
-        });
-    }
     function choicesForCategory(category) { return budgetChoices.filter((item) => (item.category || '\u672a\u5206\u985e') === category); }
     function findChoice(code) { return budgetChoices.find((item) => item.code === code); }
     function populateCategory(row, selectedCode = '') {
@@ -253,33 +239,19 @@
     }
     function populateBudget(row, selectedCode = '') {
         const categorySelect = row.querySelector('.budget-category');
-        const budgetValue = row.querySelector('.budget-code-value');
-        const picker = row.querySelector('.budget-picker');
-        const toggle = picker.querySelector('.budget-picker-toggle');
-        const options = picker.querySelector('.budget-picker-options');
-        const code = selectedCode || budgetValue.value || '';
+        const budgetSelect = row.querySelector('.budget-code-select');
+        const code = selectedCode || budgetSelect.dataset.selected || budgetSelect.value || '';
         const category = categorySelect.value;
         const choices = choicesForCategory(category);
-        options.replaceChildren();
+        budgetSelect.replaceChildren(option('', category ? '\u9078\u64c7\u9810\u7b97\u4ee3\u865f' : '\u5148\u9078\u5206\u985e'));
         choices.forEach((item) => {
-            const choiceButton = document.createElement('button');
-            choiceButton.type = 'button';
-            choiceButton.className = 'budget-picker-option';
-            choiceButton.dataset.code = item.code;
-            choiceButton.innerHTML = showActivityBudgetInOptions
-                ? `<strong>${escapeHtml(item.code)}</strong><span>\u4e8b\u5de5\uff1a${escapeHtml(item.ministry || '-')}</span><span>\u6d3b\u52d5\u8207\u9810\u7b97\uff1a${escapeHtml(item.activityBudget || '-')}</span><span>\u9918\u984d\uff1a${escapeHtml(item.balanceText)}</span>`
-                : `<strong>${escapeHtml(item.code)}</strong><span>\u4e8b\u5de5\uff1a${escapeHtml(item.ministry || '-')}</span><span>\u4f7f\u7528\u6bd4\u4f8b\uff1a${escapeHtml(item.ratio)}</span><span>\u9918\u984d\uff1a${escapeHtml(item.balanceText)}</span>`;
-            options.appendChild(choiceButton);
+            const detail = showActivityBudgetInOptions ? (item.activityBudget || '-') : item.ratio;
+            budgetSelect.appendChild(option(item.code, `${item.code} / ${item.ministry || '-'} / ${detail} / \u9918\u984d ${item.balanceText}`));
         });
-        const selected = choices.find((item) => item.code === code);
-        budgetValue.value = selected?.code || '';
-        toggle.textContent = selected ? `${selected.code} / ${selected.ministry || '-'}` : (category ? '\u9078\u64c7\u9810\u7b97\u4ee3\u865f' : '\u5148\u9078\u5206\u985e');
-        toggle.disabled = !category || !choices.length;
-        options.querySelectorAll('.budget-picker-option').forEach((button) => button.classList.toggle('selected', button.dataset.code === budgetValue.value));
+        if (code && choices.some((item) => item.code === code)) budgetSelect.value = code;
     }
-    function escapeHtml(value) { const span = document.createElement('span'); span.textContent = String(value ?? ''); return span.innerHTML; }
     function initBudgetRow(row) {
-        const selectedCode = row.querySelector('.budget-code-value')?.value || row.querySelector('.budget-category')?.dataset.selectedCode || '';
+        const selectedCode = row.querySelector('.budget-code-select')?.dataset.selected || row.querySelector('.budget-category')?.dataset.selectedCode || '';
         populateCategory(row, selectedCode);
         populateBudget(row, selectedCode);
         updateBudgetMeta(row);
@@ -287,7 +259,7 @@
     function updateBudgetMeta(targetRow) {
         const rows = targetRow ? [targetRow] : [...body.querySelectorAll('tr')];
         rows.forEach((row) => {
-            const code = row.querySelector('.budget-code-value')?.value || '';
+            const code = row.querySelector('.budget-code-select')?.value || '';
             const amount = Number.parseFloat(row.querySelector('.amount-input')?.value || '0') || 0;
             const meta = row.querySelector('.budget-meta');
             const choice = findChoice(code);
@@ -295,7 +267,7 @@
             if (!choice) { meta.textContent = ''; meta.classList.remove('over'); return; }
             const balance = Number.parseFloat(choice.balance || '0') || 0;
             meta.textContent = showActivityBudgetInOptions
-                ? `\u4e8b\u5de5\uff1a${choice.ministry || '-'}\n\u6d3b\u52d5\u8207\u9810\u7b97\uff1a${choice.activityBudget || '-'}\n\u9918\u984d\uff1a${choice.balanceText}`
+                ? `\u4e8b\u5de5\uff1a${choice.ministry || '-'}\uff5c\u6d3b\u52d5\u8207\u9810\u7b97\uff1a${choice.activityBudget || '-'}\uff5c\u9918\u984d\uff1a${choice.balanceText}`
                 : `\u4e8b\u5de5\uff1a${choice.ministry || '-'}\uff5c\u4f7f\u7528\u6bd4\u4f8b\uff1a${choice.ratio}\uff5c\u9918\u984d\uff1a${choice.balanceText}`;
             meta.classList.toggle('over', amount > balance);
         });
@@ -303,7 +275,7 @@
     function budgetOverMessage() {
         const totals = new Map();
         [...body.querySelectorAll('tr')].forEach((row) => {
-            const code = row.querySelector('.budget-code-value')?.value || '';
+            const code = row.querySelector('.budget-code-select')?.value || '';
             const amount = Number.parseFloat(row.querySelector('.amount-input')?.value || '0') || 0;
             if (!code) return;
             totals.set(code, (totals.get(code) || 0) + amount);
@@ -319,45 +291,8 @@
     addRow.addEventListener('click', () => { const row = template.content.firstElementChild.cloneNode(true); body.appendChild(row); initBudgetRow(row); updateTotal(); });
     body.addEventListener('input', updateTotal);
     body.addEventListener('change', (event) => { const row = event.target.closest('tr'); if (!row) return; if (event.target.matches('.budget-category')) { populateBudget(row, ''); } updateBudgetMeta(row); });
-    body.addEventListener('click', (event) => {
-        const toggle = event.target.closest('.budget-picker-toggle');
-        if (toggle) {
-            const picker = toggle.closest('.budget-picker');
-            const options = picker.querySelector('.budget-picker-options');
-            const opening = options.hidden;
-            closeBudgetPickers(opening ? picker : null);
-            options.hidden = !opening;
-            toggle.setAttribute('aria-expanded', String(opening));
-            if (opening) options.querySelector('.selected, .budget-picker-option')?.focus();
-            return;
-        }
-        const choiceButton = event.target.closest('.budget-picker-option');
-        if (!choiceButton) return;
-        const row = choiceButton.closest('tr');
-        row.querySelector('.budget-code-value').value = choiceButton.dataset.code;
-        populateBudget(row, choiceButton.dataset.code);
-        updateBudgetMeta(row);
-        closeBudgetPickers();
-    });
-    body.addEventListener('keydown', (event) => {
-        const toggle = event.target.closest('.budget-picker-toggle');
-        if (toggle && ['Enter', ' ', 'ArrowDown'].includes(event.key)) {
-            event.preventDefault();
-            if (toggle.getAttribute('aria-expanded') !== 'true') toggle.click();
-            else toggle.closest('.budget-picker').querySelector('.selected, .budget-picker-option')?.focus();
-            return;
-        }
-        const choiceButton = event.target.closest('.budget-picker-option');
-        if (!choiceButton) return;
-        const options = [...choiceButton.parentElement.querySelectorAll('.budget-picker-option')];
-        const index = options.indexOf(choiceButton);
-        if (event.key === 'ArrowDown') { event.preventDefault(); options[(index + 1) % options.length]?.focus(); }
-        if (event.key === 'ArrowUp') { event.preventDefault(); options[(index - 1 + options.length) % options.length]?.focus(); }
-        if (event.key === 'Escape') { event.preventDefault(); const picker = choiceButton.closest('.budget-picker'); closeBudgetPickers(); picker.querySelector('.budget-picker-toggle').focus(); }
-    });
-    document.addEventListener('click', (event) => { if (!event.target.closest('.budget-picker')) closeBudgetPickers(); });
     body.addEventListener('click', (event) => { const button = event.target.closest('.remove-row'); if (!button) return; button.closest('tr').remove(); ensureOneRow(); updateTotal(); });
-    form.addEventListener('submit', (event) => { const submitter = event.submitter; if (submitter && submitter.value === 'delete') return; updateReceiptCount(); if (!form.checkValidity()) { event.preventDefault(); form.reportValidity(); return; } if (!validItemRows().length) { event.preventDefault(); alert('\u8acb\u81f3\u5c11\u586b\u5beb\u4e00\u7b46\u8acb\u6b3e\u9805\u76ee\u3002'); return; } const missingBudget = [...body.querySelectorAll('tr')].find((row) => !row.querySelector('.budget-code-value')?.value); if (missingBudget) { event.preventDefault(); alert('\u8acb\u9078\u64c7\u6bcf\u7b46\u8acb\u6b3e\u9805\u76ee\u7684\u9810\u7b97\u4ee3\u865f\u3002'); missingBudget.querySelector('.budget-picker-toggle')?.focus(); return; } const overMessage = budgetOverMessage(); if (overMessage) { event.preventDefault(); alert(overMessage); } });
+    form.addEventListener('submit', (event) => { const submitter = event.submitter; if (submitter && submitter.value === 'delete') return; updateReceiptCount(); if (!form.checkValidity()) { event.preventDefault(); form.reportValidity(); return; } if (!validItemRows().length) { event.preventDefault(); alert('\u8acb\u81f3\u5c11\u586b\u5beb\u4e00\u7b46\u8acb\u6b3e\u9805\u76ee\u3002'); return; } const overMessage = budgetOverMessage(); if (overMessage) { event.preventDefault(); alert(overMessage); } });
     backdrop.addEventListener('click', (event) => { if (event.target === backdrop) window.location.href = '{{ expense_claim_base_path }}/'; });
     method.addEventListener('change', updateBankRequired);
     [...body.querySelectorAll('tr')].forEach(initBudgetRow);
