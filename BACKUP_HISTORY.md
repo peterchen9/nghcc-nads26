@@ -162,3 +162,13 @@
 - Deployed files: `templates/staff/leaves.html` and `modules/staff/tests.py`.
 - Database, leave records, media, menu items, permission relationships, Nginx, and database container: unchanged.
 - Verification: 7 related tests passed before deployment; deployed SHA-256 values `e89aebdbea9829a426820c357530d86b51dcffe04f16eb5d1bc3e48658866574` and `fe483ea612e6bef493827b0ced8fb60357f7730d43f01d02e02cbf9cbd236428` matched the local files; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; `/` returned HTTP 200 and the unauthenticated `/staff/leaves/` check returned the expected HTTP 302.
+
+## 2026-08-13 10:45:27 +08:00
+
+- Purpose: restore room photos in room administration and the room-detail gallery by serving existing uploaded room images through a safe Django endpoint instead of the unavailable collected-static path.
+- GitHub commit: `b18ce46` on `main`.
+- Remote backup: `/home/peterchen/backups/nads26-pre-room-photo-fix-20260813-104317/`.
+- Local backup: `D:\backups\nghcc-nads26\nads26-pre-room-photo-fix-20260813-104317\` (outside the Git working tree).
+- Deployed files: `modules/facility/views.py`, `modules/facility/urls.py`, and `modules/facility/tests_booking_day.py`.
+- Database, room records, existing photo files, media, menu items, permission relationships, Nginx, and database container: unchanged.
+- Verification: 14 related tests passed before deployment; deployed SHA-256 values matched the local files; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; `/facility/rooms/`, `/facility/booking/`, and `/facility/room-photo/203.jpg/` returned HTTP 200; the photo response was `image/jpeg`; browser verification confirmed room-admin thumbnails had nonzero natural dimensions and the booking detail for room 203 loaded a 1920-by-1076 image.
