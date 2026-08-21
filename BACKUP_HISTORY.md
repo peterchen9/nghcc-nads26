@@ -321,3 +321,14 @@
 - Menu safety baseline: `MenuItem` count remained 49, permission relations remained 1,012, and non-superusers with zero menu permissions remained 0. Existing permission counts remained 19/20/20 for the three pastoral entries, 10/10 for the two deacon-board entries, and 8 for data backup.
 - Deployed files: `nads26/urls.py` and `scripts/init_menu.py`; the backup app source already existed on production and was restored to Git for source consistency.
 - Verification: all 11 menu and backup tests passed locally; Python AST and secret scans passed; the remote and D-drive backup manifest, SQL gzip/completion marker, and 1,969-file application archive passed verification; Django check completed with only the pre-existing CKEditor warning; `nads26-web` restarted successfully; `/` returned HTTP 200; unauthenticated `/backup/`, `/board/minutes/`, and `/facility/pastoral-reports/` returned the expected HTTP 302.
+
+## 2026-08-21 11:18:16 +08:00
+
+- Purpose: move the existing `日常維護` and `定期維護` menu entries from `牧者` back to `場地設施`, while leaving `牧養報告` under `牧者`.
+- GitHub commit: `117ccac` on `main`.
+- Remote backup: `/home/peterchen/backups/nads26-pre-maintenance-menu-move-20260821-111620/`.
+- Local backup: `D:\backups\nghcc-nads26\nads26-pre-maintenance-menu-move-20260821-111620\` (outside the Git working tree).
+- Database change: updated only `parent_id` and `order` for existing `MenuItem` IDs 307 and 308 in one transaction; no `MenuItem` was created, deleted, or rebuilt.
+- Menu safety baseline: `MenuItem` count remained 49, permission relations remained 1,012, and non-superusers with zero menu permissions remained 0. Permission counts remained 20 for each moved entry; all other checked menu permission counts were unchanged.
+- Deployed file: `scripts/init_menu.py`.
+- Verification: both menu-sync tests passed locally; current-tree and all-reachable-history secret scans had no findings; the remote and D-drive backup manifest, SQL gzip/completion marker, and 1,969-file application archive passed verification; Django check completed with only the pre-existing CKEditor warning; `nads26-web` restarted successfully; `/` and unauthenticated `/facility/maintenance/` returned HTTP 200, while unauthenticated `/facility/periodic-maintenance/` returned the expected HTTP 302. Existing log entries also showed 404 responses for `/static/images/logo.png` and `/static/manifest.json`; these were observed but not changed in this deployment.
