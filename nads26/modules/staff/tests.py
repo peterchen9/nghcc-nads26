@@ -296,11 +296,11 @@ class StaffLeaveTests(TestCase):
     def test_used_leave_starts_with_imported_balance_then_counts_future_slots(self):
         self.staff_info.annual_leave_used_base = 1.5
         self.staff_info.annual_leave_used_base_year = STAFF_LEAVE_YEAR
-        self.staff_info.annual_leave_tracking_start = datetime.date(2026, 8, 14)
+        self.staff_info.annual_leave_tracking_start = datetime.date(2026, 8, 31)
         self.staff_info.save()
         now = datetime.datetime.now()
         with connection.cursor() as cursor:
-            for leave_date in ['2026-08-10', '2026-08-15']:
+            for leave_date in ['2026-08-10', '2026-08-31', '2026-09-01']:
                 cursor.execute(
                     f'''INSERT INTO {STAFF_LEAVE_TABLE}
                         (staff_user, staff_name, leave_date, day_part, code,
