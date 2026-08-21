@@ -260,6 +260,12 @@
         text-overflow: ellipsis;
         white-space: nowrap;
     }
+    .team-date-holiday.activity-notice {
+        color: #fde68a;
+    }
+    .date-notice-line {
+        display: block;
+    }
     .team-staff-head {
         width: 60px;
         min-width: 60px;
@@ -600,10 +606,11 @@
         color: #fff1f2;
         font-size: 0.68rem;
         font-weight: 700;
-        line-height: 1.1;
+        line-height: 1.2;
         text-align: right;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+    }
+    .day-holiday-name .activity-notice {
+        color: #fde68a;
     }
     .day-markers {
         display: flex;
@@ -1443,19 +1450,34 @@
         return Boolean(nationalHolidayName(date));
     }
 
-    function teamHolidayName(date) {
+    function leaveDateNotices(date) {
+        const notices = [];
         const holidayName = nationalHolidayName(date);
-        if (!holidayName) return '';
-        const isSunday = new Date(`${date}T00:00:00`).getDay() === 0;
-        return isSunday ? `${holidayName}(請擇休)` : holidayName;
+        if (holidayName) {
+            const isSunday = new Date(`${date}T00:00:00`).getDay() === 0;
+            notices.push({
+                text: isSunday ? `${holidayName}(請擇休)` : holidayName,
+                lines: isSunday ? [holidayName, '(請擇休)'] : [holidayName],
+                kind: 'holiday',
+            });
+        }
+        if (date === '2026-10-03') {
+            notices.push({
+                text: '秋令會(同工禁休)',
+                lines: ['秋令會', '(同工禁休)'],
+                kind: 'activity',
+            });
+        }
+        return notices;
     }
 
-    function teamDateNotices(date) {
-        const notices = [];
-        const holidayName = teamHolidayName(date);
-        if (holidayName) notices.push(holidayName);
-        if (date === '2026-10-03') notices.push('秋令會(同工禁休)');
-        return notices;
+    function appendNoticeLines(container, notice) {
+        notice.lines.forEach((line) => {
+            const lineElement = document.createElement('span');
+            lineElement.className = `date-notice-line ${notice.kind}-notice`;
+            lineElement.textContent = line;
+            container.appendChild(lineElement);
+        });
     }
 
     function applyNationalHolidayBackgrounds() {
@@ -1466,9 +1488,10 @@
             cell.classList.toggle('national-holiday', isNationalHoliday(cell.dataset.batchDay));
         });
         document.querySelectorAll('[data-holiday-name-for]').forEach((label) => {
-            const holidayName = nationalHolidayName(label.dataset.holidayNameFor);
-            label.textContent = holidayName;
-            label.title = holidayName;
+            const notices = leaveDateNotices(label.dataset.holidayNameFor);
+            label.replaceChildren();
+            notices.forEach((notice) => appendNoticeLines(label, notice));
+            label.title = notices.map((notice) => notice.text).join(' / ');
         });
     }
 
@@ -1579,11 +1602,11 @@
             weekdayLabel.textContent = `週${weekdayLabels[weekday]}`;
             dateLine.appendChild(weekdayLabel);
             dateCell.appendChild(dateLine);
-            teamDateNotices(date).forEach((notice) => {
+            leaveDateNotices(date).forEach((notice) => {
                 const holidayLabel = document.createElement('span');
-                holidayLabel.className = 'team-date-holiday';
-                holidayLabel.textContent = notice;
-                holidayLabel.title = notice;
+                holidayLabel.className = `team-date-holiday ${notice.kind}-notice`;
+                holidayLabel.title = notice.text;
+                appendNoticeLines(holidayLabel, notice);
                 dateCell.appendChild(holidayLabel);
             });
             row.appendChild(dateCell);
