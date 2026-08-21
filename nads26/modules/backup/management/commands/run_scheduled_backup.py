@@ -18,7 +18,7 @@ class Command(BaseCommand):
             if not config.schedule_enabled:
                 self.stdout.write("定期備份功能未啟用。")
                 return
-            
+
             # Check time: compare local time with configured backup_time
             now = timezone.localtime(timezone.now())
             current_time = now.time()
@@ -42,7 +42,7 @@ class Command(BaseCommand):
                 return
 
         self.stdout.write("符合執行備份條件，開始備份流程...")
-        
+
         # Run the generator synchronous from command line and print progress logs
         for log_event in run_backup_generator(trigger_type='scheduled'):
             # Extract line content from event format "data: <log>\n\n"
