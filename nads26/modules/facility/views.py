@@ -46,6 +46,7 @@ ROOM_PHOTO_FILES = None
 WEEKDAY_NAMES = ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日']
 EXPENSE_CLAIM_TABLE = 'facility_expense_claim'
 EXPENSE_CLAIM_ITEM_TABLE = 'facility_expense_claim_item'
+EXPENSE_PAYEE_ACCOUNT_TABLE = 'facility_expense_payee_account'
 EXPENSE_CLAIM_TYPE_STAFF = 'staff'
 EXPENSE_CLAIM_TYPE_AUTO_DEBIT = 'auto_debit'
 PASTORAL_REPORT_TABLE = 'care_pastoral_report'
@@ -1839,11 +1840,40 @@ def _expense_ensure_tables():
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 claim_id INT NOT NULL,
                 item_name VARCHAR(200) NOT NULL DEFAULT '',
+                ministry_group VARCHAR(160) NOT NULL DEFAULT '',
                 budget_code VARCHAR(80) NOT NULL DEFAULT '',
                 purpose VARCHAR(500) NOT NULL DEFAULT '',
                 amount DECIMAL(12, 2) NOT NULL DEFAULT 0,
                 sort_order INT NOT NULL DEFAULT 0,
                 INDEX idx_expense_claim_item_claim_id (claim_id)
+            )
+            '''
+        )
+        cursor.execute(f"SHOW COLUMNS FROM {EXPENSE_CLAIM_ITEM_TABLE} LIKE 'ministry_group'")
+        if not cursor.fetchone():
+            cursor.execute(
+                f"ALTER TABLE {EXPENSE_CLAIM_ITEM_TABLE} "
+                "ADD COLUMN ministry_group VARCHAR(160) NOT NULL DEFAULT '' AFTER item_name"
+            )
+            cursor.execute(
+                f'''UPDATE {EXPENSE_CLAIM_ITEM_TABLE} item
+                    INNER JOIN {EXPENSE_CLAIM_TABLE} claim ON claim.id = item.claim_id
+                    SET item.ministry_group = claim.ministry_group
+                    WHERE item.ministry_group = '' '''
+            )
+        cursor.execute(
+            f'''
+            CREATE TABLE IF NOT EXISTS {EXPENSE_PAYEE_ACCOUNT_TABLE} (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                owner_username VARCHAR(120) NOT NULL,
+                payee VARCHAR(200) NOT NULL,
+                bank_name VARCHAR(120) NOT NULL DEFAULT '',
+                bank_branch VARCHAR(120) NOT NULL DEFAULT '',
+                bank_account VARCHAR(120) NOT NULL DEFAULT '',
+                created_at DATETIME NOT NULL,
+                updated_at DATETIME NOT NULL,
+                UNIQUE KEY uniq_expense_payee_owner_account (owner_username, payee, bank_account),
+                INDEX idx_expense_payee_owner (owner_username)
             )
             '''
         )
@@ -1901,8 +1931,8 @@ def _expense_uses_activity_budget(claim_type):
 def _expense_validate_budget_balances(items):
     totals = {}
     for item in items:
-        if not item.get('budget_code') or not item.get('purpose'):
-            raise ValueError('\u8acb\u78ba\u8a8d\u6bcf\u7b46\u8acb\u6b3e\u9805\u76ee\u7684\u9810\u7b97\u4ee3\u865f\u8207\u7528\u9014\u7686\u5df2\u586b\u5beb\u3002')
+        if not item.get('ministry_group') or not item.get('budget_code') or not item.get('purpose'):
+            raise ValueError('\u8acb\u78ba\u8a8d\u6bcf\u7b46\u8acb\u6b3e\u9805\u76ee\u7684\u90e8\u9580\u3001\u9810\u7b97\u4ee3\u865f\u8207\u7528\u9014\u7686\u5df2\u586b\u5beb\u3002')
         if item['amount'] <= Decimal('0.00'):
             raise ValueError('\u8acb\u78ba\u8a8d\u6bcf\u7b46\u9805\u76ee\u7684\u91d1\u984d\u5fc5\u9808\u5927\u65bc 0\u3002')
         totals[item['budget_code']] = totals.get(item['budget_code'], Decimal('0.00')) + item['amount']
@@ -1913,27 +1943,35 @@ def _expense_validate_budget_balances(items):
         budget = budget_map.get(code)
         if not budget:
             raise ValueError(f'\u8acb\u9078\u64c7\u6709\u6548\u7684\u9810\u7b97\u4ee3\u865f\uff1a{code}')
+        selected_groups = {
+            item['ministry_group'] for item in items if item['budget_code'] == code
+        }
+        expected_group = budget.category or '\u672a\u5206\u985e'
+        if selected_groups != {expected_group}:
+            raise ValueError(f'\u9810\u7b97\u4ee3\u865f {code} \u4e0d\u5c6c\u65bc\u9078\u64c7\u7684\u90e8\u9580\uff0f\u5718\u5951\uff0f\u5c0f\u7d44\u3002')
         balance = budget.balance or Decimal('0.00')
         if amount > balance:
             raise ValueError(f'\u9810\u7b97\u4ee3\u865f {code} \u7684\u7533\u8acb\u91d1\u984d {amount:,.0f} \u9ad8\u65bc\u9918\u984d {balance:,.0f}\uff0c\u4e0d\u5141\u8a31\u9001\u51fa\u3002')
 
 
 def _expense_items_from_post(post):
+    ministry_groups = post.getlist('ministry_group')
     budget_codes = post.getlist('budget_code')
     purposes = post.getlist('purpose')
     amounts = post.getlist('amount')
     items = []
-    max_len = max(len(budget_codes), len(purposes), len(amounts), 0)
+    max_len = max(len(ministry_groups), len(budget_codes), len(purposes), len(amounts), 0)
     for index in range(max_len):
         purpose = (purposes[index] if index < len(purposes) else '').strip()
         item = {
             # Preserve the legacy column for existing exports and integrations.
             'item_name': purpose,
+            'ministry_group': (ministry_groups[index] if index < len(ministry_groups) else '').strip(),
             'budget_code': (budget_codes[index] if index < len(budget_codes) else '').strip(),
             'purpose': purpose,
             'amount': _expense_decimal(amounts[index] if index < len(amounts) else ''),
         }
-        if not item['budget_code'] and not item['purpose'] and item['amount'] in (None, Decimal('0.00')):
+        if not item['ministry_group'] and not item['budget_code'] and not item['purpose'] and item['amount'] in (None, Decimal('0.00')):
             continue
         if item['amount'] is None:
             raise ValueError('\u8acb\u78ba\u8a8d\u6bcf\u7b46\u9805\u76ee\u7684\u91d1\u984d\uff0c\u91d1\u984d\u4e0d\u53ef\u70ba\u8ca0\u6578\u3002')
@@ -1955,7 +1993,8 @@ def _expense_claim_from_post(request):
         'bank_name': (post.get('bank_name') or '').strip(),
         'bank_branch': (post.get('bank_branch') or '').strip(),
         'bank_account': (post.get('bank_account') or '').strip(),
-        'ministry_group': (post.get('ministry_group') or '').strip(),
+        # Keep the legacy claim-level value populated for existing integrations.
+        'ministry_group': items[0]['ministry_group'] if items else '',
         'receipt_count': receipt_count,
         'created_by': _current_username(request) or (post.get('applicant') or '').strip(),
         'items': items,
@@ -1968,10 +2007,58 @@ def _expense_claim_from_post(request):
     for key, message in [('applicant', '\u8acb\u586b\u5beb\u8acb\u6b3e\u4eba\u3002'), ('payee', '\u8acb\u586b\u5beb\u4ed8\u6b3e\u7d66\u3002'), ('payment_method', '\u8acb\u9078\u64c7\u4ed8\u6b3e\u65b9\u5f0f\u3002')]:
         if not claim[key]:
             raise ValueError(message)
-    if claim['payment_method'] == '\u532f\u6b3e' and (not claim['bank_name'] or not claim['bank_branch'] or not claim['bank_account']):
-        raise ValueError('\u4ed8\u6b3e\u65b9\u5f0f\u70ba\u532f\u6b3e\u6642\uff0c\u8acb\u586b\u5beb\u884c\u5eab\u540d\u3001\u5206\u884c\u8207\u8f49\u5165\u5e33\u865f\u3002')
     _expense_validate_budget_balances(items)
     return claim
+
+
+def _expense_saved_payee_accounts(request):
+    owner_username = _current_username(request)
+    if not owner_username:
+        return []
+    _expense_ensure_tables()
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f'''SELECT id, payee, bank_name, bank_branch, bank_account
+                FROM {EXPENSE_PAYEE_ACCOUNT_TABLE}
+                WHERE owner_username = %s
+                ORDER BY payee, bank_name, bank_account, id''',
+            [owner_username],
+        )
+        return _dictfetchall(cursor)
+
+
+def _expense_save_payee_account(request, claim):
+    if (
+        request.POST.get('save_payee_account') != '1'
+        or claim['payment_method'] != '\u532f\u6b3e'
+        or not claim['bank_account']
+    ):
+        return
+    owner_username = _current_username(request)
+    if not owner_username:
+        return
+    now = datetime.now(TZ).replace(tzinfo=None)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f'''SELECT id FROM {EXPENSE_PAYEE_ACCOUNT_TABLE}
+                WHERE owner_username = %s AND payee = %s AND bank_account = %s''',
+            [owner_username, claim['payee'], claim['bank_account']],
+        )
+        row = cursor.fetchone()
+        if row:
+            cursor.execute(
+                f'''UPDATE {EXPENSE_PAYEE_ACCOUNT_TABLE}
+                    SET bank_name = %s, bank_branch = %s, updated_at = %s
+                    WHERE id = %s''',
+                [claim['bank_name'], claim['bank_branch'], now, row[0]],
+            )
+        else:
+            cursor.execute(
+                f'''INSERT INTO {EXPENSE_PAYEE_ACCOUNT_TABLE}
+                    (owner_username, payee, bank_name, bank_branch, bank_account, created_at, updated_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)''',
+                [owner_username, claim['payee'], claim['bank_name'], claim['bank_branch'], claim['bank_account'], now, now],
+            )
 
 
 def _expense_create_claim(claim, claim_type=EXPENSE_CLAIM_TYPE_STAFF):
@@ -1983,7 +2070,7 @@ def _expense_create_claim(claim, claim_type=EXPENSE_CLAIM_TYPE_STAFF):
         cursor.execute('SELECT LAST_INSERT_ID()')
         claim_id = cursor.fetchone()[0]
         for index, item in enumerate(claim['items'], start=1):
-            cursor.execute(f'''INSERT INTO {EXPENSE_CLAIM_ITEM_TABLE} (claim_id, item_name, budget_code, purpose, amount, sort_order) VALUES (%s, %s, %s, %s, %s, %s)''', [claim_id, item['item_name'], item['budget_code'], item['purpose'], item['amount'], index])
+            cursor.execute(f'''INSERT INTO {EXPENSE_CLAIM_ITEM_TABLE} (claim_id, item_name, ministry_group, budget_code, purpose, amount, sort_order) VALUES (%s, %s, %s, %s, %s, %s, %s)''', [claim_id, item['item_name'], item['ministry_group'], item['budget_code'], item['purpose'], item['amount'], index])
     return claim_no
 
 
@@ -1995,7 +2082,7 @@ def _expense_get_claim(claim_no, claim_type=EXPENSE_CLAIM_TYPE_STAFF):
         if not rows:
             return None
         claim = rows[0]
-        cursor.execute(f'''SELECT item_name, budget_code, purpose, amount, sort_order FROM {EXPENSE_CLAIM_ITEM_TABLE} WHERE claim_id = %s ORDER BY sort_order, id''', [claim['id']])
+        cursor.execute(f'''SELECT item_name, ministry_group, budget_code, purpose, amount, sort_order FROM {EXPENSE_CLAIM_ITEM_TABLE} WHERE claim_id = %s ORDER BY sort_order, id''', [claim['id']])
         claim['items'] = _dictfetchall(cursor)
     return claim
 
@@ -2011,18 +2098,62 @@ def _expense_claim_for_form(claim):
     items = []
     for item in form_claim.get('items') or []:
         form_item = dict(item)
+        if not form_item.get('ministry_group'):
+            form_item['ministry_group'] = form_claim.get('ministry_group') or ''
         amount = form_item.get('amount')
         form_item['amount'] = '' if amount in (None, '') else str(amount).rstrip('0').rstrip('.')
         items.append(form_item)
-    form_claim['items'] = items or [{'item_name': '', 'budget_code': '', 'purpose': '', 'amount': ''}]
+    form_claim['items'] = items or [{'item_name': '', 'ministry_group': '', 'budget_code': '', 'purpose': '', 'amount': ''}]
     return form_claim
 
 
-def _expense_recent_claims(claim_type=EXPENSE_CLAIM_TYPE_STAFF):
+def _expense_can_view_all_staff_claims(request):
+    user = getattr(request, 'user', None)
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    try:
+        from modules.eureka.models import StaffInfo
+        return StaffInfo.objects.filter(user=user, name='黃美美').exists()
+    except Exception:
+        return False
+
+
+def _expense_can_access_claim(request, claim, claim_type=EXPENSE_CLAIM_TYPE_STAFF):
+    if claim_type != EXPENSE_CLAIM_TYPE_STAFF:
+        return True
+    if _expense_can_view_all_staff_claims(request):
+        return True
+    return bool(claim and claim.get('created_by') == _current_username(request))
+
+
+def _expense_recent_claims(claim_type=EXPENSE_CLAIM_TYPE_STAFF, created_by=None):
     _expense_ensure_tables()
     with connection.cursor() as cursor:
-        cursor.execute(f'''SELECT claim_no, applicant, request_date, total_amount, accepted_at, created_at FROM {EXPENSE_CLAIM_TABLE} WHERE claim_type = %s ORDER BY created_at DESC, id DESC''', [claim_type])
-        return _dictfetchall(cursor)
+        where_sql = 'WHERE claim_type = %s'
+        params = [claim_type]
+        if created_by is not None:
+            where_sql += ' AND created_by = %s'
+            params.append(created_by)
+        cursor.execute(f'''SELECT id, claim_no, applicant, request_date, total_amount, accepted_at, created_at FROM {EXPENSE_CLAIM_TABLE} {where_sql} ORDER BY created_at DESC, id DESC''', params)
+        claims = _dictfetchall(cursor)
+        if not claims:
+            return claims
+        claim_ids = [claim['id'] for claim in claims]
+        placeholders = ', '.join(['%s'] * len(claim_ids))
+        cursor.execute(
+            f'''SELECT claim_id, purpose FROM {EXPENSE_CLAIM_ITEM_TABLE} WHERE claim_id IN ({placeholders}) ORDER BY claim_id, sort_order, id''',
+            claim_ids,
+        )
+        purposes_by_claim = {}
+        for item in _dictfetchall(cursor):
+            purpose = (item.get('purpose') or '').strip()
+            if purpose:
+                purposes_by_claim.setdefault(item['claim_id'], []).append(purpose)
+        for claim in claims:
+            claim['purpose'] = '、'.join(purposes_by_claim.get(claim['id'], [])) or '—'
+        return claims
 
 
 def _expense_update_claim(claim_no, claim, claim_type=EXPENSE_CLAIM_TYPE_STAFF):
@@ -2033,10 +2164,10 @@ def _expense_update_claim(claim_no, claim, claim_type=EXPENSE_CLAIM_TYPE_STAFF):
     if existing.get('accepted_at'):
         raise ValueError('\u6b64\u8acb\u6b3e\u55ae\u5df2\u88ab\u5f8c\u7e8c\u6d41\u7a0b\u63a5\u53d7\uff0c\u4e0d\u80fd\u4fee\u6539\u3002')
     with connection.cursor() as cursor:
-        cursor.execute(f'''UPDATE {EXPENSE_CLAIM_TABLE} SET applicant=%s, request_date=%s, payee=%s, payment_method=%s, bank_name=%s, bank_branch=%s, bank_account=%s, ministry_group=%s, receipt_count=%s, total_amount=%s, created_by=%s WHERE claim_no=%s''', [claim['applicant'], claim['request_date_obj'], claim['payee'], claim['payment_method'], claim['bank_name'], claim['bank_branch'], claim['bank_account'], claim['ministry_group'], claim['receipt_count'], claim['total_amount'], claim['created_by'], claim_no])
+        cursor.execute(f'''UPDATE {EXPENSE_CLAIM_TABLE} SET applicant=%s, request_date=%s, payee=%s, payment_method=%s, bank_name=%s, bank_branch=%s, bank_account=%s, ministry_group=%s, receipt_count=%s, total_amount=%s WHERE claim_no=%s''', [claim['applicant'], claim['request_date_obj'], claim['payee'], claim['payment_method'], claim['bank_name'], claim['bank_branch'], claim['bank_account'], claim['ministry_group'], claim['receipt_count'], claim['total_amount'], claim_no])
         cursor.execute(f'DELETE FROM {EXPENSE_CLAIM_ITEM_TABLE} WHERE claim_id = %s', [existing['id']])
         for index, item in enumerate(claim['items'], start=1):
-            cursor.execute(f'''INSERT INTO {EXPENSE_CLAIM_ITEM_TABLE} (claim_id, item_name, budget_code, purpose, amount, sort_order) VALUES (%s, %s, %s, %s, %s, %s)''', [existing['id'], item['item_name'], item['budget_code'], item['purpose'], item['amount'], index])
+            cursor.execute(f'''INSERT INTO {EXPENSE_CLAIM_ITEM_TABLE} (claim_id, item_name, ministry_group, budget_code, purpose, amount, sort_order) VALUES (%s, %s, %s, %s, %s, %s, %s)''', [existing['id'], item['item_name'], item['ministry_group'], item['budget_code'], item['purpose'], item['amount'], index])
 
 
 def _expense_delete_claim(claim_no, claim_type=EXPENSE_CLAIM_TYPE_STAFF):
@@ -2068,7 +2199,7 @@ def _expense_default_claim(request):
                 bank_account = staff_info.bank_account or ''
         except Exception:
             pass
-    return {'applicant': applicant_name, 'request_date': date.today().isoformat(), 'payee': applicant_name, 'payment_method': '\u532f\u6b3e', 'bank_name': bank_name, 'bank_branch': '', 'bank_account': bank_account, 'ministry_group': '', 'receipt_count': 0, 'items': [{'item_name': '', 'budget_code': '', 'purpose': '', 'amount': ''}]}
+    return {'applicant': applicant_name, 'request_date': date.today().isoformat(), 'payee': applicant_name, 'payment_method': '\u532f\u6b3e', 'bank_name': bank_name, 'bank_branch': '', 'bank_account': bank_account, 'ministry_group': '', 'receipt_count': 0, 'items': [{'item_name': '', 'ministry_group': '', 'budget_code': '', 'purpose': '', 'amount': ''}]}
 
 
 def _expense_claim_page(
@@ -2084,6 +2215,17 @@ def _expense_claim_page(
     new_claim = request.GET.get('new') == '1'
     editing_claim = _expense_get_claim(edit_claim_no, claim_type) if edit_claim_no else None
     source_claim = _expense_get_claim(copy_claim_no, claim_type) if copy_claim_no else None
+    if editing_claim and not _expense_can_access_claim(request, editing_claim, claim_type):
+        return HttpResponseForbidden('您無權查看或修改這張請款單。')
+    if source_claim and not _expense_can_access_claim(request, source_claim, claim_type):
+        return HttpResponseForbidden('您無權查看或複製這張請款單。')
+    show_claim_scope_tabs = claim_type == EXPENSE_CLAIM_TYPE_STAFF
+    can_view_all_claims = show_claim_scope_tabs and _expense_can_view_all_staff_claims(request)
+    requested_scope = request.GET.get('scope') or request.POST.get('scope') or 'mine'
+    claim_scope = 'all' if can_view_all_claims and requested_scope == 'all' else 'mine'
+    if not show_claim_scope_tabs:
+        claim_scope = 'all'
+    list_url = f'{base_path}/?scope={claim_scope}' if show_claim_scope_tabs else f'{base_path}/'
     form_modal_open = bool(new_claim or editing_claim or source_claim)
     if editing_claim:
         claim = _expense_claim_for_form(editing_claim)
@@ -2102,20 +2244,31 @@ def _expense_claim_page(
             if action == 'delete':
                 if not form_claim_no:
                     raise ValueError('\u8acb\u5148\u9078\u64c7\u8acb\u6b3e\u55ae')
+                target_claim = _expense_get_claim(form_claim_no, claim_type)
+                if target_claim and not _expense_can_access_claim(request, target_claim, claim_type):
+                    return HttpResponseForbidden('您無權刪除這張請款單。')
                 _expense_delete_claim(form_claim_no, claim_type)
                 messages.success(request, f'已刪除{claim_title}：{form_claim_no}')
-                return redirect(f'{base_path}/')
+                return redirect(list_url)
             claim = _expense_claim_from_post(request)
             if form_claim_no:
+                target_claim = _expense_get_claim(form_claim_no, claim_type)
+                if target_claim and not _expense_can_access_claim(request, target_claim, claim_type):
+                    return HttpResponseForbidden('您無權修改這張請款單。')
                 _expense_update_claim(form_claim_no, claim, claim_type)
+                _expense_save_payee_account(request, claim)
                 messages.success(request, f'已更新{claim_title}：{form_claim_no}')
-                return redirect(f'{base_path}/')
+                return redirect(list_url)
             claim_no = _expense_create_claim(claim, claim_type)
+            _expense_save_payee_account(request, claim)
             messages.success(request, f'\u5df2\u6210\u7acb\u55ae\u865f\uff1a{claim_no}')
-            return redirect(f'{base_path}/')
+            return redirect(list_url)
         except ValueError as exc:
             messages.error(request, str(exc))
-    claim_history = _expense_recent_claims(claim_type)
+    history_created_by = None
+    if show_claim_scope_tabs and claim_scope == 'mine':
+        history_created_by = _current_username(request)
+    claim_history = _expense_recent_claims(claim_type, history_created_by)
     return render(request, 'facility/expense_claim.html', {
         'claim': claim,
         'editing_claim': editing_claim,
@@ -2124,6 +2277,10 @@ def _expense_claim_page(
         'claim_history': claim_history,
         'expense_claim_base_path': base_path,
         'expense_claim_title': claim_title,
+        'claim_scope': claim_scope,
+        'show_claim_scope_tabs': show_claim_scope_tabs,
+        'can_view_all_claims': can_view_all_claims,
+        'saved_payee_accounts': _expense_saved_payee_accounts(request),
         'show_activity_budget_in_options': _expense_uses_activity_budget(claim_type),
         'budget_choices_json': _expense_budget_choices_json(),
     })
@@ -2193,6 +2350,8 @@ def _expense_claim_voucher_pdf(
     claim = _expense_get_claim(claim_no, claim_type)
     if not claim:
         return HttpResponseBadRequest('Expense claim not found')
+    if not _expense_can_access_claim(request, claim, claim_type):
+        return HttpResponseForbidden('您無權查看這張請款單。')
 
     from reportlab.graphics.barcode.qr import QrCodeWidget
     from reportlab.graphics import renderPDF
@@ -2230,59 +2389,88 @@ def _expense_claim_voucher_pdf(
     page.drawCentredString(qr_x + qr_size / 2, qr_y - 1 * mm, claim_no)
     y -= 24 * mm
 
-    page.setFont(font_name, 10)
-    page.drawString(margin_x, y, f'請款人：{claim["applicant"] or ""}')
-    page.drawString(margin_x + 78 * mm, y, f'日期：{claim["request_date"]}')
-    y -= 9 * mm
-
-    page.drawString(margin_x, y, f'付款給：{claim["payee"] or ""}')
-    page.drawString(margin_x + 90 * mm, y, f'付款方式：{claim["payment_method"] or ""}')
-    y -= 8 * mm
-    page.drawString(margin_x, y, f'行庫名：{claim["bank_name"] or ""}')
-    page.drawString(margin_x + 90 * mm, y, f'分行：{claim["bank_branch"] or ""}')
-    y -= 8 * mm
-    page.drawString(margin_x, y, f'轉入帳號：{claim["bank_account"] or ""}')
-    y -= 8 * mm
-    page.drawString(margin_x, y, f'部門/團契/小組：{claim["ministry_group"] or ""}')
-    page.drawString(margin_x + 88 * mm, y, f'憑證張數：{claim["receipt_count"] or 0}')
-    page.drawString(margin_x + 128 * mm, y, f'總計金額：{claim["total_amount"]}')
-    y -= 12 * mm
+    page.setFont(font_name, 9)
+    field_width = (width - margin_x * 2) / 4
+    header_rows = [
+        [('請款人', claim['applicant']), ('申請日期', claim['request_date']), ('付款給', claim['payee']), ('付款方式', claim['payment_method'])],
+        [('行庫名', claim['bank_name']), ('分行', claim['bank_branch']), ('轉入帳號', claim['bank_account']), ('憑證張數', claim['receipt_count'] or 0)],
+    ]
+    for row in header_rows:
+        for index, (label, value) in enumerate(row):
+            text = f'{label}：{value or ""}'
+            page.drawString(margin_x + field_width * index, y, text[:22])
+        y -= 8 * mm
+    page.setFont(font_name, 11)
+    page.drawRightString(width - margin_x, y, f'總計金額：{claim["total_amount"]}')
+    y -= 10 * mm
 
     table_x = margin_x
     table_w = width - margin_x * 2
-    col_widths = [38 * mm, 88 * mm, table_w - 126 * mm]
-    row_h = 10 * mm
+    col_widths = [42 * mm, table_w - 72 * mm, 30 * mm]
+    row_h = 9 * mm
     page.setStrokeColor(colors.black)
     page.setLineWidth(0.7)
-    page.rect(table_x, y - row_h, table_w, row_h)
-    x = table_x
-    headers = ['預算代號', '用途', '金額']
-    for index, header in enumerate(headers):
-        page.drawString(x + 2 * mm, y - 6.5 * mm, header)
-        if index < len(col_widths) - 1:
-            x += col_widths[index]
-            page.line(x, y, x, y - row_h)
-    y -= row_h
 
-    item_rows = max(len(claim['items']), 4)
-    for index in range(item_rows):
-        item = claim['items'][index] if index < len(claim['items']) else {}
+    grouped_items = {}
+    for item in claim['items']:
+        group_name = item.get('ministry_group') or claim.get('ministry_group') or '未分類'
+        grouped_items.setdefault(group_name, []).append(item)
+
+    def start_continuation_page():
+        nonlocal y
+        page.showPage()
+        page.setFont(font_name, 13)
+        page.drawString(margin_x, height - 18 * mm, f'{document_title}（續）')
+        page.setFont(font_name, 9)
+        page.drawRightString(width - margin_x, height - 18 * mm, claim_no)
+        y = height - 30 * mm
+        page.setStrokeColor(colors.black)
+        page.setLineWidth(0.7)
+
+    def draw_table_header():
+        nonlocal y
+        page.setFont(font_name, 9)
         page.rect(table_x, y - row_h, table_w, row_h)
         x = table_x
-        page.drawString(x + 2 * mm, y - 6.5 * mm, str(item.get('budget_code') or ''))
-        x += col_widths[0]
-        page.line(x, y, x, y - row_h)
-        item_text = str(item.get('purpose') or '')
-        if item.get('item_name') and item.get('item_name') not in item_text:
-            item_text = f'{item.get("item_name")} {item_text}'.strip()
-        page.drawString(x + 2 * mm, y - 6.5 * mm, item_text[:34])
-        x += col_widths[1]
-        page.line(x, y, x, y - row_h)
-        amount = item.get('amount')
-        page.drawRightString(table_x + table_w - 2 * mm, y - 6.5 * mm, '' if amount in (None, '') else str(amount))
+        for index, header in enumerate(['預算代號', '用途', '金額']):
+            page.drawString(x + 2 * mm, y - 6 * mm, header)
+            if index < len(col_widths) - 1:
+                x += col_widths[index]
+                page.line(x, y, x, y - row_h)
         y -= row_h
 
-    y -= 10 * mm
+    for group_name, group_items in grouped_items.items():
+        required_height = (len(group_items) + 1) * row_h + 12 * mm
+        if y - required_height < 70 * mm:
+            start_continuation_page()
+        page.setFont(font_name, 10)
+        page.drawString(table_x, y, f'部門/團契/小組：{group_name}')
+        y -= 7 * mm
+        draw_table_header()
+        for item in group_items:
+            if y - row_h < 70 * mm:
+                start_continuation_page()
+                page.setFont(font_name, 10)
+                page.drawString(table_x, y, f'部門/團契/小組：{group_name}（續）')
+                y -= 7 * mm
+                draw_table_header()
+            page.rect(table_x, y - row_h, table_w, row_h)
+            x = table_x
+            page.drawString(x + 2 * mm, y - 6 * mm, str(item.get('budget_code') or '')[:18])
+            x += col_widths[0]
+            page.line(x, y, x, y - row_h)
+            item_text = str(item.get('purpose') or '')
+            page.drawString(x + 2 * mm, y - 6 * mm, item_text[:42])
+            x += col_widths[1]
+            page.line(x, y, x, y - row_h)
+            amount = item.get('amount')
+            page.drawRightString(table_x + table_w - 2 * mm, y - 6 * mm, '' if amount in (None, '') else str(amount))
+            y -= row_h
+        y -= 7 * mm
+
+    if y < 72 * mm:
+        start_continuation_page()
+    page.setFont(font_name, 10)
     sign_w = table_w / 4
     page.rect(table_x, y - 20 * mm, table_w, 20 * mm)
     for index, label in enumerate(['主任牧師', '部門區牧', '會計', '出納']):
@@ -2296,8 +2484,8 @@ def _expense_claim_voucher_pdf(
     page.line(margin_x, y, width - margin_x, y)
     page.setDash()
     y -= 8 * mm
-    page.setFont(font_name, 12)
-    page.drawCentredString(width / 2, y, '憑證請黏貼在虛線以下以及背面')
+    page.setFont(font_name, 10)
+    page.drawCentredString(width / 2, y, '憑證請黏貼在虛線以下，或用另一張A4紙靠右貼，放在第二頁')
     y -= 8 * mm
     page.setDash(3, 3)
     page.line(margin_x, y, width - margin_x, y)

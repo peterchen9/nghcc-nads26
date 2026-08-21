@@ -202,8 +202,8 @@
         font-weight: 800;
         text-align: center;
     }
-    .hr-summary-table tbody tr:first-child td,
-    .hr-summary-table tbody tr:first-child .hr-summary-label {
+    .hr-summary-table tbody tr:nth-child(4) td,
+    .hr-summary-table tbody tr:nth-child(4) .hr-summary-label {
         background: #365f68;
         color: #d5fff8;
     }
@@ -467,14 +467,44 @@
     .personal-leave-stat small {
         color: var(--text-secondary);
     }
-    .personal-leave-stat.featured,
     .personal-leave-stat.total {
         grid-column: span 3;
     }
     .personal-leave-stat.featured strong,
     .personal-leave-stat.total strong {
-        color: var(--accent-color);
         font-size: 1.1rem;
+    }
+    .personal-leave-stat.total-quota {
+        border-color: rgba(96, 165, 250, 0.42);
+        background: rgba(37, 99, 235, 0.16);
+    }
+    .personal-leave-stat.total-quota strong {
+        color: #93c5fd;
+    }
+    .personal-leave-stat.used-quota {
+        border-color: rgba(251, 146, 60, 0.42);
+        background: rgba(194, 65, 12, 0.16);
+    }
+    .personal-leave-stat.used-quota strong {
+        color: #fdba74;
+    }
+    .personal-leave-stat.remaining-quota {
+        border-color: rgba(52, 211, 153, 0.42);
+        background: rgba(5, 150, 105, 0.16);
+    }
+    .personal-leave-stat.remaining-quota strong,
+    .personal-leave-stat.total strong {
+        color: var(--accent-color);
+    }
+    .personal-leave-stat.remaining-quota.renewal-warning {
+        border-color: #f59e0b;
+        background: #fde047;
+        box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.2);
+        color: #991b1b;
+    }
+    .personal-leave-stat.remaining-quota.renewal-warning strong,
+    .personal-leave-stat.remaining-quota.renewal-warning small {
+        color: #991b1b;
     }
     .muted {
         color: var(--text-secondary);
@@ -1216,8 +1246,9 @@
                     <span class="muted">{{ selected_month|date:'Y年n月' }}</span>
                 </div>
                 <div class="personal-leave-summary">
-                    <div class="personal-leave-stat featured"><span>年度特休天數</span><strong>{{ annual_leave_quota|floatformat:"-1" }}</strong><small>天</small></div>
-                    <div class="personal-leave-stat featured"><span>已休特休天數</span><strong>{{ used_leave_days|floatformat:"-1" }}</strong><small>天</small></div>
+                    <div class="personal-leave-stat featured total-quota"><span>總特休數</span><strong>{{ annual_leave_quota|floatformat:"-1" }}</strong><small>天</small></div>
+                    <div class="personal-leave-stat featured used-quota"><span>已休特休</span><strong>{{ used_leave_days|floatformat:"-1" }}</strong><small>天</small></div>
+                    <div class="personal-leave-stat featured remaining-quota{% if selected_month.month == annual_leave_warning_month %} renewal-warning{% endif %}"{% if selected_month.month == annual_leave_warning_month %} title="到職週年前一個月提醒：特休即將歸零，請儘速安排休假"{% endif %}><span>剩餘特休</span><strong>{{ remaining_annual_leave_days|floatformat:"-1" }}</strong><small>天</small></div>
                     <div class="personal-leave-stat"><span>例休</span><strong>{{ monthly_leave_summary.休|floatformat:"-1" }}</strong><small>天</small></div>
                     <div class="personal-leave-stat"><span>特休</span><strong>{{ monthly_leave_summary.特|floatformat:"-1" }}</strong><small>天</small></div>
                     <div class="personal-leave-stat"><span>補休</span><strong>{{ monthly_leave_summary.補|floatformat:"-1" }}</strong><small>天</small></div>
@@ -1412,6 +1443,21 @@
         return Boolean(nationalHolidayName(date));
     }
 
+    function teamHolidayName(date) {
+        const holidayName = nationalHolidayName(date);
+        if (!holidayName) return '';
+        const isSunday = new Date(`${date}T00:00:00`).getDay() === 0;
+        return isSunday ? `${holidayName}(請擇休)` : holidayName;
+    }
+
+    function teamDateNotices(date) {
+        const notices = [];
+        const holidayName = teamHolidayName(date);
+        if (holidayName) notices.push(holidayName);
+        if (date === '2026-10-03') notices.push('秋令會(同工禁休)');
+        return notices;
+    }
+
     function applyNationalHolidayBackgrounds() {
         document.querySelectorAll('.calendar-table .day-cell[data-date]').forEach((cell) => {
             cell.classList.toggle('national-holiday', isNationalHoliday(cell.dataset.date));
@@ -1533,14 +1579,13 @@
             weekdayLabel.textContent = `週${weekdayLabels[weekday]}`;
             dateLine.appendChild(weekdayLabel);
             dateCell.appendChild(dateLine);
-            const holidayName = nationalHolidayName(date);
-            if (holidayName) {
+            teamDateNotices(date).forEach((notice) => {
                 const holidayLabel = document.createElement('span');
                 holidayLabel.className = 'team-date-holiday';
-                holidayLabel.textContent = holidayName;
-                holidayLabel.title = holidayName;
+                holidayLabel.textContent = notice;
+                holidayLabel.title = notice;
                 dateCell.appendChild(holidayLabel);
-            }
+            });
             row.appendChild(dateCell);
 
             teamStaffNames.forEach((staffName) => {

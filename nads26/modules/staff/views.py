@@ -18,6 +18,7 @@ from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import redirect, render
 
 from modules.facility.views import expense_claim_page, expense_claim_voucher_pdf
+from modules.eureka.leave_rules import annual_leave_entitlement
 
 
 STAFF_LEAVE_TABLE = 'staff_leave_entry'
@@ -850,30 +851,92 @@ def _staff_names_for_month(month_start, entries, alias_map=None):
     return names
 
 
-def _get_used_annual_leave_days(user):
-    aliases = _staff_user_aliases(user)
+def _get_used_annual_leave_days_for_aliases(aliases, staff_info=None, year=STAFF_LEAVE_YEAR):
+    aliases = [alias for alias in dict.fromkeys(aliases) if alias]
+    if not aliases:
+        return 0.0
+    opening_balance = 0.0
+    tracking_start = None
+    if staff_info and staff_info.annual_leave_used_base_year == year:
+        opening_balance = float(staff_info.annual_leave_used_base or 0.0)
+        tracking_start = staff_info.annual_leave_tracking_start
+
     with connection.cursor() as cursor:
         placeholders = ', '.join(['%s'] * len(aliases))
+        tracking_sql = ' AND leave_date > %s' if tracking_start else ''
         query = f"""
             SELECT leave_date, day_part
             FROM {STAFF_LEAVE_TABLE} 
             WHERE (staff_user IN ({placeholders}) OR staff_name IN ({placeholders}))
               AND STRFTIME('%%Y', leave_date) = %s
               AND code = '特'
+              {tracking_sql}
         """ if connection.vendor == 'sqlite' else f"""
             SELECT leave_date, day_part
             FROM {STAFF_LEAVE_TABLE} 
             WHERE (staff_user IN ({placeholders}) OR staff_name IN ({placeholders}))
               AND YEAR(leave_date) = %s
               AND code = '特'
+              {tracking_sql}
         """
-        params = list(aliases) + list(aliases) + [str(STAFF_LEAVE_YEAR)]
+        params = list(aliases) + list(aliases) + [str(year)]
+        if tracking_start:
+            params.append(tracking_start)
         cursor.execute(query, params)
         unique_slots = {
             (str(leave_date), day_part)
             for leave_date, day_part in cursor.fetchall()
         }
-    return float(len(unique_slots)) * 0.5
+    return opening_balance + float(len(unique_slots)) * 0.5
+
+
+def _get_used_annual_leave_days(user, staff_info=None, year=STAFF_LEAVE_YEAR):
+    if staff_info is None:
+        try:
+            from modules.eureka.models import StaffInfo
+            staff_info = StaffInfo.objects.filter(user=user).first()
+            if not staff_info:
+                staff_info = StaffInfo.objects.filter(
+                    name=_staff_display_name(user)
+                ).first()
+        except Exception:
+            staff_info = None
+    return _get_used_annual_leave_days_for_aliases(
+        _staff_user_aliases(user), staff_info, year
+    )
+
+
+def _annual_leave_balances(canonical_names, full_names, as_of_date):
+    from modules.eureka.models import StaffInfo
+
+    balances = {}
+    for canonical_name in canonical_names:
+        full_name = full_names.get(canonical_name, canonical_name)
+        staff_info = StaffInfo.objects.select_related('user').filter(
+            name__in=[canonical_name, full_name]
+        ).first()
+        if not staff_info:
+            balances[canonical_name] = {'total': 0.0, 'used': 0.0, 'remaining': 0.0}
+            continue
+        total = (
+            annual_leave_entitlement(staff_info.onboard_date, as_of_date)
+            if staff_info.is_active else float(staff_info.annual_leave_quota or 0.0)
+        )
+        aliases = [canonical_name, full_name, staff_info.name]
+        if staff_info.user:
+            aliases.extend([
+                staff_info.user.get_username(),
+                staff_info.user.get_full_name(),
+            ])
+        used = _get_used_annual_leave_days_for_aliases(
+            aliases, staff_info, as_of_date.year
+        )
+        balances[canonical_name] = {
+            'total': total,
+            'used': used,
+            'remaining': total - used,
+        }
+    return balances
 
 
 def _monthly_leave_summary(user, entries):
@@ -924,7 +987,9 @@ def _monthly_leave_summary(user, entries):
     }
 
 
-def _hr_monthly_leave_overview(staff_names, entries, alias_map, full_names):
+def _hr_monthly_leave_overview(
+    staff_names, entries, alias_map, full_names, annual_balances=None
+):
     canonical_names = [
         _canonical_staff_name(name, alias_map)
         for name in staff_names
@@ -958,6 +1023,19 @@ def _hr_monthly_leave_overview(staff_names, entries, alias_map, full_names):
         for name in canonical_names
     ]
     rows = []
+    annual_balances = annual_balances or {}
+    for label, key in [
+        ('總特休數', 'total'),
+        ('已休特休', 'used'),
+        ('剩餘特休', 'remaining'),
+    ]:
+        rows.append({
+            'label': label,
+            'values': [
+                annual_balances.get(name, {}).get(key, 0.0)
+                for name in canonical_names
+            ],
+        })
     for label, code in HR_LEAVE_SUMMARY_METRICS:
         key = code or 'total'
         rows.append({
@@ -1031,17 +1109,24 @@ def _save_leave_entry(request, selected_month):
                     additional_special_slots += 1
         if additional_special_slots:
             annual_leave_quota = 0.0
+            staff_info = None
             try:
                 from modules.eureka.models import StaffInfo
                 staff_info = StaffInfo.objects.filter(user=request.user).first()
                 if not staff_info:
                     staff_info = StaffInfo.objects.filter(name=staff_name).first()
                 if staff_info:
-                    annual_leave_quota = staff_info.annual_leave_quota
+                    annual_leave_quota = (
+                        annual_leave_entitlement(staff_info.onboard_date, leave_day)
+                        if staff_info.is_active
+                        else float(staff_info.annual_leave_quota or 0.0)
+                    )
             except Exception:
                 pass
                 
-            used_days = _get_used_annual_leave_days(request.user)
+            used_days = _get_used_annual_leave_days(
+                request.user, staff_info, leave_day.year
+            )
             requested_days = additional_special_slots * 0.5
             if used_days + requested_days > annual_leave_quota:
                 messages.error(request, f"本次需要 {requested_days:g} 天特休，將超過年度上限 {annual_leave_quota:g} 天。")
@@ -1164,27 +1249,49 @@ def leave_calendar_page(request):
     current_user = request.user.get_username()
 
     annual_leave_quota = 0.0
+    annual_leave_warning_month = None
+    staff_info = None
     try:
         from modules.eureka.models import StaffInfo
         staff_info = StaffInfo.objects.filter(user=request.user).first()
         if not staff_info:
             staff_info = StaffInfo.objects.filter(name=_staff_display_name(request.user)).first()
         if staff_info:
-            annual_leave_quota = staff_info.annual_leave_quota
+            if staff_info.onboard_date:
+                annual_leave_warning_month = (
+                    12
+                    if staff_info.onboard_date.month == 1
+                    else staff_info.onboard_date.month - 1
+                )
+            annual_leave_quota = (
+                annual_leave_entitlement(staff_info.onboard_date, today)
+                if staff_info.is_active else float(staff_info.annual_leave_quota or 0.0)
+            )
     except Exception:
         pass
-    used_leave_days = _get_used_annual_leave_days(request.user)
+    used_leave_days = _get_used_annual_leave_days(
+        request.user, staff_info, today.year
+    )
+    remaining_annual_leave_days = annual_leave_quota - used_leave_days
     monthly_leave_summary = _monthly_leave_summary(request.user, entries)
     can_view_hr_leave_summary = request.user.has_perm(
         'eureka.view_staff_leave_summary'
     )
     hr_leave_overview = None
     if can_view_hr_leave_summary:
+        canonical_staff_names = [
+            _canonical_staff_name(name, staff_name_aliases)
+            for name in staff_names
+        ]
+        annual_balances = _annual_leave_balances(
+            canonical_staff_names, staff_full_names, today
+        )
         hr_leave_overview = _hr_monthly_leave_overview(
             staff_names,
             entries,
             staff_name_aliases,
             staff_full_names,
+            annual_balances,
         )
 
     context = {
@@ -1210,6 +1317,8 @@ def leave_calendar_page(request):
         'lock_note': '每月5日鎖住前一個月；已鎖定月份只能閱讀。',
         'annual_leave_quota': annual_leave_quota,
         'used_leave_days': used_leave_days,
+        'remaining_annual_leave_days': remaining_annual_leave_days,
+        'annual_leave_warning_month': annual_leave_warning_month,
         'monthly_leave_summary': monthly_leave_summary,
         'can_view_hr_leave_summary': can_view_hr_leave_summary,
         'hr_leave_overview': hr_leave_overview,

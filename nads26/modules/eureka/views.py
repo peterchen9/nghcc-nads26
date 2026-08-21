@@ -10,6 +10,7 @@ from django.db.models import Q, Max, Count
 from django.contrib import messages
 from openpyxl import Workbook
 from .models import Member, PastoralOverseer, PastoralSection, PastoralGroup
+from .leave_rules import annual_leave_entitlement
 
 # 照片目錄路徑
 PHOTO_FOLDER = os.path.join(settings.MEDIA_ROOT, 'eureka', 'photo')
@@ -1279,6 +1280,10 @@ def staff_list_view(request):
 
     users = User.objects.filter(is_active=True).order_by('username')
     shifts = StaffShift.objects.all().order_by('shift_code')
+    today = datetime.date.today()
+    for staff in staff_list:
+        if staff.is_active:
+            staff.annual_leave_quota = annual_leave_entitlement(staff.onboard_date, today)
 
     return render(request, 'eureka/staff_list.html', {
         'staff_list': staff_list,
@@ -1321,11 +1326,6 @@ def add_staff_view(request):
         user_id = request.POST.get('user_id', '').strip()
         shift_id = request.POST.get('shift_id', '').strip()
         onboard_date = request.POST.get('onboard_date', '').strip() or None
-        try:
-            annual_leave_quota = float(request.POST.get('annual_leave_quota', '0') or 0)
-        except ValueError:
-            annual_leave_quota = 0.0
-
         staff = StaffInfo.objects.create(
             staff_id=staff_id,
             name=name,
@@ -1338,7 +1338,13 @@ def add_staff_view(request):
             bank_account=request.POST.get('bank_account', '').strip(),
             user_id=int(user_id) if user_id else None,
             shift_id=int(shift_id) if shift_id else None,
-            annual_leave_quota=max(annual_leave_quota, 0.0),
+            annual_leave_quota=(
+                annual_leave_entitlement(
+                    datetime.date.fromisoformat(onboard_date) if onboard_date else None,
+                    datetime.date.today(),
+                )
+                if request.POST.get('is_active', 'true') == 'true' else 0.0
+            ),
             onboard_date=onboard_date,
             is_active=request.POST.get('is_active', 'true') == 'true',
             email=request.POST.get('email', '').strip(),
@@ -1383,12 +1389,15 @@ def edit_staff_view(request, staff_id):
             shift_id = request.POST.get('shift_id', '').strip()
             staff.shift_id = int(shift_id) if shift_id else None
             
-            try:
-                staff.annual_leave_quota = float(request.POST.get('annual_leave_quota', '0') or 0.0)
-            except ValueError:
-                staff.annual_leave_quota = 0.0
-                
+            parsed_onboard_date = (
+                datetime.date.fromisoformat(onboard_date_str)
+                if onboard_date_str else None
+            )
             staff.is_active = request.POST.get('is_active') == 'true'
+            if staff.is_active:
+                staff.annual_leave_quota = annual_leave_entitlement(
+                    parsed_onboard_date, datetime.date.today()
+                )
             
             staff.save()
             messages.success(request, f"已成功更新同工 {staff.name} 的資料。")
@@ -1822,6 +1831,4 @@ def shift_delete_view(request, shift_id):
         messages.error(request, f"刪除班表失敗: {e}")
         
     return redirect('eureka:shift-list')
-
-
 

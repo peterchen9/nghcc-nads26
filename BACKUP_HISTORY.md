@@ -192,3 +192,101 @@
 - Deployed files: `modules/hymns/serializers.py` and `modules/hymns/tests.py`.
 - Database, hymn records, MIDI files, media, menu items, permission relationships, Nginx, and database container: unchanged.
 - Verification: 4 MIDI tests passed locally and on production; deployed SHA-256 values matched the local files; `python manage.py check` completed with only the pre-existing CKEditor 4 warning; `nads26-web` restarted successfully; `/` returned HTTP 200; the production detail API for hymn 1 now returns `/hymn_resources/midi/100801_%E6%99%82%E5%88%BB%E8%BF%91%E4%B8%BB.mid` instead of the blocked `http://` absolute URL.
+
+## 2026-08-14 14:45:32 +08:00
+
+- Purpose: calculate active staff annual leave from onboard dates, make the quota read-only, and add total/used/remaining annual-leave balances to the HR and personal leave summaries.
+- GitHub publication: pending because the existing local `gh` authentication for `peterchen9` is invalid.
+- Remote backup: `/home/peterchen/backups/nads26-pre-annual-leave-20260814-143931/`.
+- Local backup: `D:\backups\nghcc-nads26\nads26-pre-annual-leave-20260814-143931\` (outside the Git working tree).
+- Database change: applied `eureka.0011_staffinfo_annual_leave_opening_balance`; added three annual-leave tracking fields and loaded 18 existing staff opening balances for 2026-08-14, totaling 76 days. `施方正` was not created or matched because no corresponding `staff_info` record exists in production.
+- Deployed files: `modules/eureka/models.py`, `modules/eureka/views.py`, `modules/eureka/test_staff_admin.py`, `modules/eureka/leave_rules.py`, `modules/eureka/migrations/0011_staffinfo_annual_leave_opening_balance.py`, `modules/eureka/test_leave_rules.py`, `modules/staff/views.py`, `modules/staff/tests.py`, `templates/eureka/staff_list.html`, and `templates/staff/leaves.html`.
+- Unchanged: menu items, permission relationships, media, Nginx, and the database container configuration.
+- Verification: 15 related tests passed locally; remote and local backup SHA-256 checks passed; all 10 deployed file hashes matched local files; Django check completed with the pre-existing CKEditor warning; migration `0011` is applied; opening-balance count and sum are 18 and 76; `nads26-web` restarted; `/` returned HTTP 200 and unauthenticated `/staff/leaves/` returned HTTP 302; authenticated browser verification confirmed the new summary order, correct `7 / 0 / 7` values for 陳潘傳, and a read-only annual-leave field in staff administration.
+
+## 2026-08-14 15:02:03 +08:00
+
+- Purpose: set the newly added staff record for 施方正 to the annual-leave opening balance supplied by the user.
+- Remote backup: `/home/peterchen/backups/nads26-pre-fangzheng-leave-20260814-150203/`.
+- Local backup: `D:\backups\nghcc-nads26\nads26-pre-fangzheng-leave-20260814-150203\` (outside the Git working tree).
+- Database change: updated exactly one record, `staff_info.staff_id=26`, to a 2026 opening used-leave balance of 4 days with tracking starting on 2026-08-14. No other staff record was changed.
+- Verification: the remote MySQL dump and local copy passed SHA-256 and gzip verification; the transaction updated exactly one row; the calculated balance is total 14, used 4, remaining 10; authenticated production browser verification showed `14 / 4 / 10` for 施方正 in the HR leave overview. No container restart was required.
+
+## 2026-08-14 15:16:03 +08:00
+
+- Purpose: move the HR-summary emphasis from the total annual-leave row to the monthly-total row, and present the personal total/used/remaining annual-leave cards in three distinct color tones on one three-column row.
+- Remote backup: `/home/peterchen/backups/nads26-pre-leave-colors-20260814-151603/`.
+- Local backup: `D:\backups\nghcc-nads26\nads26-pre-leave-colors-20260814-151603\` (outside the Git working tree).
+- Deployed files: `templates/staff/leaves.html` and `modules/staff/tests.py`.
+- Unchanged: database schema and records, media, menu items, permission relationships, Nginx, and database container configuration.
+- Verification: 8 related tests passed locally; backup archives and local copies passed SHA-256 and tar verification; both deployed file hashes matched local files; Django check completed with the pre-existing CKEditor warning; `nads26-web` restarted; `/` returned HTTP 200 and unauthenticated `/staff/leaves/` returned HTTP 302. Authenticated production browser verification confirmed the monthly-total row background, normal total-annual-leave row background, three distinct blue/orange/green card tones, and a single three-column card row.
+
+## 2026-08-14 15:53:30 +08:00
+
+- Purpose: warn each staff member about expiring annual leave during the month before their onboard-anniversary month, including December warnings for January onboard dates.
+- Remote backup: `/home/peterchen/backups/nads26-pre-leave-renewal-warning-20260814-155330/`.
+- Local backup: `D:\backups\nghcc-nads26\nads26-pre-leave-renewal-warning-20260814-155330\` (outside the Git working tree).
+- Deployed files: `modules/staff/views.py`, `modules/staff/tests.py`, and `templates/staff/leaves.html`.
+- Unchanged: database schema and records, media, menu items, permission relationships, Nginx, and database container configuration.
+- Verification: 10 related tests passed locally, including the January/December wraparound; remote and local backups passed SHA-256 and tar verification; all three deployed hashes matched local files; Django check completed with the pre-existing CKEditor warning; `nads26-web` restarted; `/` returned HTTP 200 and unauthenticated `/staff/leaves/` returned HTTP 302. Authenticated production browser verification used 陳潘傳's April onboard month: March showed the yellow background, red text, and renewal warning, while April returned to the normal green style.
+
+## 2026-08-14 17:06:15 +08:00
+
+- Purpose: limit the staff expense-claim history to each submitter by default, allow 黃美美 and superusers to switch between their own and all submissions, and replace the visible claim-number column with the claim-item purposes.
+- GitHub publication: pending because the existing local `gh` authentication for `peterchen9` is invalid.
+- Remote backup: `/home/peterchen/backups/nads26-pre-expense-claim-visibility-20260814-170152/`.
+- Local backup: `D:\backups\nghcc-nads26\nads26-pre-expense-claim-visibility-20260814-170152\` (outside the Git working tree).
+- Deployed files: `modules/facility/views.py` and `templates/facility/expense_claim.html`; the local test file was not deployed because tests are not retained in the production source tree.
+- Unchanged: database schema and records, media, menu items, permission relationships, Nginx, and the database container configuration.
+- Verification: 8 related tests passed locally; deployed SHA-256 values `1452f990ac66d5b0e90726b3abfa2efe5dbc99e9db6b304163bb73ca5ef8d7bb` and `404ec3238f0a4e4e267a70501413b40d75f9e04b68f2d89342567166200e4548` matched the local files; Django check completed with only the pre-existing CKEditor warning; 黃美美 has a linked login account; `nads26-web` restarted; the production root returned HTTP 200 and unauthenticated `/staff/expense-claims/` returned HTTP 302. Authenticated browser verification confirmed the superuser's own list contained only peterchen-created claims, the all-users list contained other applicants, and the table displayed purposes instead of claim numbers.
+
+## 2026-08-16 09:09:28 +08:00
+
+- Purpose: remove the `支票` payment method from the shared staff expense-claim and finance auto-debit claim form, leaving only bank transfer and cash.
+- GitHub publication: pending because the existing local `gh` authentication for `peterchen9` is invalid.
+- Remote backup: `/home/peterchen/backups/nads26-pre-remove-check-payment-20260816-090804/`.
+- Local backup: `D:\backups\nghcc-nads26\nads26-pre-remove-check-payment-20260816-090804\` (outside the Git working tree).
+- Deployed file: `templates/facility/expense_claim.html`.
+- Unchanged: existing claim records, database schema, media, menu items, permission relationships, Nginx, and the database container configuration.
+- Verification: 9 related tests passed locally; deployed SHA-256 `d559a4c426c625cbf5365985a6117f613ef0927b2c8820aa2ee7f9090f95f57b` matched the local file; the production container contains `匯款` and `現金` but no `支票` option; Django check completed with only the pre-existing CKEditor warning; `nads26-web` restarted; the production root returned HTTP 200, while unauthenticated staff-claim and auto-debit-claim pages both returned the expected HTTP 302.
+
+## 2026-08-17 13:52:45 +08:00
+
+- Purpose: correct 張慕聖's 2026 annual-leave opening used balance because the supplied 3-day value already included the scheduled half-day on August 28.
+- Remote backup: `/home/peterchen/backups/nads26-pre-zhang-musheng-leave-fix-20260817-135034/`.
+- Local backup: `D:\backups\nghcc-nads26\nads26-pre-zhang-musheng-leave-fix-20260817-135034\` (outside the Git working tree).
+- Database change: updated exactly one record, `staff_info.staff_id=8` (`張慕聖`), changing `annual_leave_used_base` from 3.0 to 2.5 days. The tracking year remains 2026 and the tracking start remains 2026-08-14.
+- Source consistency: corrected 張慕聖's value in the not-yet-published opening-balance migration from 3 to 2.5; the already-applied migration was not rerun in production.
+- Verification: the production `staff_info` dump passed SHA-256 and gzip verification; the transaction checked the original values before updating; the calculated used annual leave is now 3.0 days after adding the scheduled 0.5 day on August 28; 10 staff-leave tests passed locally. No container restart was required.
+
+## 2026-08-18 11:07:48 +08:00
+
+- Purpose: prevent accidental modal dismissal when users click outside an editing dialog, using a shared base-template guard that covers leave, expense, staff, shift, facility, attendance, meeting, hymn, and other modal-backed pages while preserving explicit controls inside each dialog.
+- GitHub publication: pending because the existing local `gh` authentication for `peterchen9` is invalid.
+- Remote backup: `/home/peterchen/backups/nads26-pre-modal-backdrop-lock-20260818-110337/`.
+- Local backups: `D:\backups\nghcc-nads26\nads26-pre-modal-backdrop-lock-20260818-105538\` for the pre-change local files and `D:\backups\nghcc-nads26\nads26-pre-modal-backdrop-lock-20260818-110337\` for the pre-deployment production file.
+- Deployed file: `templates/base.html`.
+- Local tooling compatibility: updated the local-only `.tools/ssh_exec.py` and `.tools/ssh_stream_extract.py` helpers to use a direct IPv4 socket when given a numeric address, working around the current bundled Python Unicode-DLL failure. These helper changes were not deployed.
+- Unchanged: database schema and records, media, menu items, permission relationships, Nginx, and the database container configuration.
+- Verification: deployed SHA-256 `4699fac633f0a490782e0c867118dbd77b9d14e575d8b03c8706488ec8d4df66` matched the local file; the production container contains the shared modal-backdrop guard; Django check completed with only the pre-existing CKEditor warning; `nads26-web` restarted; the production root returned HTTP 200 and unauthenticated `/staff/leaves/` returned HTTP 302. Automated Django tests could not start because the production application account cannot create `test_nads26db`, and browser click verification was unavailable because the Browser plugin rejected its updated runtime path as untrusted; neither failure touched production data.
+
+## 2026-08-18 14:07:49 +08:00
+
+- Purpose: redesign the staff expense-claim form and print layout, move ministry/group selection to each item using budget categories, and add login-specific reusable payee bank accounts.
+- GitHub publication: pending; this deployment synchronized only the approved production files.
+- Remote backup: `/home/peterchen/backups/nads26-pre-expense-claim-redesign-20260818-140513/`.
+- Local backup: `D:\backups\nghcc-nads26\nads26-pre-expense-claim-redesign-20260818-140513\` (outside the Git working tree).
+- Deployed files: `modules/facility/views.py` and `templates/facility/expense_claim.html`; the local test file and PDF layout sample were not deployed.
+- Database change: added `ministry_group` to `facility_expense_claim_item`, preserving legacy claim-level values for existing rows, and created `facility_expense_payee_account` with per-login ownership and a unique owner/payee/account key. Existing claim and item counts remained 18 and 32; the new saved-account table started empty.
+- Unchanged: existing claim amounts and approvals, menu items, permission relationships, media, Nginx, and database container configuration.
+- Verification: remote and D-drive backup hashes matched; deployed hashes matched local files (`98e6d611...91479` and `bd501836...d53ce`); Django check completed with only the pre-existing CKEditor warning; schema initialization reported success; `nads26-web` restarted successfully; `/` returned HTTP 200 and unauthenticated `/staff/expense-claims/` returned HTTP 302.
+
+## 2026-08-18 14:48:07 +08:00
+
+- Purpose: make bank name, branch, and transfer account optional on expense claims, align the second-row fields by moving the `新增帳號` control below the transfer-account input, and prevent saving an empty reusable account.
+- GitHub publication: pending; this deployment synchronized only the approved production files.
+- Remote backup: `/home/peterchen/backups/nads26-pre-optional-bank-fields-20260818-144700/`.
+- Local backup: `D:\backups\nghcc-nads26\nads26-pre-optional-bank-fields-20260818-144700\` (outside the Git working tree).
+- Deployed files: `modules/facility/views.py` and `templates/facility/expense_claim.html`; the local test file was not deployed.
+- Unchanged: database schema, existing claims and saved accounts, menu items, permission relationships, media, Nginx, and database container configuration.
+- Verification: 13 related tests passed locally before deployment; remote and D-drive backup hashes matched; deployed hashes matched local files (`da08af07...8ec79` and `30ff837b...75114`); Django check completed with only the pre-existing CKEditor warning; the deployed template no longer makes bank fields required; `nads26-web` restarted successfully; claim/item/saved-account counts remained 19/33/1; `/` returned HTTP 200 and unauthenticated `/staff/expense-claims/` returned HTTP 302.

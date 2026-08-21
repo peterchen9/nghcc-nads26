@@ -1026,6 +1026,29 @@
         }
 
         // Keep active menu open on load
+        const protectedModalBackdropSelector = [
+            '.modal-backdrop',
+            '.modal-overlay',
+            '.custom-modal-backdrop',
+            '.custom-modal-overlay',
+            '.hymn-modal-backdrop',
+            '.day-overview-modal-backdrop',
+            '.eureka-modal-backdrop',
+        ].join(', ');
+
+        // Modal backdrops are intentionally inert. Users must choose an
+        // explicit control inside the dialog so partially entered data is not
+        // discarded by an accidental click outside the form.
+        document.addEventListener('click', (event) => {
+            if (
+                event.target instanceof Element
+                && event.target.matches(protectedModalBackdropSelector)
+            ) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+            }
+        }, true);
+
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.sub-link').forEach((link) => {
                 link.addEventListener('click', (event) => handleSubMenuClick(event, link));

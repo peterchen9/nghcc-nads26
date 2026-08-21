@@ -157,6 +157,13 @@ class StaffInfo(models.Model):
     user = models.ForeignKey(User, verbose_name="user", null=True, blank=True, on_delete=models.SET_NULL, related_name="staff_infos")
     shift = models.ForeignKey(StaffShift, on_delete=models.SET_NULL, null=True, blank=True, related_name='staff_infos', verbose_name='班表')
     annual_leave_quota = models.FloatField("年度特休", default=0.0)
+    annual_leave_used_base = models.FloatField("已休特休期初值", default=0.0)
+    annual_leave_used_base_year = models.PositiveIntegerField(
+        "特休期初值年度", null=True, blank=True
+    )
+    annual_leave_tracking_start = models.DateField(
+        "特休續計起日", null=True, blank=True
+    )
 
     leave_quotas = models.JSONField("歷年休假額度", default=dict, blank=True)
 
@@ -300,7 +307,6 @@ class PastoralGroup(models.Model):
 
     def __str__(self):
         return self.name
-
 
 
 

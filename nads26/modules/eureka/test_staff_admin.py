@@ -1,3 +1,5 @@
+import datetime
+
 from django.contrib.auth.models import Permission, User
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -17,12 +19,15 @@ class StaffAdminCreateTests(TestCase):
     def test_superuser_can_create_staff(self):
         self.client.force_login(self.superuser)
 
+        today = datetime.date.today()
+        onboard_date = today.replace(year=today.year - 1)
+
         response = self.client.post(reverse('eureka:staff-add'), {
             'staff_id': '101',
             'name': '測試同工',
             'identity_code': 'W',
             'employee_no': 'E101',
-            'annual_leave_quota': '7.5',
+            'onboard_date': onboard_date.isoformat(),
             'is_active': 'true',
         })
 
@@ -30,7 +35,7 @@ class StaffAdminCreateTests(TestCase):
         staff = StaffInfo.objects.get(pk=101)
         self.assertEqual(staff.name, '測試同工')
         self.assertEqual(staff.employee_no, 'E101')
-        self.assertEqual(staff.annual_leave_quota, 7.5)
+        self.assertEqual(staff.annual_leave_quota, 7)
         self.assertTrue(staff.is_active)
 
     def test_duplicate_staff_id_does_not_overwrite(self):
@@ -78,6 +83,8 @@ class StaffAdminCreateTests(TestCase):
 
         list_response = self.client.get(reverse('eureka:staff-list'))
         self.assertContains(list_response, 'id="add-staff-button"')
+        self.assertContains(list_response, 'id="edit-annual-leave"')
+        self.assertContains(list_response, 'readonly')
 
         response = self.client.post(reverse('eureka:staff-add'), {
             'staff_id': '103',

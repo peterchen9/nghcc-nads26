@@ -28,7 +28,8 @@ class StaffLeaveTests(TestCase):
         self.staff_info = StaffInfo.objects.create(
             user=self.user,
             name="測試同工",
-            annual_leave_quota=2.0
+            onboard_date=datetime.date(STAFF_LEAVE_YEAR, 2, 1),
+            annual_leave_quota=3.0,
         )
         
         # Ensure the raw SQL tables are created
@@ -80,17 +81,29 @@ class StaffLeaveTests(TestCase):
         self.assertContains(response, 'team-slots')
         self.assertContains(response, "code === '陪/產假' ? '陪產' : code")
         self.assertContains(response, '個人休假瀏覽表')
-        self.assertContains(response, '年度特休天數')
-        self.assertContains(response, '已休特休天數')
+        self.assertContains(response, '總特休數')
+        self.assertContains(response, '已休特休')
+        self.assertContains(response, '剩餘特休')
+        self.assertContains(response, '.hr-summary-table tbody tr:nth-child(4) td')
+        self.assertContains(response, 'personal-leave-stat featured total-quota')
+        self.assertContains(response, 'personal-leave-stat featured used-quota')
+        self.assertContains(response, 'personal-leave-stat featured remaining-quota')
         self.assertContains(response, '當月總計')
         self.assertContains(response, '日期與時段（可複選）')
         self.assertContains(response, 'name="leave_slots"')
         self.assertContains(response, 'width: min(500px, 100%)')
         self.assertContains(response, 'min-height: 20px')
+        self.assertContains(response, 'protectedModalBackdropSelector')
+        self.assertContains(response, "event.target.matches(protectedModalBackdropSelector)")
+        self.assertContains(response, 'event.stopImmediatePropagation()')
         self.assertContains(response, '.content-area .leave-modal .batch-slot-button')
         self.assertContains(response, 'height: 20px')
         self.assertContains(response, 'applyNationalHolidayBackgrounds')
         self.assertContains(response, 'function nationalHolidayName(date)')
+        self.assertContains(response, 'function teamHolidayName(date)')
+        self.assertContains(response, "`${holidayName}(請擇休)`")
+        self.assertContains(response, "date === '2026-10-03'")
+        self.assertContains(response, '秋令會(同工禁休)')
         self.assertContains(response, 'data-holiday-name-for=')
         self.assertContains(response, 'team-date-holiday')
         self.assertContains(response, 'const extendedHolidayPattern = /連假|補假|調整放假|彈性放假/;')
@@ -109,11 +122,37 @@ class StaffLeaveTests(TestCase):
         self.assertNotContains(response, "slot.classList.add('present-dot')")
         html = response.content.decode()
         labels = [
-            '年度特休天數', '已休特休天數', '例休', '特休', '補休',
+            '總特休數', '已休特休', '剩餘特休', '例休', '特休', '補休',
             '公假', '其他', '病假', '事假', '婚假', '陪產', '育嬰', '喪假', '當月總計',
         ]
         positions = [html.index(f'<span>{label}</span>') for label in labels]
         self.assertEqual(positions, sorted(positions))
+
+    def test_remaining_annual_leave_warns_in_month_before_onboard_month(self):
+        warning_month = self.client.get(
+            reverse('staff-leaves'), {'month': '2026-01'}
+        )
+        self.assertContains(
+            warning_month,
+            'remaining-quota renewal-warning',
+        )
+        self.assertContains(
+            warning_month,
+            '到職週年前一個月提醒：特休即將歸零，請儘速安排休假',
+        )
+
+        other_month = self.client.get(
+            reverse('staff-leaves'), {'month': '2026-02'}
+        )
+        self.assertNotContains(other_month, 'remaining-quota renewal-warning')
+
+    def test_january_onboard_date_warns_in_december(self):
+        StaffInfo.objects.filter(user=self.user).update(
+            onboard_date=datetime.date(2025, 1, 15)
+        )
+
+        december = self.client.get(reverse('staff-leaves'), {'month': '2026-12'})
+        self.assertContains(december, 'remaining-quota renewal-warning')
 
     def test_monthly_leave_summary_counts_half_days(self):
         entries = [
@@ -218,10 +257,14 @@ class StaffLeaveTests(TestCase):
             ],
             _staff_name_aliases(),
             {'美美': '黃美美'},
+            {'美美': {'total': 15, 'used': 5.5, 'remaining': 9.5}},
         )
         row_values = {row['label']: row['values'][0] for row in overview['rows']}
         self.assertEqual(overview['columns'][0]['name'], '黃美美')
-        self.assertEqual(len(overview['rows']), 12)
+        self.assertEqual(len(overview['rows']), 15)
+        self.assertEqual(row_values['總特休數'], 15)
+        self.assertEqual(row_values['已休特休'], 5.5)
+        self.assertEqual(row_values['剩餘特休'], 9.5)
         self.assertEqual(row_values['當月總計'], 0.5)
         self.assertEqual(row_values['例休'], 0.5)
 
@@ -244,12 +287,32 @@ class StaffLeaveTests(TestCase):
 
         self.assertEqual(_get_used_annual_leave_days(self.user), 1.0)
 
+    def test_used_leave_starts_with_imported_balance_then_counts_future_slots(self):
+        self.staff_info.annual_leave_used_base = 1.5
+        self.staff_info.annual_leave_used_base_year = STAFF_LEAVE_YEAR
+        self.staff_info.annual_leave_tracking_start = datetime.date(2026, 8, 14)
+        self.staff_info.save()
+        now = datetime.datetime.now()
+        with connection.cursor() as cursor:
+            for leave_date in ['2026-08-10', '2026-08-15']:
+                cursor.execute(
+                    f'''INSERT INTO {STAFF_LEAVE_TABLE}
+                        (staff_user, staff_name, leave_date, day_part, code,
+                         description, source, created_at, updated_at)
+                        VALUES (%s, %s, %s, 'am', '特', '', '', %s, %s)''',
+                    [self.user.username, self.staff_info.name, leave_date, now, now],
+                )
+
+        self.assertEqual(
+            _get_used_annual_leave_days(self.user, self.staff_info), 2.0
+        )
+
     def test_special_leave_quota_limit(self):
         """Verify that creating '特' leave entries is restricted by quota"""
         today = datetime.date.today()
         month_str = today.strftime('%Y-%m')
-        # Save 4 special leave entries (0.5 day * 4 = 2.0 days, which is exactly the quota)
-        for idx in range(4):
+        # Save 6 special leave entries (0.5 day * 6 = 3.0 days, exactly the half-year quota)
+        for idx in range(6):
             leave_date = datetime.date(STAFF_LEAVE_YEAR, today.month, 1 + idx)
             post_data = {
                 'action': 'save',
@@ -262,16 +325,16 @@ class StaffLeaveTests(TestCase):
             response = self.client.post(reverse('staff-leaves'), post_data)
             self.assertEqual(response.status_code, 302)
 
-        # Confirm 4 entries exist
+        # Confirm 6 entries exist
         with connection.cursor() as cursor:
             cursor.execute(
                 f"SELECT COUNT(*) FROM {STAFF_LEAVE_TABLE} WHERE staff_user = %s AND code = '特'",
                 [self.user.username]
             )
             count = cursor.fetchone()[0]
-            self.assertEqual(count, 4)
+            self.assertEqual(count, 6)
 
-        # Attempt to save a 5th special leave entry (which exceeds the quota of 2.0 days)
+        # Attempt to save a 7th special leave entry (which exceeds the quota of 3.0 days)
         exceeding_date = datetime.date(STAFF_LEAVE_YEAR, today.month, 20)
         post_data = {
             'action': 'save',

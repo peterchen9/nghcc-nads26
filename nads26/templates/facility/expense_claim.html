@@ -16,6 +16,8 @@
     .expense-list-panel { min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; padding: 16px; overflow: hidden; }
     .list-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .list-head h3 { margin: 0; font-size: 1.08rem; }
+    .claim-scope-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .claim-scope-tabs .btn.active { color: #17202b; background: var(--accent-color); border-color: var(--accent-color); }
     .messages { display: grid; gap: 8px; }
     .message { border-radius: 6px; padding: 10px 12px; background: rgba(188,220,255,0.12); color: var(--accent-color); }
     .message.error { background: rgba(248,113,113,0.12); color: #fecaca; }
@@ -37,11 +39,13 @@
     .modal-head-actions { display: flex; gap: 8px; align-items: center; }
     .modal-body { min-height: 0; overflow: auto; padding: 16px; }
     .expense-form { display: grid; gap: 16px; }
-    .form-grid { display: grid; grid-template-columns: repeat(3, minmax(160px, 1fr)); gap: 12px; }
+    .form-grid { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; }
     .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
     .field label { color: var(--text-secondary); font-size: 0.86rem; }
     .field input, .field select, .item-table input, .item-table select { box-sizing: border-box; border: 1px solid rgba(255,255,255,0.14); border-radius: 6px; padding: 9px 10px; background: rgba(8,13,20,0.35); color: var(--text-primary); font: inherit; width: 100%; }
     .field option { color: #111827; }
+    .save-account-control { display: inline-flex; align-items: center; align-self: flex-start; gap: 4px; color: var(--accent-color); cursor: pointer; white-space: nowrap; }
+    .save-account-control input { width: auto; margin: 0; }
     .item-wrap { overflow-x: auto; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; }
     .item-table { width: 100%; min-width: 900px; border-collapse: separate; border-spacing: 0; }
     .item-table th, .item-table td { border-bottom: 1px solid rgba(255,255,255,0.08); padding: 8px; background: rgba(47,65,86,0.74); vertical-align: top; }
@@ -49,7 +53,7 @@
     .item-table tr:last-child td { border-bottom: 0; }
     .money-cell { width: 140px; }
     .action-cell { width: 54px; text-align: center; }
-    .budget-category-cell { width: 150px; }
+    .budget-category-cell { width: 190px; min-width: 190px; }
     .budget-code-cell { width: 300px; min-width: 300px; }
     .purpose-cell { min-width: 320px; width: 42%; }
     .budget-code-trigger { width: 100%; min-height: 40px; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.14); border-radius: 6px; padding: 9px 32px 9px 10px; background: rgba(8,13,20,0.35); color: var(--text-primary); font: inherit; text-align: left; cursor: pointer; position: relative; }
@@ -95,30 +99,38 @@
         {% endif %}
 
         <div class="list-head">
-            <h3>已送出的申請表列表</h3>
-            <a class="btn primary" href="{{ expense_claim_base_path }}/?new=1">新增</a>
+            <div>
+                <h3>已送出的申請表列表</h3>
+                {% if show_claim_scope_tabs and can_view_all_claims %}
+                    <div class="claim-scope-tabs" aria-label="申請表顯示範圍">
+                        <a class="btn {% if claim_scope == 'mine' %}active{% endif %}" href="{{ expense_claim_base_path }}/?scope=mine">自己送出的申請表</a>
+                        <a class="btn {% if claim_scope == 'all' %}active{% endif %}" href="{{ expense_claim_base_path }}/?scope=all">所有人的申請表</a>
+                    </div>
+                {% endif %}
+            </div>
+            <a class="btn primary" href="{{ expense_claim_base_path }}/?new=1&amp;scope={{ claim_scope }}">新增</a>
         </div>
 
         <div class="claim-history-scroll">
             <table class="claim-history-table">
                 <thead>
-                    <tr><th>申請者</th><th>單號</th><th>日期</th><th>總金額</th><th class="history-action-column">操作</th></tr>
+                    <tr><th>申請者</th><th>用途</th><th>日期</th><th>總金額</th><th class="history-action-column">操作</th></tr>
                 </thead>
                 <tbody>
                     {% for history_claim in claim_history %}
                         <tr>
                             <td>{{ history_claim.applicant }}</td>
-                            <td class="claim-no">{{ history_claim.claim_no }}</td>
+                            <td>{{ history_claim.purpose }}</td>
                             <td>{{ history_claim.request_date|date:"Y-m-d" }}</td>
                             <td>{{ history_claim.total_amount }}</td>
                             <td class="history-action-column">
                                 <div class="history-actions">
                                     <a class="btn" href="{{ expense_claim_base_path }}/{{ history_claim.claim_no }}/voucher.pdf" target="_blank" rel="noopener">列印</a>
-                                    <a class="btn" href="{{ expense_claim_base_path }}/?copy={{ history_claim.claim_no }}">複製</a>
+                                    <a class="btn" href="{{ expense_claim_base_path }}/?copy={{ history_claim.claim_no }}&amp;scope={{ claim_scope }}">複製</a>
                                     {% if history_claim.accepted_at %}
                                         <span class="btn disabled" title="已被後續流程接受，不能修改">修改</span>
                                     {% else %}
-                                        <a class="btn" href="{{ expense_claim_base_path }}/?edit={{ history_claim.claim_no }}">修改</a>
+                                        <a class="btn" href="{{ expense_claim_base_path }}/?edit={{ history_claim.claim_no }}&amp;scope={{ claim_scope }}">修改</a>
                                     {% endif %}
                                 </div>
                                 {% if history_claim.accepted_at %}<div class="accepted-note">已接受，不能修改</div>{% endif %}
@@ -143,7 +155,7 @@
                 {% if editing_claim %}
                     <a class="voucher-link" href="{{ expense_claim_base_path }}/{{ editing_claim.claim_no }}/voucher.pdf" target="_blank" rel="noopener">傳票黏貼單下載</a>
                 {% endif %}
-                <a class="btn" href="{{ expense_claim_base_path }}/">關閉</a>
+                <a class="btn" href="{{ expense_claim_base_path }}/?scope={{ claim_scope }}">關閉</a>
             </div>
         </div>
         <div class="modal-body">
@@ -156,34 +168,41 @@
             <form class="expense-form" method="post" id="expenseForm">
                 {% csrf_token %}
                 <input type="hidden" name="claim_no" value="{{ editing_claim.claim_no|default:'' }}">
+                <input type="hidden" name="scope" value="{{ claim_scope }}">
 
                 <div class="form-grid">
                     <div class="field"><label for="applicant">請款人</label><input id="applicant" name="applicant" value="{{ claim.applicant }}" required></div>
                     <div class="field"><label for="request_date">申請日期</label><input id="request_date" name="request_date" type="date" value="{{ claim.request_date }}" required></div>
-                    <div class="field"><label for="payee">付款給</label><input id="payee" name="payee" value="{{ claim.payee }}" required></div>
+                    <div class="field"><label for="payee">付款給</label><input id="payee" name="payee" list="savedPayeeAccounts" value="{{ claim.payee }}" autocomplete="off" required></div>
                     <div class="field">
                         <label for="payment_method">付款方式</label>
                         <select id="payment_method" name="payment_method" required>
                             <option value="匯款" {% if claim.payment_method == '匯款' %}selected{% endif %}>匯款</option>
                             <option value="現金" {% if claim.payment_method == '現金' %}selected{% endif %}>現金</option>
-                            <option value="支票" {% if claim.payment_method == '支票' %}selected{% endif %}>支票</option>
                         </select>
                     </div>
-                    <div class="field"><label for="ministry_group">部門/團契/小組</label><input id="ministry_group" name="ministry_group" value="{{ claim.ministry_group }}" required></div>
-                    <div class="field"><label for="receipt_count">憑證張數</label><input id="receipt_count" name="receipt_count" type="number" min="0" step="1" readonly value="{{ claim.receipt_count }}"></div>
                     <div class="field bank-field"><label for="bank_name">行庫名</label><input id="bank_name" name="bank_name" value="{{ claim.bank_name }}"></div>
                     <div class="field bank-field"><label for="bank_branch">分行</label><input id="bank_branch" name="bank_branch" value="{{ claim.bank_branch }}"></div>
-                    <div class="field bank-field"><label for="bank_account">轉入帳號</label><input id="bank_account" name="bank_account" value="{{ claim.bank_account }}"></div>
+                    <div class="field bank-field">
+                        <label for="bank_account">轉入帳號</label>
+                        <input id="bank_account" name="bank_account" value="{{ claim.bank_account }}">
+                        <label class="save-account-control" title="儲存為目前登入帳號的常用收款資料"><input type="checkbox" name="save_payee_account" value="1">新增帳號</label>
+                    </div>
+                    <div class="field"><label for="receipt_count">憑證張數</label><input id="receipt_count" name="receipt_count" type="number" min="0" step="1" readonly value="{{ claim.receipt_count }}"></div>
                 </div>
+
+                <datalist id="savedPayeeAccounts">
+                    {% for account in saved_payee_accounts %}<option value="{{ account.payee }}">{{ account.bank_name }} {{ account.bank_branch }} {{ account.bank_account }}</option>{% endfor %}
+                </datalist>
 
                 <div class="item-wrap">
                     <table class="item-table">
-                        <thead><tr><th class="budget-category-cell">分類</th><th class="budget-code-cell">預算代號</th><th class="purpose-cell">用途</th><th class="money-cell">金額</th><th class="action-cell"></th></tr></thead>
+                        <thead><tr><th class="budget-category-cell">部門/團契/小組</th><th class="budget-code-cell">預算代號</th><th class="purpose-cell">用途</th><th class="money-cell">金額</th><th class="action-cell"></th></tr></thead>
                         <tbody id="itemBody">
                             {% for item in claim.items %}
                                 <tr>
-                                    <td class="budget-category-cell"><select class="budget-category" name="budget_category" data-selected-code="{{ item.budget_code }}" required><option value="">選擇分類</option></select></td>
-                                    <td class="budget-code-cell"><input class="budget-code-value" name="budget_code" type="hidden" value="{{ item.budget_code }}"><button class="budget-code-trigger" type="button" data-selected="{{ item.budget_code }}" aria-expanded="false">先選分類</button><div class="budget-meta"></div></td>
+                                    <td class="budget-category-cell"><select class="budget-category" name="ministry_group" data-selected-code="{{ item.budget_code }}" data-selected-ministry="{{ item.ministry_group }}" required><option value="">選擇部門/團契/小組</option></select></td>
+                                    <td class="budget-code-cell"><input class="budget-code-value" name="budget_code" type="hidden" value="{{ item.budget_code }}"><button class="budget-code-trigger" type="button" data-selected="{{ item.budget_code }}" aria-expanded="false">先選部門/團契/小組</button><div class="budget-meta"></div></td>
                                     <td class="purpose-cell"><input name="purpose" value="{{ item.purpose }}" required></td>
                                     <td><input class="amount-input" name="amount" type="number" min="1" step="1" value="{{ item.amount }}" required></td>
                                     <td class="action-cell"><button class="btn icon danger remove-row" type="button" title="移除此列">×</button></td>
@@ -211,13 +230,15 @@
     </section>
 </div>
 
-<template id="itemRowTemplate"><tr><td class="budget-category-cell"><select class="budget-category" name="budget_category" required><option value="">選擇分類</option></select></td><td class="budget-code-cell"><input class="budget-code-value" name="budget_code" type="hidden"><button class="budget-code-trigger" type="button" aria-expanded="false">先選分類</button><div class="budget-meta"></div></td><td class="purpose-cell"><input name="purpose" required></td><td><input class="amount-input" name="amount" type="number" min="1" step="1" required></td><td class="action-cell"><button class="btn icon danger remove-row" type="button" title="移除此列">×</button></td></tr></template>
+<template id="itemRowTemplate"><tr><td class="budget-category-cell"><select class="budget-category" name="ministry_group" required><option value="">選擇部門/團契/小組</option></select></td><td class="budget-code-cell"><input class="budget-code-value" name="budget_code" type="hidden"><button class="budget-code-trigger" type="button" aria-expanded="false">先選部門/團契/小組</button><div class="budget-meta"></div></td><td class="purpose-cell"><input name="purpose" required></td><td><input class="amount-input" name="amount" type="number" min="1" step="1" required></td><td class="action-cell"><button class="btn icon danger remove-row" type="button" title="移除此列">×</button></td></tr></template>
 
 <div class="budget-dropdown-panel" id="budgetDropdownPanel" hidden></div>
+{{ saved_payee_accounts|json_script:"savedPayeeAccountsData" }}
 
 <script>
 (() => {
     const budgetChoices = {{ budget_choices_json|safe }};
+    const savedPayeeAccounts = JSON.parse(document.getElementById('savedPayeeAccountsData').textContent);
     const showActivityBudgetInOptions = {{ show_activity_budget_in_options|yesno:'true,false' }};
     const categories = [...new Set(budgetChoices.map((item) => item.category || '\u672a\u5206\u985e'))].sort((a, b) => a.localeCompare(b, 'zh-Hant'));
     const body = document.getElementById('itemBody');
@@ -227,23 +248,22 @@
     const form = document.getElementById('expenseForm');
     const receiptCount = document.getElementById('receipt_count');
     const method = document.getElementById('payment_method');
+    const payee = document.getElementById('payee');
     const backdrop = document.getElementById('expenseModalBackdrop');
     const budgetDropdown = document.getElementById('budgetDropdownPanel');
     let activeBudgetRow = null;
-    const bankInputs = ['bank_name', 'bank_branch', 'bank_account'].map((id) => document.getElementById(id));
     function money(value) { return new Intl.NumberFormat('zh-TW').format(Number.parseFloat(value || '0') || 0); }
     function validItemRows() { return [...body.querySelectorAll('tr')].filter((row) => { const budgetCode = row.querySelector('[name="budget_code"]')?.value.trim(); const purpose = row.querySelector('[name="purpose"]')?.value.trim(); const amount = Number.parseFloat(row.querySelector('[name="amount"]')?.value || '0') || 0; return budgetCode || purpose || amount > 0; }); }
     function updateReceiptCount() { receiptCount.value = validItemRows().length; }
     function updateTotal() { const sum = [...body.querySelectorAll('.amount-input')].reduce((acc, input) => acc + (Number.parseFloat(input.value || '0') || 0), 0); total.textContent = money(sum); updateReceiptCount(); updateBudgetMeta(); }
-    function updateBankRequired() { const required = method.value === '\u532f\u6b3e'; bankInputs.forEach((input) => { input.required = required; }); }
     function option(value, text) { const opt = document.createElement('option'); opt.value = value; opt.textContent = text; return opt; }
     function choicesForCategory(category) { return budgetChoices.filter((item) => (item.category || '\u672a\u5206\u985e') === category); }
     function findChoice(code) { return budgetChoices.find((item) => item.code === code); }
     function populateCategory(row, selectedCode = '') {
         const categorySelect = row.querySelector('.budget-category');
         const selectedChoice = findChoice(selectedCode || categorySelect.dataset.selectedCode || '');
-        const selectedCategory = categorySelect.value || selectedChoice?.category || '';
-        categorySelect.replaceChildren(option('', '\u9078\u64c7\u5206\u985e'), ...categories.map((category) => option(category, category)));
+        const selectedCategory = categorySelect.value || categorySelect.dataset.selectedMinistry || selectedChoice?.category || '';
+        categorySelect.replaceChildren(option('', '\u9078\u64c7\u90e8\u9580\uff0f\u5718\u5951\uff0f\u5c0f\u7d44'), ...categories.map((category) => option(category, category)));
         if (selectedCategory) categorySelect.value = selectedCategory;
     }
     function populateBudget(row, selectedCode = '') {
@@ -255,7 +275,7 @@
         const choices = choicesForCategory(category);
         const selected = choices.find((item) => item.code === code);
         budgetValue.value = selected?.code || '';
-        trigger.textContent = selected?.code || (category ? '\u9078\u64c7\u9810\u7b97\u4ee3\u865f' : '\u5148\u9078\u5206\u985e');
+        trigger.textContent = selected?.code || (category ? '\u9078\u64c7\u9810\u7b97\u4ee3\u865f' : '\u5148\u9078\u90e8\u9580\uff0f\u5718\u5951\uff0f\u5c0f\u7d44');
         trigger.disabled = !category || !choices.length;
         trigger.dataset.selected = '';
     }
@@ -336,6 +356,14 @@
         }
         return '';
     }
+    function applySavedPayeeAccount() {
+        const account = [...savedPayeeAccounts].reverse().find((item) => item.payee === payee.value.trim());
+        if (!account) return;
+        document.getElementById('bank_name').value = account.bank_name || '';
+        document.getElementById('bank_branch').value = account.bank_branch || '';
+        document.getElementById('bank_account').value = account.bank_account || '';
+        method.value = '\u532f\u6b3e';
+    }
     function ensureOneRow() { if (!body.querySelector('tr')) { const row = template.content.firstElementChild.cloneNode(true); body.appendChild(row); initBudgetRow(row); } }
     addRow.addEventListener('click', () => { const row = template.content.firstElementChild.cloneNode(true); body.appendChild(row); initBudgetRow(row); updateTotal(); });
     body.addEventListener('input', updateTotal);
@@ -348,10 +376,10 @@
     document.querySelector('.modal-body')?.addEventListener('scroll', closeBudgetDropdown);
     body.addEventListener('click', (event) => { const button = event.target.closest('.remove-row'); if (!button) return; button.closest('tr').remove(); ensureOneRow(); updateTotal(); });
     form.addEventListener('submit', (event) => { const submitter = event.submitter; if (submitter && submitter.value === 'delete') return; updateReceiptCount(); if (!form.checkValidity()) { event.preventDefault(); form.reportValidity(); return; } if (!validItemRows().length) { event.preventDefault(); alert('\u8acb\u81f3\u5c11\u586b\u5beb\u4e00\u7b46\u8acb\u6b3e\u9805\u76ee\u3002'); return; } const missingBudget = [...body.querySelectorAll('tr')].find((row) => !row.querySelector('.budget-code-value')?.value); if (missingBudget) { event.preventDefault(); alert('\u8acb\u9078\u64c7\u6bcf\u7b46\u8acb\u6b3e\u9805\u76ee\u7684\u9810\u7b97\u4ee3\u865f\u3002'); missingBudget.querySelector('.budget-code-trigger')?.focus(); return; } const overMessage = budgetOverMessage(); if (overMessage) { event.preventDefault(); alert(overMessage); } });
-    backdrop.addEventListener('click', (event) => { if (event.target === backdrop) window.location.href = '{{ expense_claim_base_path }}/'; });
-    method.addEventListener('change', updateBankRequired);
+    payee.addEventListener('input', applySavedPayeeAccount);
+    payee.addEventListener('change', applySavedPayeeAccount);
     [...body.querySelectorAll('tr')].forEach(initBudgetRow);
-    ensureOneRow(); updateTotal(); updateBankRequired();
+    ensureOneRow(); updateTotal();
 })();
 </script>
 {% endblock %}
