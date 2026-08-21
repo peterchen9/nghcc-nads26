@@ -191,8 +191,8 @@ class MenuSyncSafetyTests(TestCase):
 
         expected_parents = {
             '/facility/pastoral-reports/': '牧者',
-            '/facility/periodic-maintenance/': '牧者',
-            '/facility/maintenance/': '牧者',
+            '/facility/periodic-maintenance/': '場地設施',
+            '/facility/maintenance/': '場地設施',
             '/board/minutes/': '執事會',
             '/board/deacons/': '執事會',
             '/backup/': '管理員',

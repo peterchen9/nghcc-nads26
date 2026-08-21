@@ -41,8 +41,6 @@ items = [
         'order': 35,
         'children': [
             {'title': '牧養報告', 'route': '/facility/pastoral-reports/', 'order': 1},
-            {'title': '定期維護', 'route': '/facility/periodic-maintenance/', 'order': 2},
-            {'title': '日常維護', 'route': '/facility/maintenance/', 'order': 3},
         ],
     },
     {
@@ -64,6 +62,8 @@ items = [
         'children': [
             {'title': '用電監測', 'route': '/facility/power/', 'order': 1},
             {'title': '場地資料維護', 'route': '/facility/rooms/', 'order': 2},
+            {'title': '日常維護', 'route': '/facility/maintenance/', 'order': 3},
+            {'title': '定期維護', 'route': '/facility/periodic-maintenance/', 'order': 4},
             {'title': '定期維護回報', 'route': '/facility/periodic-maintenance/report/', 'order': 5},
             {'title': '教室檢查', 'route': '/facility/classroom-inspection/', 'order': 6},
         ],
