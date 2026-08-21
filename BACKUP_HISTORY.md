@@ -310,3 +310,14 @@
 - Deployed file: `templates/staff/leaves.html`.
 - Unchanged: database schema and records, media, menu items, permission relationships, Nginx, and database container configuration.
 - Verification: all 10 staff-module tests passed locally; current-tree and all-reachable-history secret scans had no findings; remote and local backup SHA-256 values matched; deployed SHA-256 `289339ad9469ae97d8376c07c7bc6edb35c7d15eee5d4a8f94c6a02f9aa9c376` matched the local file; production markers for shared notices and both two-line layouts were present; Django check completed with only the pre-existing CKEditor warning; `nads26-web` restarted successfully; `/` returned HTTP 200 and unauthenticated `/staff/leaves/` returned the expected HTTP 302.
+
+## 2026-08-21 10:45:38 +08:00
+
+- Purpose: restore the three existing pastoral child menus under `牧者`, preserve the two `執事會` entries, and reconnect the existing backup app at `/backup/` for `管理員 → 資料備份`.
+- GitHub commits: `a9ccb5d` restored the menu definitions, backup app source, and route; `43ad1ff` cleaned formatting in the restored source.
+- Remote backup: `/home/peterchen/backups/nads26-pre-menu-restore-20260821-104317/`.
+- Local backup: `D:\backups\nghcc-nads26\nads26-pre-menu-restore-20260821-104317\` (outside the Git working tree).
+- Database change: updated only `parent_id` and `order` for existing `MenuItem` IDs 296, 307, and 308 in one transaction; no `MenuItem` was created, deleted, or rebuilt.
+- Menu safety baseline: `MenuItem` count remained 49, permission relations remained 1,012, and non-superusers with zero menu permissions remained 0. Existing permission counts remained 19/20/20 for the three pastoral entries, 10/10 for the two deacon-board entries, and 8 for data backup.
+- Deployed files: `nads26/urls.py` and `scripts/init_menu.py`; the backup app source already existed on production and was restored to Git for source consistency.
+- Verification: all 11 menu and backup tests passed locally; Python AST and secret scans passed; the remote and D-drive backup manifest, SQL gzip/completion marker, and 1,969-file application archive passed verification; Django check completed with only the pre-existing CKEditor warning; `nads26-web` restarted successfully; `/` returned HTTP 200; unauthenticated `/backup/`, `/board/minutes/`, and `/facility/pastoral-reports/` returned the expected HTTP 302.
