@@ -290,3 +290,13 @@
 - Deployed files: `modules/facility/views.py` and `templates/facility/expense_claim.html`; the local test file was not deployed.
 - Unchanged: database schema, existing claims and saved accounts, menu items, permission relationships, media, Nginx, and database container configuration.
 - Verification: 13 related tests passed locally before deployment; remote and D-drive backup hashes matched; deployed hashes matched local files (`da08af07...8ec79` and `30ff837b...75114`); Django check completed with only the pre-existing CKEditor warning; the deployed template no longer makes bank fields required; `nads26-web` restarted successfully; claim/item/saved-account counts remained 19/33/1; `/` returned HTTP 200 and unauthenticated `/staff/expense-claims/` returned HTTP 302.
+
+## 2026-08-21 10:06:23 +08:00
+
+- Purpose: append `(請擇休)` to national-holiday names that fall on Sunday in the team leave table, and add `秋令會(同工禁休)` to 2026-10-03.
+- GitHub commit: `d703d06` on `main`; this commit also published the previously deployed but uncommitted production-source updates from 2026-08-14 through 2026-08-18.
+- Remote backup: `/home/peterchen/backups/nads26-pre-holiday-sunday-label-20260821-100512/`.
+- Local backup: `D:\backups\nghcc-nads26\nads26-pre-holiday-sunday-label-20260821-100512\` (outside the Git working tree).
+- Deployed file: `templates/staff/leaves.html`.
+- Unchanged: database schema and records, media, menu items, permission relationships, Nginx, and database container configuration.
+- Verification: the 30 tests covering staff, annual-leave rules/admin, and expense claims passed locally; the complete 60-test run had 58 passes and two pre-existing education CRUD failures caused by unexpected HTTP 403 responses; current-tree and all-reachable-history secret scans had no findings; remote and local backup SHA-256 values matched; deployed SHA-256 `dfa058d8c8cbf7173b162c65792da0cdec8c14be982a3ea7e1d71f9d496e158a` matched the local file; Django check completed with only the pre-existing CKEditor warning; `nads26-web` restarted successfully; `/` returned HTTP 200 and unauthenticated `/staff/leaves/` returned the expected HTTP 302.
