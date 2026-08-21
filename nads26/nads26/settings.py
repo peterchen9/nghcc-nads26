@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'rest_framework',
     'modules.accounts',
+    'modules.backup',
     'modules.menu',
     'modules.pages',
     'modules.humnos',

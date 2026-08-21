@@ -34,6 +34,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('users/', include('modules.accounts.urls')),
     path('accounts/', include('modules.accounts.auth_urls')),
+    path('backup/', include('modules.backup.urls')),
     path('ckeditor/', include('ckeditor_uploader.urls')),
     path('api/humnos/', include('modules.humnos.api_urls')),
     path('api/hymns/', include('modules.hymns.api_urls')),

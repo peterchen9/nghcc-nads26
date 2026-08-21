@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.test import RequestFactory, SimpleTestCase, TestCase
+from django.urls import resolve
 
 from modules.menu.context_processors import menu_processor
 from modules.menu.models import MenuItem
@@ -187,6 +188,23 @@ class MenuSyncSafetyTests(TestCase):
         self.assertIn(original_id, allowed_ids)
         self.assertIn(custom.id, allowed_ids)
         self.assertTrue(MenuItem.objects.filter(id=custom.id).exists())
+
+        expected_parents = {
+            '/facility/pastoral-reports/': '牧者',
+            '/facility/periodic-maintenance/': '牧者',
+            '/facility/maintenance/': '牧者',
+            '/board/minutes/': '執事會',
+            '/board/deacons/': '執事會',
+            '/backup/': '管理員',
+        }
+        for route, parent_title in expected_parents.items():
+            item = MenuItem.objects.select_related('parent').get(route=route)
+            self.assertEqual(item.parent.title, parent_title)
+
+    def test_backup_dashboard_route_is_registered(self):
+        match = resolve('/backup/')
+
+        self.assertEqual(match.view_name, 'backup-dashboard')
 
 
 class BaseTemplateScrollRestorationTests(SimpleTestCase):

@@ -33,8 +33,17 @@ items = [
             {'title': '牧區小組', 'route': '/eureka/pastoral/', 'order': 2},
             {'title': '新朋友登記', 'route': '/eureka/add/', 'order': 3},
             {'title': '搜名單', 'route': '/eureka/modify/', 'order': 4},
-            {'title': '牧養報告', 'route': '/facility/pastoral-reports/', 'order': 5},
         ]
+    },
+    {
+        'title': '牧者',
+        'icon': '⛪',
+        'order': 35,
+        'children': [
+            {'title': '牧養報告', 'route': '/facility/pastoral-reports/', 'order': 1},
+            {'title': '定期維護', 'route': '/facility/periodic-maintenance/', 'order': 2},
+            {'title': '日常維護', 'route': '/facility/maintenance/', 'order': 3},
+        ],
     },
     {
         'title': '同工',
@@ -55,10 +64,17 @@ items = [
         'children': [
             {'title': '用電監測', 'route': '/facility/power/', 'order': 1},
             {'title': '場地資料維護', 'route': '/facility/rooms/', 'order': 2},
-            {'title': '日常維護', 'route': '/facility/maintenance/', 'order': 3},
-            {'title': '定期維護', 'route': '/facility/periodic-maintenance/', 'order': 4},
             {'title': '定期維護回報', 'route': '/facility/periodic-maintenance/report/', 'order': 5},
             {'title': '教室檢查', 'route': '/facility/classroom-inspection/', 'order': 6},
+        ],
+    },
+    {
+        'title': '執事會',
+        'icon': '👥',
+        'order': 75,
+        'children': [
+            {'title': '會議紀錄', 'route': '/board/minutes/', 'order': 1},
+            {'title': '歷屆執事名單', 'route': '/board/deacons/', 'order': 2},
         ],
     },
     {
@@ -94,6 +110,7 @@ items = [
             {'title': '使用者管理', 'route': '/users/', 'order': 1},
             {'title': '同工資料', 'route': '/eureka/staff/', 'order': 2},
             {'title': '出勤狀態', 'route': '/eureka/attendance/', 'order': 3},
+            {'title': '資料備份', 'route': '/backup/', 'order': 4},
         ]
     },
     {

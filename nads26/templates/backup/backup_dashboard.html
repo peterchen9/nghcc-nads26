@@ -1,0 +1,649 @@
+{% extends "base.html" %}
+
+{% block title %}資料備份 - NADS 26{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Premium Glassmorphic Layout */
+    .dashboard-container {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+
+    @media (min-width: 992px) {
+        .dashboard-container {
+            grid-template-columns: 1.2fr 0.8fr;
+        }
+        .history-card {
+            grid-column: span 2;
+        }
+    }
+
+    .config-card, .status-card, .history-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        backdrop-filter: blur(10px);
+    }
+
+    .card-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.4rem;
+        margin-top: 0;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #fff;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding-bottom: 12px;
+    }
+
+    /* Terminal-style Progress Logger */
+    .terminal-container {
+        margin-top: 20px;
+        display: none;
+    }
+
+    .terminal-header {
+        background: #1e293b;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-bottom: none;
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+        padding: 10px 15px;
+        font-family: monospace;
+        font-size: 0.85rem;
+        color: #94a3b8;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .terminal-dots {
+        display: flex;
+        gap: 6px;
+    }
+
+    .terminal-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+    .dot-red { background: #ef4444; }
+    .dot-yellow { background: #f59e0b; }
+    .dot-green { background: #10b981; }
+
+    .terminal-body {
+        background: #0f172a;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-top: none;
+        border-bottom-left-radius: 12px;
+        border-bottom-right-radius: 12px;
+        padding: 15px;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.9rem;
+        color: #38bdf8;
+        height: 250px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        line-height: 1.5;
+    }
+
+    /* Buttons styling */
+    .btn {
+        padding: 12px 24px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+        font-size: 0.95rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 44px;
+    }
+
+    .btn-primary {
+        background: var(--accent-color);
+        color: var(--sidebar-bg);
+    }
+    .btn-primary:hover {
+        background: #d0e7ff;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(188, 220, 255, 0.3);
+    }
+
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* Tables */
+    .history-table {
+        width: 100%;
+        border-collapse: collapse;
+        color: var(--text-primary);
+        margin-top: 15px;
+    }
+
+    .history-table th {
+        padding: 16px 12px;
+        text-align: left;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+        color: var(--text-secondary);
+        font-weight: 600;
+        font-size: 0.92rem;
+    }
+
+    .history-table td {
+        padding: 16px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        font-size: 0.92rem;
+        vertical-align: middle;
+    }
+
+    .history-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Badges */
+    .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .badge-success {
+        background: rgba(34, 197, 94, 0.15);
+        color: #4ade80;
+        border: 1px solid rgba(74, 222, 128, 0.2);
+    }
+
+    .badge-failed {
+        background: rgba(239, 68, 68, 0.15);
+        color: #f87171;
+        border: 1px solid rgba(248, 113, 113, 0.2);
+    }
+
+    .badge-pending {
+        background: rgba(245, 158, 11, 0.15);
+        color: #fbbf24;
+        border: 1px solid rgba(251, 191, 36, 0.2);
+    }
+
+    .badge-manual {
+        background: rgba(188, 220, 255, 0.15);
+        color: var(--accent-color);
+        border: 1px solid rgba(188, 220, 255, 0.2);
+    }
+
+    .badge-scheduled {
+        background: rgba(168, 85, 247, 0.15);
+        color: #c084fc;
+        border: 1px solid rgba(192, 132, 252, 0.2);
+    }
+
+    /* Action links */
+    .action-link {
+        color: var(--accent-color);
+        text-decoration: none;
+        margin-right: 12px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .action-link:hover {
+        text-decoration: underline;
+        color: #d0e7ff;
+    }
+
+    .action-link-danger {
+        color: #f87171;
+    }
+    .action-link-danger:hover {
+        color: #fca5a5;
+    }
+
+    /* Modals styling */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(8px);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.25s ease;
+    }
+
+    .modal.open {
+        display: flex;
+        opacity: 1;
+    }
+
+    .modal-content {
+        background: rgba(43, 62, 85, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        border-radius: 20px;
+        width: 90%;
+        max-width: 580px;
+        padding: 30px;
+        color: #fff;
+        transform: scale(0.9);
+        transition: transform 0.25s ease;
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+
+    .modal.open .modal-content {
+        transform: scale(1);
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding-bottom: 12px;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.3rem;
+        color: #fff;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .modal-close:hover {
+        color: #fff;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 12px 15px;
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #fff;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+        box-sizing: border-box;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 25px;">
+    <h2>🛡️ 系統資料備份管理</h2>
+    <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 0; font-size: 1.02rem;">
+        本平台資料在主機系統設定 (crontab) 定期備份。備份目錄：<strong style="color: var(--accent-color); font-family: monospace;">/mnt/usb1t/nads26</strong>
+    </p>
+</div>
+
+<div class="dashboard-container">
+    <!-- Left: Backup Control & Live Output -->
+    <div class="status-card">
+        <h3 class="card-title">🚀 立即備份</h3>
+        <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; margin-bottom: 25px;">
+            點擊下方按鈕將立即打包專案目錄 (排除日誌、快取與過往備份) 並導出 MySQL 資料庫，合併存入備份裝置中。
+        </p>
+        
+        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+            <button id="btn-run-backup" class="btn btn-primary" onclick="triggerImmediateBackup()" {% if not mount_writable %}disabled title="備份目錄未掛載或唯讀，無法備份"{% endif %}>
+                ⚡ 立即執行備份
+            </button>
+        </div>
+
+        <!-- Terminal Progress Log -->
+        <div class="terminal-container" id="terminal-block">
+            <div class="terminal-header">
+                <div class="terminal-dots">
+                    <span class="terminal-dot dot-red"></span>
+                    <span class="terminal-dot dot-yellow"></span>
+                    <span class="terminal-dot dot-green"></span>
+                </div>
+                <span>backup_process.log</span>
+            </div>
+            <div class="terminal-body" id="terminal-output">備份作業等待啟動...</div>
+        </div>
+    </div>
+
+    <!-- Right: Connection Status & Disk Usage Widget -->
+    <div class="config-card">
+        <h3 class="card-title">🖥️ 備份目錄連線狀況</h3>
+        <div style="margin-bottom: 20px;">
+            <label style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 600; display: block; margin-bottom: 6px;">掛載路徑 (Mount Path)</label>
+            <div style="font-family: monospace; font-size: 1rem; background: rgba(0,0,0,0.25); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); color: #fff;">
+                {{ backup_dir_path }}
+            </div>
+        </div>
+
+        <div style="margin-bottom: 25px;">
+            <label style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 600; display: block; margin-bottom: 8px;">連線狀態</label>
+            {% if mount_exists and mount_writable %}
+                <span class="badge badge-success" style="font-size: 0.9rem; padding: 6px 14px; border-radius: 8px;">🟢 已連線 (可讀寫)</span>
+            {% elif mount_exists %}
+                <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.2); font-size: 0.9rem; padding: 6px 14px; border-radius: 8px;">🟡 唯讀模式 (唯讀)</span>
+            {% else %}
+                <span class="badge badge-failed" style="font-size: 0.9rem; padding: 6px 14px; border-radius: 8px; background: rgba(239, 68, 68, 0.2);">🔴 未連線 / 未掛載</span>
+            {% endif %}
+        </div>
+
+        {% if mount_exists and disk_info %}
+        <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 20px;">
+            <label style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 600; display: block; margin-bottom: 12px;">儲存容量使用率 ({{ disk_info.percent }})</label>
+            
+            <!-- Progress Bar -->
+            <div style="width: 100%; height: 12px; background: rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 15px;">
+                <div style="width: {{ disk_info.percent }}; height: 100%; background: linear-gradient(90deg, var(--accent-color) 0%, #3b82f6 100%); border-radius: 6px;"></div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center; font-size: 0.85rem; color: var(--text-secondary);">
+                <div style="background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
+                    <div style="color: #fff; font-weight: 600; margin-bottom: 4px;">{{ disk_info.free }}</div>
+                    <div>可用空間</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
+                    <div style="color: #fff; font-weight: 600; margin-bottom: 4px;">{{ disk_info.used }}</div>
+                    <div>已用空間</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.15); padding: 10px; border-radius: 8px;">
+                    <div style="color: #fff; font-weight: 600; margin-bottom: 4px;">{{ disk_info.total }}</div>
+                    <div>總容量</div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 20px; color: #f87171; font-size: 0.88rem; line-height: 1.6;">
+            ⚠️ 找不到儲存裝置掛載路徑，請確認外部備份隨身碟是否正確連線並掛載到主機的 `/mnt/usb1t/nads26`，且 Docker 容器 volumes 已經重新載入並正確對應映射。
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Bottom: Backup History Table -->
+    <div class="history-card">
+        <h3 class="card-title">📋 備份歷史列表</h3>
+        
+        <div style="overflow-x: auto;">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>備份時間</th>
+                        <th>備份檔名</th>
+                        <th>大小</th>
+                        <th>觸發</th>
+                        <th>狀態</th>
+                        <th style="width: 25%;">備份註解</th>
+                        <th style="text-align: right;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in history %}
+                    <tr>
+                        <td>{{ item.created_at|date:"Y-m-d H:i:s" }}</td>
+                        <td style="font-family: monospace; font-size: 0.85rem;">{{ item.filename }}</td>
+                        <td>{{ item.formatted_size }}</td>
+                        <td>
+                            {% if item.trigger_type == 'manual' %}
+                            <span class="badge badge-manual">手動</span>
+                            {% else %}
+                            <span class="badge badge-scheduled">排程</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.status == 'success' %}
+                            <span class="badge badge-success">成功</span>
+                            {% elif item.status == 'failed' %}
+                            <span class="badge badge-failed">失敗</span>
+                            {% else %}
+                            <span class="badge badge-pending">執行中</span>
+                            {% endif %}
+                        </td>
+                        <td id="comment-text-{{ item.id }}" style="color: var(--text-secondary);">
+                            {{ item.comment|default:"—" }}
+                        </td>
+                        <td style="text-align: right; white-space: nowrap;">
+                            {% if item.status == 'success' %}
+                            <a href="{% url 'backup-download' item.id %}" class="action-link">
+                                📥 下載
+                            </a>
+                            {% endif %}
+                            <a class="action-link" onclick="openCommentModal('{{ item.id }}', '{{ item.comment|escapejs }}')">
+                                ✏️ 註解
+                            </a>
+                            <a class="action-link" onclick="viewLogContent('{{ item.id }}')">
+                                📝 日誌
+                            </a>
+                            <form action="{% url 'backup-delete' item.id %}" method="post" style="display: inline;" onsubmit="return confirm('確定要刪除此備份記錄與實體檔案嗎？')">
+                                {% csrf_token %}
+                                <button type="submit" class="action-link action-link-danger" style="background:none; border:none; padding:0; font:inherit; cursor:pointer;">
+                                    🗑️ 刪除
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 30px;">
+                            目前尚無備份紀錄。
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Editing Backup Comment -->
+<div class="modal" id="commentModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>✏️ 編輯備份註解</h3>
+            <button class="modal-close" onclick="closeCommentModal()">&times;</button>
+        </div>
+        <div class="form-group">
+            <label for="modal-comment-input">備份檔註解說明</label>
+            <textarea class="form-control" id="modal-comment-input" rows="4" placeholder="請輸入備份註解（例如：系統更新前手動備份）" style="width: 100%; border-radius: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 12px 15px; font-family: inherit; box-sizing: border-box;"></textarea>
+        </div>
+        <input type="hidden" id="modal-backup-id">
+        <div style="display: flex; justify-content: flex-end; gap: 15px; margin-top: 15px;">
+            <button class="btn btn-secondary" onclick="closeCommentModal()">取消</button>
+            <button class="btn btn-primary" onclick="submitBackupComment()">儲存變更</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Viewing Log Content -->
+<div class="modal" id="logModal">
+    <div class="modal-content" style="max-width: 750px;">
+        <div class="modal-header">
+            <h3>📝 備份執行記錄日誌</h3>
+            <button class="modal-close" onclick="closeLogModal()">&times;</button>
+        </div>
+        <pre id="modal-log-content" style="background: #0f172a; color: #38bdf8; padding: 20px; border-radius: 10px; overflow-y: auto; max-height: 50vh; white-space: pre-wrap; font-family: 'Courier New', Courier, monospace; font-size: 0.88rem; line-height: 1.5;"></pre>
+        <div style="display: flex; justify-content: flex-end; margin-top: 15px;">
+            <button class="btn btn-primary" onclick="closeLogModal()">關閉</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Trigger Immediate Backup & Stream Logs
+    async function triggerImmediateBackup() {
+        const runButton = document.getElementById('btn-run-backup');
+        const terminalBlock = document.getElementById('terminal-block');
+        const terminalOutput = document.getElementById('terminal-output');
+
+        // Disable run button and show logger terminal
+        runButton.disabled = true;
+        runButton.textContent = '⏳ 備份執行中...';
+        terminalBlock.style.display = 'block';
+        terminalOutput.textContent = '[INFO] 正在連線至備份服務，啟動日誌流...\n';
+
+        try {
+            const response = await fetch('{% url "backup-run" %}');
+            if (!response.body) {
+                terminalOutput.textContent += '[ERROR] 伺服器未傳回日誌流。\n';
+                runButton.disabled = false;
+                runButton.textContent = '⚡ 立即執行備份';
+                return;
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                
+                // Parse EventStream format "data: <log_content>\n\n"
+                const lines = buffer.split('\n\n');
+                // Keep the last item in buffer if it doesn't end with double newline
+                buffer = lines.pop();
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const logText = line.substring(6);
+                        terminalOutput.textContent += logText + '\n';
+                        // Auto scroll to bottom
+                        terminalOutput.scrollTop = terminalOutput.scrollHeight;
+                    }
+                }
+            }
+
+            // Flush remaining buffer
+            if (buffer.startsWith('data: ')) {
+                terminalOutput.textContent += buffer.substring(6) + '\n';
+            }
+
+            terminalOutput.textContent += '\n[INFO] 備份作業完畢，準備重新載入歷史列表...\n';
+            setTimeout(() => {
+                window.location.reload();
+            }, 2500);
+
+        } catch (error) {
+            terminalOutput.textContent += `\n[ERROR] 連線異常: ${error.message}\n`;
+            runButton.disabled = false;
+            runButton.textContent = '⚡ 立即執行備份';
+        }
+    }
+
+    // Modal control for Editing Comments
+    const commentModal = document.getElementById('commentModal');
+    const commentInput = document.getElementById('modal-comment-input');
+    const commentIdInput = document.getElementById('modal-backup-id');
+
+    function openCommentModal(id, currentComment) {
+        commentIdInput.value = id;
+        commentInput.value = currentComment || '';
+        commentModal.classList.add('open');
+    }
+
+    function closeCommentModal() {
+        commentModal.classList.remove('open');
+    }
+
+    async function submitBackupComment() {
+        const id = commentIdInput.value;
+        const comment = commentInput.value.trim();
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        try {
+            const formData = new FormData();
+            formData.append('comment', comment);
+
+            const response = await fetch(`/backup/comment/${id}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                body: formData
+            });
+
+            if (response.ok) {
+                // Update table row comment cell directly
+                const cell = document.getElementById(`comment-text-${id}`);
+                if (cell) {
+                    cell.textContent = comment || '—';
+                }
+                closeCommentModal();
+            } else {
+                alert('儲存註解失敗，請重試。');
+            }
+        } catch (error) {
+            alert('儲存註解發生錯誤: ' + error.message);
+        }
+    }
+
+    // Modal control for viewing logs
+    const logModal = document.getElementById('logModal');
+    const logContentText = document.getElementById('modal-log-content');
+
+    async function viewLogContent(id) {
+        try {
+            const response = await fetch(`/backup/view-log/${id}/`);
+            if (response.ok) {
+                const data = await response.json();
+                logContentText.textContent = data.log || '尚無日誌記錄。';
+                logModal.classList.add('open');
+            } else {
+                alert('無法讀取日誌。');
+            }
+        } catch (error) {
+            alert('讀取日誌發生錯誤: ' + error.message);
+        }
+    }
+
+    function closeLogModal() {
+        logModal.classList.remove('open');
+        logContentText.textContent = '';
+    }
+
+    // Close modals on clicking outside modal content
+    window.addEventListener('click', (e) => {
+        if (e.target === commentModal) closeCommentModal();
+        if (e.target === logModal) closeLogModal();
+    });
+</script>
+{% endblock %}
