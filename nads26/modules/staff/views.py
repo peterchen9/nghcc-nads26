@@ -851,7 +851,9 @@ def _staff_names_for_month(month_start, entries, alias_map=None):
     return names
 
 
-def _get_used_annual_leave_days_for_aliases(aliases, staff_info=None, year=STAFF_LEAVE_YEAR):
+def _get_used_annual_leave_days_for_aliases(
+    aliases, staff_info=None, year=STAFF_LEAVE_YEAR, through_date=None
+):
     aliases = [alias for alias in dict.fromkeys(aliases) if alias]
     if not aliases:
         return 0.0
@@ -864,6 +866,7 @@ def _get_used_annual_leave_days_for_aliases(aliases, staff_info=None, year=STAFF
     with connection.cursor() as cursor:
         placeholders = ', '.join(['%s'] * len(aliases))
         tracking_sql = ' AND leave_date > %s' if tracking_start else ''
+        through_sql = ' AND leave_date <= %s' if through_date else ''
         query = f"""
             SELECT leave_date, day_part
             FROM {STAFF_LEAVE_TABLE} 
@@ -871,6 +874,7 @@ def _get_used_annual_leave_days_for_aliases(aliases, staff_info=None, year=STAFF
               AND STRFTIME('%%Y', leave_date) = %s
               AND code = '特'
               {tracking_sql}
+              {through_sql}
         """ if connection.vendor == 'sqlite' else f"""
             SELECT leave_date, day_part
             FROM {STAFF_LEAVE_TABLE} 
@@ -878,10 +882,13 @@ def _get_used_annual_leave_days_for_aliases(aliases, staff_info=None, year=STAFF
               AND YEAR(leave_date) = %s
               AND code = '特'
               {tracking_sql}
+              {through_sql}
         """
         params = list(aliases) + list(aliases) + [str(year)]
         if tracking_start:
             params.append(tracking_start)
+        if through_date:
+            params.append(through_date)
         cursor.execute(query, params)
         unique_slots = {
             (str(leave_date), day_part)
@@ -890,7 +897,9 @@ def _get_used_annual_leave_days_for_aliases(aliases, staff_info=None, year=STAFF
     return opening_balance + float(len(unique_slots)) * 0.5
 
 
-def _get_used_annual_leave_days(user, staff_info=None, year=STAFF_LEAVE_YEAR):
+def _get_used_annual_leave_days(
+    user, staff_info=None, year=STAFF_LEAVE_YEAR, through_date=None
+):
     if staff_info is None:
         try:
             from modules.eureka.models import StaffInfo
@@ -902,7 +911,7 @@ def _get_used_annual_leave_days(user, staff_info=None, year=STAFF_LEAVE_YEAR):
         except Exception:
             staff_info = None
     return _get_used_annual_leave_days_for_aliases(
-        _staff_user_aliases(user), staff_info, year
+        _staff_user_aliases(user), staff_info, year, through_date
     )
 
 
@@ -929,7 +938,7 @@ def _annual_leave_balances(canonical_names, full_names, as_of_date):
                 staff_info.user.get_full_name(),
             ])
         used = _get_used_annual_leave_days_for_aliases(
-            aliases, staff_info, as_of_date.year
+            aliases, staff_info, as_of_date.year, as_of_date
         )
         balances[canonical_name] = {
             'total': total,
@@ -1241,6 +1250,7 @@ def leave_calendar_page(request):
         return redirect(f'/staff/leaves/?month={_month_start(selected_day).strftime("%Y-%m")}&day={selected_day.isoformat()}')
 
     today = date.today()
+    selected_month_end = _month_end(selected_month)
     entries = _leave_entries(selected_month)
     church_calendar_entries = _church_calendar_entries(selected_month)
     staff_name_aliases = _staff_name_aliases()
@@ -1264,13 +1274,13 @@ def leave_calendar_page(request):
                     else staff_info.onboard_date.month - 1
                 )
             annual_leave_quota = (
-                annual_leave_entitlement(staff_info.onboard_date, today)
+                annual_leave_entitlement(staff_info.onboard_date, selected_month_end)
                 if staff_info.is_active else float(staff_info.annual_leave_quota or 0.0)
             )
     except Exception:
         pass
     used_leave_days = _get_used_annual_leave_days(
-        request.user, staff_info, today.year
+        request.user, staff_info, selected_month.year, selected_month_end
     )
     remaining_annual_leave_days = annual_leave_quota - used_leave_days
     monthly_leave_summary = _monthly_leave_summary(request.user, entries)
@@ -1284,7 +1294,7 @@ def leave_calendar_page(request):
             for name in staff_names
         ]
         annual_balances = _annual_leave_balances(
-            canonical_staff_names, staff_full_names, today
+            canonical_staff_names, staff_full_names, selected_month_end
         )
         hr_leave_overview = _hr_monthly_leave_overview(
             staff_names,

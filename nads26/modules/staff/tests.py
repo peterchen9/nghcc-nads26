@@ -1,5 +1,6 @@
 import datetime
 import json
+from unittest.mock import patch
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from django.contrib.auth.models import Permission
@@ -9,6 +10,7 @@ from modules.eureka.models import StaffInfo
 from modules.staff.views import (
     STAFF_LEAVE_TABLE,
     STAFF_LEAVE_YEAR,
+    _annual_leave_balances,
     _get_used_annual_leave_days,
     _hr_monthly_leave_overview,
     _monthly_leave_summary,
@@ -26,6 +28,7 @@ class StaffLeaveTests(TestCase):
         
         # Create corresponding StaffInfo
         self.staff_info = StaffInfo.objects.create(
+            staff_id=999,
             user=self.user,
             name="測試同工",
             onboard_date=datetime.date(STAFF_LEAVE_YEAR, 2, 1),
@@ -312,6 +315,62 @@ class StaffLeaveTests(TestCase):
         self.assertEqual(
             _get_used_annual_leave_days(self.user, self.staff_info), 2.0
         )
+
+    def test_used_leave_only_accumulates_through_viewed_month(self):
+        self.staff_info.annual_leave_used_base = 1.5
+        self.staff_info.annual_leave_used_base_year = STAFF_LEAVE_YEAR
+        self.staff_info.annual_leave_tracking_start = datetime.date(2026, 8, 31)
+        self.staff_info.save()
+        now = datetime.datetime.now()
+        with connection.cursor() as cursor:
+            for leave_date in ['2026-09-01', '2026-10-01']:
+                cursor.execute(
+                    f'''INSERT INTO {STAFF_LEAVE_TABLE}
+                        (staff_user, staff_name, leave_date, day_part, code,
+                         description, source, created_at, updated_at)
+                        VALUES (%s, %s, %s, 'am', '特', '', '', %s, %s)''',
+                    [self.user.username, self.staff_info.name, leave_date, now, now],
+                )
+
+        self.assertEqual(
+            _get_used_annual_leave_days(
+                self.user,
+                self.staff_info,
+                STAFF_LEAVE_YEAR,
+                datetime.date(2026, 8, 31),
+            ),
+            1.5,
+        )
+        self.assertEqual(
+            _annual_leave_balances(
+                [self.staff_info.name],
+                {self.staff_info.name: self.staff_info.name},
+                datetime.date(2026, 9, 30),
+            )[self.staff_info.name]['used'],
+            2.0,
+        )
+
+        with patch(
+            'modules.staff.views._import_legacy_leave_entries_if_needed',
+            return_value=0,
+        ), patch(
+            'modules.staff.views._import_church_calendar_entries_if_needed',
+            return_value=0,
+        ), patch(
+            'modules.staff.views._get_used_annual_leave_days',
+            side_effect=lambda user, staff_info, year, through_date: {
+                8: 1.5,
+                9: 2.0,
+                10: 2.5,
+            }[through_date.month],
+        ):
+            august = self.client.get(reverse('staff-leaves'), {'month': '2026-08'})
+            september = self.client.get(reverse('staff-leaves'), {'month': '2026-09'})
+            october = self.client.get(reverse('staff-leaves'), {'month': '2026-10'})
+
+        self.assertEqual(august.context['used_leave_days'], 1.5)
+        self.assertEqual(september.context['used_leave_days'], 2.0)
+        self.assertEqual(october.context['used_leave_days'], 2.5)
 
     def test_special_leave_quota_limit(self):
         """Verify that creating '特' leave entries is restricted by quota"""
