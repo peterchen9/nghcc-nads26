@@ -300,3 +300,13 @@
 - Deployed file: `templates/staff/leaves.html`.
 - Unchanged: database schema and records, media, menu items, permission relationships, Nginx, and database container configuration.
 - Verification: the 30 tests covering staff, annual-leave rules/admin, and expense claims passed locally; the complete 60-test run had 58 passes and two pre-existing education CRUD failures caused by unexpected HTTP 403 responses; current-tree and all-reachable-history secret scans had no findings; remote and local backup SHA-256 values matched; deployed SHA-256 `dfa058d8c8cbf7173b162c65792da0cdec8c14be982a3ea7e1d71f9d496e158a` matched the local file; Django check completed with only the pre-existing CKEditor warning; `nads26-web` restarted successfully; `/` returned HTTP 200 and unauthenticated `/staff/leaves/` returned the expected HTTP 302.
+
+## 2026-08-21 10:20:36 +08:00
+
+- Purpose: show Sunday national-holiday compensatory-leave reminders and the October 3 autumn gathering notice consistently in both personal and team leave calendars, with long reminders split across clear lines.
+- GitHub commit: `6ca6928` on `main`.
+- Remote backup: `/home/peterchen/backups/nads26-pre-leave-notice-layout-20260821-101946/`.
+- Local backup: `D:\backups\nghcc-nads26\nads26-pre-leave-notice-layout-20260821-101946\` (outside the Git working tree).
+- Deployed file: `templates/staff/leaves.html`.
+- Unchanged: database schema and records, media, menu items, permission relationships, Nginx, and database container configuration.
+- Verification: all 10 staff-module tests passed locally; current-tree and all-reachable-history secret scans had no findings; remote and local backup SHA-256 values matched; deployed SHA-256 `289339ad9469ae97d8376c07c7bc6edb35c7d15eee5d4a8f94c6a02f9aa9c376` matched the local file; production markers for shared notices and both two-line layouts were present; Django check completed with only the pre-existing CKEditor warning; `nads26-web` restarted successfully; `/` returned HTTP 200 and unauthenticated `/staff/leaves/` returned the expected HTTP 302.
