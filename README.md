@@ -19,6 +19,8 @@
 ## 文件
 
 - [平台功能說明](docs/platform-features.md)
+- [Codex Cloud 設定與跨電腦協作](docs/codex-cloud-setup.md)
+- [新電腦與協作者上手指南](docs/collaboration-onboarding.md)
 - [系統盤點](docs/system-inventory.md)
 - [Docker 正式環境配置](docs/docker-production-layout.md)
 - [備份與還原手冊](docs/backup-and-restore-runbook.md)
