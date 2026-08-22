@@ -372,6 +372,66 @@ class StaffLeaveTests(TestCase):
         self.assertEqual(september.context['used_leave_days'], 2.0)
         self.assertEqual(october.context['used_leave_days'], 2.5)
 
+    def test_used_leave_resets_on_exact_hire_anniversary(self):
+        self.staff_info.onboard_date = datetime.date(2006, 9, 1)
+        self.staff_info.annual_leave_used_base = 25
+        self.staff_info.annual_leave_used_base_year = STAFF_LEAVE_YEAR
+        self.staff_info.annual_leave_tracking_start = datetime.date(2026, 8, 31)
+        self.staff_info.save()
+        now = datetime.datetime.now()
+        with connection.cursor() as cursor:
+            for leave_date in ['2026-09-01', '2026-09-15', '2026-10-01']:
+                cursor.execute(
+                    f'''INSERT INTO {STAFF_LEAVE_TABLE}
+                        (staff_user, staff_name, leave_date, day_part, code,
+                         description, source, created_at, updated_at)
+                        VALUES (%s, %s, %s, 'am', '特', '', '', %s, %s)''',
+                    [self.user.username, self.staff_info.name, leave_date, now, now],
+                )
+
+        self.assertEqual(
+            _get_used_annual_leave_days(
+                self.user, self.staff_info, 2026, datetime.date(2026, 8, 31)
+            ),
+            25,
+        )
+        self.assertEqual(
+            _get_used_annual_leave_days(
+                self.user, self.staff_info, 2026, datetime.date(2026, 9, 30)
+            ),
+            1,
+        )
+        self.assertEqual(
+            _get_used_annual_leave_days(
+                self.user, self.staff_info, 2026, datetime.date(2026, 10, 31)
+            ),
+            1.5,
+        )
+
+    def test_mid_month_anniversary_counts_leave_from_anniversary_day(self):
+        self.staff_info.onboard_date = datetime.date(2020, 11, 15)
+        self.staff_info.annual_leave_used_base = 3.5
+        self.staff_info.annual_leave_used_base_year = STAFF_LEAVE_YEAR
+        self.staff_info.annual_leave_tracking_start = datetime.date(2026, 8, 31)
+        self.staff_info.save()
+        now = datetime.datetime.now()
+        with connection.cursor() as cursor:
+            for leave_date in ['2026-11-14', '2026-11-15']:
+                cursor.execute(
+                    f'''INSERT INTO {STAFF_LEAVE_TABLE}
+                        (staff_user, staff_name, leave_date, day_part, code,
+                         description, source, created_at, updated_at)
+                        VALUES (%s, %s, %s, 'am', '特', '', '', %s, %s)''',
+                    [self.user.username, self.staff_info.name, leave_date, now, now],
+                )
+
+        self.assertEqual(
+            _get_used_annual_leave_days(
+                self.user, self.staff_info, 2026, datetime.date(2026, 11, 30)
+            ),
+            0.5,
+        )
+
     def test_special_leave_quota_limit(self):
         """Verify that creating '特' leave entries is restricted by quota"""
         today = datetime.date.today()

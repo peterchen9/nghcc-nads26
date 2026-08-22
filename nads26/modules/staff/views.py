@@ -18,7 +18,10 @@ from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import redirect, render
 
 from modules.facility.views import expense_claim_page, expense_claim_voucher_pdf
-from modules.eureka.leave_rules import annual_leave_entitlement
+from modules.eureka.leave_rules import (
+    annual_leave_cycle_start,
+    annual_leave_entitlement,
+)
 
 
 STAFF_LEAVE_TABLE = 'staff_leave_entry'
@@ -859,13 +862,36 @@ def _get_used_annual_leave_days_for_aliases(
         return 0.0
     opening_balance = 0.0
     tracking_start = None
-    if staff_info and staff_info.annual_leave_used_base_year == year:
-        opening_balance = float(staff_info.annual_leave_used_base or 0.0)
-        tracking_start = staff_info.annual_leave_tracking_start
+    lower_bound = None
+    lower_operator = None
+    if staff_info:
+        cycle_start = (
+            annual_leave_cycle_start(staff_info.onboard_date, through_date)
+            if through_date else None
+        )
+        if through_date and staff_info.onboard_date and cycle_start is None:
+            return 0.0
+        base_tracking_start = staff_info.annual_leave_tracking_start
+        use_opening_balance = (
+            staff_info.annual_leave_used_base_year == year
+            and base_tracking_start
+            and (not through_date or through_date >= base_tracking_start)
+            and (not cycle_start or cycle_start <= base_tracking_start)
+        )
+        if use_opening_balance:
+            opening_balance = float(staff_info.annual_leave_used_base or 0.0)
+            tracking_start = base_tracking_start
+            lower_bound = tracking_start
+            lower_operator = '>'
+        elif cycle_start:
+            lower_bound = cycle_start
+            lower_operator = '>='
 
     with connection.cursor() as cursor:
         placeholders = ', '.join(['%s'] * len(aliases))
-        tracking_sql = ' AND leave_date > %s' if tracking_start else ''
+        lower_sql = (
+            f' AND leave_date {lower_operator} %s' if lower_bound else ''
+        )
         through_sql = ' AND leave_date <= %s' if through_date else ''
         query = f"""
             SELECT leave_date, day_part
@@ -873,7 +899,7 @@ def _get_used_annual_leave_days_for_aliases(
             WHERE (staff_user IN ({placeholders}) OR staff_name IN ({placeholders}))
               AND STRFTIME('%%Y', leave_date) = %s
               AND code = '特'
-              {tracking_sql}
+              {lower_sql}
               {through_sql}
         """ if connection.vendor == 'sqlite' else f"""
             SELECT leave_date, day_part
@@ -881,12 +907,12 @@ def _get_used_annual_leave_days_for_aliases(
             WHERE (staff_user IN ({placeholders}) OR staff_name IN ({placeholders}))
               AND YEAR(leave_date) = %s
               AND code = '特'
-              {tracking_sql}
+              {lower_sql}
               {through_sql}
         """
         params = list(aliases) + list(aliases) + [str(year)]
-        if tracking_start:
-            params.append(tracking_start)
+        if lower_bound:
+            params.append(lower_bound)
         if through_date:
             params.append(through_date)
         cursor.execute(query, params)
@@ -1134,7 +1160,10 @@ def _save_leave_entry(request, selected_month):
                 pass
                 
             used_days = _get_used_annual_leave_days(
-                request.user, staff_info, leave_day.year
+                request.user,
+                staff_info,
+                leave_day.year,
+                max(slot_day for slot_day, _ in slots),
             )
             requested_days = additional_special_slots * 0.5
             if used_days + requested_days > annual_leave_quota:

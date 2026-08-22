@@ -19,6 +19,14 @@ def completed_service_years(onboard_date, as_of_date):
     return years - (anniversary > as_of_date)
 
 
+def annual_leave_cycle_start(onboard_date, as_of_date):
+    """Return the most recent hire-date anniversary on or before the date."""
+    if not onboard_date or as_of_date < onboard_date:
+        return None
+    years = completed_service_years(onboard_date, as_of_date)
+    return _add_months(onboard_date, years * 12)
+
+
 def annual_leave_entitlement(onboard_date, as_of_date):
     """Calculate statutory-style annual leave from the hire-date anniversary."""
     if not onboard_date or as_of_date < onboard_date:
